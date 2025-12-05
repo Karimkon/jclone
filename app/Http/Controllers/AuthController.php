@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\VendorProfile;
+use App\Models\BuyerWallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -58,6 +59,65 @@ class AuthController extends Controller
     public function showCEOLogin()
     {
         return view('auth.ceo-login');
+    }
+
+     /**
+     * Handle user registration
+     */
+     public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'phone' => 'required|string|max:20|unique:users',
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'role' => 'nullable|in:buyer,vendor_local,vendor_international',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        $role = $request->role ?? 'buyer';
+        
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'password' => Hash::make($request->password),
+            'role' => $role,
+        ]);
+
+        // If vendor registration, create vendor profile
+        if (in_array($role, ['vendor_local', 'vendor_international'])) {
+            VendorProfile::create([
+                'user_id' => $user->id,
+                'vendor_type' => $role === 'vendor_international' ? 'china_supplier' : 'local_retail',
+                'business_name' => $request->business_name ?? $request->name . "'s Store",
+                'country' => $request->country ?? 'Uganda',
+                'city' => $request->city ?? 'Kampala',
+                'vetting_status' => 'pending',
+            ]);
+        } 
+        // If buyer registration, create wallet automatically
+        elseif ($role === 'buyer') {
+            BuyerWallet::create([
+                'user_id' => $user->id,
+                'balance' => 0,
+                'locked_balance' => 0,
+                'currency' => 'USD',
+                'meta' => [
+                    'created_at' => now()->toDateTimeString(),
+                    'initial_balance' => 0,
+                ]
+            ]);
+        }
+
+        Auth::login($user);
+
+        return $this->redirectBasedOnRole($user);
     }
 
     /**
@@ -256,51 +316,8 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    /**
-     * Handle user registration
-     */
-    public function register(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'phone' => 'required|string|max:20|unique:users',
-            'password' => ['required', 'confirmed', Password::defaults()],
-            'role' => 'nullable|in:buyer,vendor_local,vendor_international',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()
-                ->withErrors($validator)
-                ->withInput();
-        }
-
-        $role = $request->role ?? 'buyer';
-        
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'password' => Hash::make($request->password),
-            'role' => $role,
-        ]);
-
-        // If vendor registration, create vendor profile
-        if (in_array($role, ['vendor_local', 'vendor_international'])) {
-            VendorProfile::create([
-                'user_id' => $user->id,
-                'vendor_type' => $role === 'vendor_international' ? 'china_supplier' : 'local_retail',
-                'business_name' => $request->business_name ?? $request->name . "'s Store",
-                'country' => $request->country ?? 'Uganda',
-                'city' => $request->city ?? 'Kampala',
-                'vetting_status' => 'pending',
-            ]);
-        }
-
-        Auth::login($user);
-
-        return $this->redirectBasedOnRole($user);
-    }
+   
+    
 
     /**
      * Redirect user based on role

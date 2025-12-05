@@ -55,7 +55,7 @@
                             <i class="fas fa-exclamation-circle text-red-400"></i>
                         </div>
                         <div class="ml-3">
-                            <p class="text-sm text-red-700">{{ session('error') }}</p>
+                            <p class="text-sm text-red-700 font-semibold">{{ session('error') }}</p>
                         </div>
                     </div>
                 </div>
@@ -69,6 +69,24 @@
                         </div>
                         <div class="ml-3">
                             <p class="text-sm text-green-700">{{ session('success') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if($errors->any())
+                <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-circle text-red-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-red-700 font-semibold mb-2">Please correct the following errors:</p>
+                            <ul class="list-disc list-inside text-sm text-red-600 space-y-1">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -247,22 +265,29 @@
                                 <div class="relative">
                                     <span class="absolute left-3 top-3 text-gray-500">$</span>
                                     <input type="number" name="annual_turnover" step="0.01" 
-                                           class="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                           class="w-full pl-8 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('annual_turnover') border-red-500 @enderror"
                                            placeholder="0.00"
                                            value="{{ old('annual_turnover') }}">
                                 </div>
+                                @error('annual_turnover')
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Preferred Currency -->
                             <div>
                                 <label class="block text-gray-700 font-medium mb-2">Preferred Currency *</label>
                                 <select name="preferred_currency" required 
-                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('preferred_currency') border-red-500 @enderror">
+                                    <option value="">Select Currency</option>
                                     <option value="USD" {{ old('preferred_currency') == 'USD' ? 'selected' : '' }}>US Dollar (USD)</option>
                                     <option value="UGX" {{ old('preferred_currency') == 'UGX' ? 'selected' : '' }}>Ugandan Shilling (UGX)</option>
                                     <option value="KES" {{ old('preferred_currency') == 'KES' ? 'selected' : '' }}>Kenyan Shilling (KES)</option>
                                     <option value="CNY" {{ old('preferred_currency') == 'CNY' ? 'selected' : '' }}>Chinese Yuan (CNY)</option>
                                 </select>
+                                @error('preferred_currency')
+                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
+                                @enderror
                             </div>
                         </div>
                     </div>

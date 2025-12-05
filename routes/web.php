@@ -21,6 +21,9 @@ use App\Http\Controllers\Marketplace\ImportController;
 use App\Http\Controllers\Marketplace\OrderController;
 use App\Http\Controllers\Logistics\WarehouseController;
 use App\Http\Controllers\Logistics\ShipmentController;
+use App\Http\Controllers\Vendor\VendorOrderController;
+use App\Http\Controllers\Vendor\PromotionController;
+use App\Http\Controllers\Finance\EscrowController;
 
 // ====================
 // PUBLIC ROUTES
@@ -57,6 +60,15 @@ Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->name
 Route::post('/finance/login', [AuthController::class, 'financeLogin'])->name('finance.login.submit');
 Route::post('/ceo/login', [AuthController::class, 'ceoLogin'])->name('ceo.login.submit');
 
+// ====================
+// REGISTRATION ROUTES
+// ====================
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+Route::get('/register/buyer', function () {
+    return view('auth.register');
+})->name('register.buyer');
+
 // Logout
 Route::post('/logout', function (Request $request) {
     Auth::logout();
@@ -66,47 +78,80 @@ Route::post('/logout', function (Request $request) {
 })->name('logout');
 
 // ====================
-// VENDOR ONBOARDING ROUTES (Public view, but submission requires auth)
+// VENDOR ONBOARDING ROUTES (Public view and submission, status requires auth)
 // ====================
 Route::prefix('vendor')->name('vendor.')->group(function () {
-    // Public view of onboarding form
+    // Public routes (form view and submission - handles both authenticated and unauthenticated users)
     Route::get('/onboard', [VendorOnboardingController::class, 'create'])->name('onboard.create');
+    Route::post('/onboard', [VendorOnboardingController::class, 'store'])->name('onboard.store');
     
     // Protected routes (require login)
     Route::middleware(['auth'])->group(function () {
-        Route::post('/onboard', [VendorOnboardingController::class, 'store'])->name('onboard.store');
         Route::get('/onboard/status', [VendorOnboardingController::class, 'show'])->name('onboard.status');
         Route::post('/onboard/additional', [VendorOnboardingController::class, 'uploadAdditional'])->name('onboard.additional');
     });
 });
+
 // ====================
 // AUTHENTICATED ROUTES
 // ====================
 
 Route::middleware(['auth'])->group(function () {
     
-   // ====================
-// VENDOR ROUTES
-// ====================
-Route::middleware(['check.vendor.status'])->prefix('vendor')->name('vendor.')->group(function () {    Route::get('/dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
-    
-    // Listings management
-    Route::resource('listings', ListingController::class)->except(['index', 'show']);
-    
-    // Import requests
-    Route::prefix('imports')->name('imports.')->group(function () {
-        Route::get('/', [ImportController::class, 'index'])->name('index');
-        Route::post('/request', [ImportController::class, 'store'])->name('request.store');
-        Route::post('/{import}/calculate', [ImportController::class, 'calculate'])->name('request.calculate');
-        Route::post('/{import}/start', [ImportController::class, 'startImport'])->name('request.start');
-    });
-    
-    // Orders
-    Route::get('/orders', [\App\Http\Controllers\Vendor\VendorOrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{order}', [\App\Http\Controllers\Vendor\VendorOrderController::class, 'show'])->name('orders.show');
-});
+    // ====================
+    // VENDOR ROUTES
+    // ====================
+    Route::middleware(['check.vendor.status'])->prefix('vendor')->name('vendor.')->group(function () {
+        Route::get('/dashboard', [VendorDashboardController::class, 'index'])->name('dashboard');
+        
+        // Import management
+        Route::prefix('imports')->name('imports.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Marketplace\ImportController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Marketplace\ImportController::class, 'create'])->name('create');
+            Route::post('/request', [\App\Http\Controllers\Marketplace\ImportController::class, 'store'])->name('request.store');
+            Route::post('/{import}/calculate', [\App\Http\Controllers\Marketplace\ImportController::class, 'calculate'])->name('request.calculate');
+            Route::post('/{import}/start', [\App\Http\Controllers\Marketplace\ImportController::class, 'startImport'])->name('request.start');
+        });
+        
+        // Vendor listings
+        Route::get('/listings', [ListingController::class, 'index'])->name('listings.index');
+        Route::get('/listings/create', [ListingController::class, 'create'])->name('listings.create');
+        Route::post('/listings', [ListingController::class, 'store'])->name('listings.store');
+        Route::get('/listings/{listing}/edit', [ListingController::class, 'edit'])->name('listings.edit');
+        Route::put('/listings/{listing}', [ListingController::class, 'update'])->name('listings.update');
+        Route::delete('/listings/{listing}', [ListingController::class, 'destroy'])->name('listings.destroy');
+        Route::post('/listings/{listing}/toggle-status', [ListingController::class, 'toggleStatus'])->name('listings.toggleStatus');
+        Route::post('/listings/bulk-update', [ListingController::class, 'bulkUpdate'])->name('listings.bulkUpdate');
 
-    
+        // Vendor orders
+        Route::get('/orders', [VendorOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [VendorOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{order}/status', [VendorOrderController::class, 'updateStatus'])->name('orders.updateStatus');
+        Route::post('/orders/{order}/ship', [VendorOrderController::class, 'markShipped'])->name('orders.markShipped');
+        Route::post('/orders/{order}/cancel', [VendorOrderController::class, 'requestCancel'])->name('orders.requestCancel');
+        Route::get('/orders/{order}/packing-slip', [VendorOrderController::class, 'packingSlip'])->name('orders.packingSlip');
+
+        // Vendor promotions
+        Route::prefix('promotions')->name('promotions.')->group(function () {
+            Route::get('/', [PromotionController::class, 'index'])->name('index');
+            Route::get('/create', [PromotionController::class, 'create'])->name('create');
+            Route::post('/', [PromotionController::class, 'store'])->name('store');
+            Route::get('/{promotion}', [PromotionController::class, 'show'])->name('show');
+            Route::post('/{promotion}/cancel', [PromotionController::class, 'cancel'])->name('cancel');
+            Route::post('/{promotion}/extend', [PromotionController::class, 'extend'])->name('extend');
+            Route::get('/statistics', [PromotionController::class, 'statistics'])->name('statistics');
+        });
+
+        // Vendor profile
+        Route::get('/profile', [\App\Http\Controllers\Vendor\VendorProfileController::class, 'show'])->name('profile.show');
+        Route::put('/profile', [\App\Http\Controllers\Vendor\VendorProfileController::class, 'update'])->name('profile.update');
+        
+        // Vendor analytics
+        Route::get('/analytics', function () {
+            return view('vendor.analytics.index');
+        })->name('analytics');
+    });
+
     // ====================
     // ADMIN ROUTES
     // ====================
@@ -119,17 +164,23 @@ Route::middleware(['check.vendor.status'])->prefix('vendor')->name('vendor.')->g
         // Vendor vetting
         Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
         Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
+        Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
         Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
         Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
         Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
         Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
 
-         // Document verification
+        // Document verification
         Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
         Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
         
         // Category management
-        Route::resource('categories', CategoryController::class);
+        Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+        Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+        Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+        Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+        Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
         Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
         
         // Orders
@@ -142,6 +193,13 @@ Route::middleware(['check.vendor.status'])->prefix('vendor')->name('vendor.')->g
         
         // Reports
         Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+
+        // Escrow management
+        Route::prefix('escrows')->name('escrows.')->group(function () {
+            Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
+            Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
+            Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
+        });
     });
     
     // ====================
@@ -195,29 +253,60 @@ Route::middleware(['check.vendor.status'])->prefix('vendor')->name('vendor.')->g
     });
     
     // ====================
-    // BUYER ROUTES (Regular Users)
+    // BUYER ROUTES (AUTHENTICATION REQUIRED)
     // ====================
-    Route::middleware(['role:buyer'])->group(function () {
-        // Orders
-        Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-        Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    Route::middleware(['auth', 'role:buyer'])->prefix('buyer')->name('buyer.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/profile', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'profile'])->name('profile');
+        Route::post('/profile', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'updateProfile'])->name('profile.update');
+        Route::post('/change-password', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'changePassword'])->name('profile.change-password');
         
-        // Cart
+        // Wallet
+        Route::prefix('wallet')->name('wallet.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Buyer\WalletController::class, 'index'])->name('index');
+            Route::post('/deposit', [\App\Http\Controllers\Buyer\WalletController::class, 'deposit'])->name('deposit');
+            Route::post('/withdraw', [\App\Http\Controllers\Buyer\WalletController::class, 'withdraw'])->name('withdraw');
+            Route::get('/transactions', [\App\Http\Controllers\Buyer\WalletController::class, 'transactions'])->name('transactions');
+            Route::get('/balance', [\App\Http\Controllers\Buyer\WalletController::class, 'getBalance'])->name('balance');
+        });
+        
+        // Cart (PROTECTED - requires authentication)
         Route::get('/cart', [\App\Http\Controllers\Buyer\CartController::class, 'index'])->name('cart.index');
         Route::post('/cart/add/{listing}', [\App\Http\Controllers\Buyer\CartController::class, 'add'])->name('cart.add');
-        Route::delete('/cart/remove/{item}', [\App\Http\Controllers\Buyer\CartController::class, 'remove'])->name('cart.remove');
+        Route::post('/cart/update/{listingId}', [\App\Http\Controllers\Buyer\CartController::class, 'update'])->name('cart.update');
+        Route::delete('/cart/remove/{listingId}', [\App\Http\Controllers\Buyer\CartController::class, 'remove'])->name('cart.remove');
+        Route::post('/cart/clear', [\App\Http\Controllers\Buyer\CartController::class, 'clear'])->name('cart.clear');
+        Route::get('/cart/summary', [\App\Http\Controllers\Buyer\CartController::class, 'getCartSummary'])->name('cart.summary');
         
-        // Wishlist
+        // Wishlist (PROTECTED - requires authentication)
         Route::get('/wishlist', [\App\Http\Controllers\Buyer\WishlistController::class, 'index'])->name('wishlist.index');
         Route::post('/wishlist/add/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'add'])->name('wishlist.add');
+        Route::delete('/wishlist/remove/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'remove'])->name('wishlist.remove');
+        Route::post('/wishlist/toggle/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'toggle'])->name('wishlist.toggle');
+        Route::post('/wishlist/move-to-cart/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
+        
+        // Orders
+        Route::prefix('orders')->name('orders.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Buyer\OrderController::class, 'index'])->name('index');
+            Route::get('/{order}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->name('show');
+            Route::get('/checkout', [\App\Http\Controllers\Buyer\OrderController::class, 'checkout'])->name('checkout');
+            Route::post('/place-order', [\App\Http\Controllers\Buyer\OrderController::class, 'placeOrder'])->name('place-order');
+            Route::post('/{order}/cancel', [\App\Http\Controllers\Buyer\OrderController::class, 'cancelOrder'])->name('cancel');
+            Route::post('/{order}/confirm-delivery', [\App\Http\Controllers\Buyer\OrderController::class, 'confirmDelivery'])->name('confirm-delivery');
+        });
         
         // Disputes
-        Route::post('/orders/{order}/dispute', [\App\Http\Controllers\Buyer\DisputeController::class, 'store'])->name('disputes.store');
+        Route::prefix('disputes')->name('disputes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Buyer\DisputeController::class, 'index'])->name('index');
+            Route::get('/create/{order}', [\App\Http\Controllers\Buyer\DisputeController::class, 'create'])->name('create');
+            Route::post('/store/{order}', [\App\Http\Controllers\Buyer\DisputeController::class, 'store'])->name('store');
+            Route::get('/{dispute}', [\App\Http\Controllers\Buyer\DisputeController::class, 'show'])->name('show');
+            Route::post('/{dispute}/add-evidence', [\App\Http\Controllers\Buyer\DisputeController::class, 'addEvidence'])->name('add-evidence');
+            Route::post('/{dispute}/accept-resolution', [\App\Http\Controllers\Buyer\DisputeController::class, 'acceptResolution'])->name('accept-resolution');
+        });
     });
 });
-
-
 
 // ====================
 // IMPORT CALCULATOR (Public API)
@@ -241,7 +330,6 @@ if (config('app.debug')) {
     });
     
     Route::get('/debug/setup', function () {
-        // Quick setup for testing
         return view('debug.setup');
     });
 }

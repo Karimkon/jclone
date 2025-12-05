@@ -76,4 +76,50 @@ class VendorProfile extends Model
     {
         return $this->meta['guarantor'] ?? null;
     }
+
+public function balance()
+{
+    return $this->hasOne(VendorBalance::class);
+}
+
+public function transactions()
+{
+    return $this->hasMany(VendorTransaction::class);
+}
+
+public function withdrawals()
+{
+    return $this->hasMany(VendorWithdrawal::class);
+}
+
+/**
+ * Get or create vendor balance
+ */
+public function getBalanceRecordAttribute()
+{
+    if (!$this->balance) {
+        return VendorBalance::create([
+            'vendor_profile_id' => $this->id,
+            'balance' => 0,
+            'pending_balance' => 0,
+        ]);
+    }
+    return $this->balance;
+}
+
+/**
+ * Get available balance
+ */
+public function getAvailableBalanceAttribute()
+{
+    return $this->balanceRecord->available_balance ?? 0;
+}
+
+/**
+ * Get pending balance (in escrow)
+ */
+public function getPendingBalanceAttribute()
+{
+    return $this->balanceRecord->pending_balance ?? 0;
+}
 }

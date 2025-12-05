@@ -47,6 +47,13 @@ class VendorOnboardingController extends Controller
      */
     public function store(Request $request)
     {
+        // Log incoming request for debugging
+        Log::info('Vendor onboarding form submitted', [
+            'is_authenticated' => Auth::check(),
+            'has_files' => $request->hasFile('national_id_front'),
+            'request_keys' => array_keys($request->all()),
+        ]);
+        
         // Determine if this is a new user registration or existing user onboarding
         $isNewUser = !Auth::check();
         
@@ -86,8 +93,17 @@ class VendorOnboardingController extends Controller
             ]);
         }
         
-        // Validate all fields
-        $validated = $request->validate($validationRules);
+        // Validate all fields with better error handling
+        try {
+            $validated = $request->validate($validationRules);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Vendor onboarding validation failed', [
+                'errors' => $e->errors(),
+                'request_data' => $request->except(['password', 'password_confirmation']),
+            ]);
+            
+            return back()->withErrors($e->errors())->withInput();
+        }
 
         // Start database transaction
         DB::beginTransaction();
@@ -168,8 +184,20 @@ class VendorOnboardingController extends Controller
 
             foreach ($documents as $doc) {
                 $file = $doc['file'];
+                
+                // Validate file exists and is valid
+                if (!$file || !$file->isValid()) {
+                    throw new \Exception('Invalid file uploaded: ' . ($doc['type'] ?? 'unknown'));
+                }
+                
+                // Store file
                 $path = $file->store('vendor-documents/' . $vendorProfile->id, 'public');
                 
+                if (!$path) {
+                    throw new \Exception('Failed to store file: ' . $file->getClientOriginalName());
+                }
+                
+                // Create document record
                 VendorDocument::create([
                     'vendor_profile_id' => $vendorProfile->id,
                     'type' => $doc['type'],
@@ -183,6 +211,12 @@ class VendorOnboardingController extends Controller
                         'subtype' => $doc['subtype'] ?? null,
                     ],
                     'status' => 'uploaded',
+                ]);
+                
+                Log::info('Document uploaded successfully', [
+                    'vendor_profile_id' => $vendorProfile->id,
+                    'type' => $doc['type'],
+                    'path' => $path,
                 ]);
             }
             
@@ -231,15 +265,26 @@ class VendorOnboardingController extends Controller
             return redirect()->route('vendor.onboard.status')
                 ->with('success', 'Vendor application submitted successfully! It will be reviewed within 24-48 hours. Check your email for updates.');
 
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            DB::rollBack();
+            Log::error('Vendor onboarding validation exception', [
+                'errors' => $e->errors(),
+            ]);
+            
+            return back()->withErrors($e->errors())->withInput()
+                ->with('error', 'Please correct the errors below and try again.');
+                
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Vendor onboarding failed', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
             
             return back()->withInput()
-                ->with('error', 'Failed to submit application. Please try again. If the problem persists, contact support.');
+                ->with('error', 'Failed to submit application: ' . $e->getMessage() . '. Please try again or contact support.');
         }
     }
 
@@ -248,25 +293,24 @@ class VendorOnboardingController extends Controller
      * Requires authentication
      */
     public function show()
-    {
-        // Ensure user is authenticated
-        if (!Auth::check()) {
-            return redirect()->route('login')
-                ->with('error', 'Please login to view your application status.');
-        }
-        
-        $vendorProfile = Auth::user()->vendorProfile;
-        
-        if (!$vendorProfile) {
-            return redirect()->route('vendor.onboard.create')
-                ->with('info', 'You have not submitted a vendor application yet.');
-        }
-
-        $documents = $vendorProfile->documents;
-        $score = $vendorProfile->scores()->latest()->first();
-        
-        return view('vendor.onboarding.status', compact('vendorProfile', 'documents', 'score'));
+{
+    // Check if user is logged in
+    if (!Auth::check()) {
+        return redirect()->route('login')->with('error', 'Please login to view your application status.');
     }
+    
+    $vendorProfile = Auth::user()->vendorProfile;
+    
+    if (!$vendorProfile) {
+        return redirect()->route('vendor.onboard.create')
+            ->with('info', 'You haven\'t submitted a vendor application yet.');
+    }
+
+    $documents = $vendorProfile->documents;
+    $score = $vendorProfile->scores()->latest()->first();
+    
+    return view('vendor.onboarding.status', compact('vendorProfile', 'documents', 'score'));
+}
 
     /**
      * Upload additional documents

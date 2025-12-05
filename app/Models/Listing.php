@@ -8,7 +8,9 @@ class Listing extends Model {
     use HasFactory;
 
     protected $fillable = [
-        'vendor_profile_id','title','description','sku','price','weight_kg','origin','condition','category','stock','attributes','is_active'
+        'vendor_profile_id', 'title', 'description', 'sku', 'price', 
+        'weight_kg', 'origin', 'condition', 'category_id', 'stock', 
+        'attributes', 'is_active'
     ];
 
     protected $casts = [
@@ -20,6 +22,11 @@ class Listing extends Model {
 
     public function vendor() {
         return $this->belongsTo(VendorProfile::class, 'vendor_profile_id');
+    }
+
+    // ADD THIS RELATIONSHIP
+    public function category() {
+        return $this->belongsTo(Category::class, 'category_id');
     }
 
     public function images() {

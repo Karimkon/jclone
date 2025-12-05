@@ -77,8 +77,7 @@
                 <i class="fas fa-user-circle mr-3"></i> Profile
             </a>
             
-            <a href="{{ route('imports.request.store') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('imports*') ? 'bg-indigo-800' : '' }}">
-                <i class="fas fa-plane mr-3"></i> Import Goods
+            <a href="{{ route('vendor.imports.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/imports*') ? 'bg-indigo-800' : '' }}">                <i class="fas fa-plane mr-3"></i> Import Goods
             </a>
             
             <a href="{{ route('vendor.promotions.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/promotions*') ? 'bg-indigo-800' : '' }}">

@@ -1,377 +1,353 @@
-@extends('layouts.vendor')
+@extends('layouts.app')
 
-@section('title', 'Onboarding Status - JClone')
+@section('title', 'Application Status - JClone')
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <!-- Status Header -->
-    <div class="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-8 text-white mb-8">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-3xl font-bold mb-2">Vendor Application Status</h1>
-                <p class="text-blue-100">Your application is being reviewed by our team</p>
-            </div>
-            <div class="bg-white/20 p-4 rounded-xl">
-                <i class="fas fa-clipboard-check text-4xl"></i>
-            </div>
-        </div>
-    </div>
-
-    <!-- Status Card -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        <!-- Current Status -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Current Status</h3>
-            
-            @php
-                $statusColors = [
-                    'pending' => 'bg-yellow-100 text-yellow-800',
-                    'approved' => 'bg-green-100 text-green-800',
-                    'rejected' => 'bg-red-100 text-red-800',
-                    'manual_review' => 'bg-blue-100 text-blue-800'
-                ];
-                
-                $statusIcons = [
-                    'pending' => 'fas fa-clock',
-                    'approved' => 'fas fa-check-circle',
-                    'rejected' => 'fas fa-times-circle',
-                    'manual_review' => 'fas fa-user-check'
-                ];
-            @endphp
-            
-            <div class="flex items-center mb-4">
-                <div class="mr-4">
-                    <span class="{{ $statusColors[$vendorProfile->vetting_status] }} px-4 py-2 rounded-full font-bold">
-                        <i class="{{ $statusIcons[$vendorProfile->vetting_status] }} mr-2"></i>
-                        {{ strtoupper(str_replace('_', ' ', $vendorProfile->vetting_status)) }}
-                    </span>
-                </div>
-            </div>
-            
-            <p class="text-gray-600 mb-4">
-                @if($vendorProfile->vetting_status == 'pending')
-                    Your application has been received and is in the queue for review.
-                @elseif($vendorProfile->vetting_status == 'manual_review')
-                    Your application requires additional manual verification.
-                @elseif($vendorProfile->vetting_status == 'approved')
-                    Congratulations! Your vendor account has been approved.
-                @elseif($vendorProfile->vetting_status == 'rejected')
-                    Your application was not approved at this time.
-                @endif
-            </p>
-            
-            @if($vendorProfile->vetting_notes)
-                <div class="bg-gray-50 p-4 rounded-lg">
-                    <p class="font-medium text-gray-700">Admin Notes:</p>
-                    <p class="text-gray-600">{{ $vendorProfile->vetting_notes }}</p>
-                </div>
-            @endif
-        </div>
-
-        <!-- Vendor Score -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Vendor Score</h3>
-            
-            @if($score)
-                <div class="text-center mb-6">
-                    <div class="inline-block relative">
-                        <svg class="w-32 h-32" viewBox="0 0 36 36">
-                            <path d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                                  fill="none" stroke="#e6e6e6" stroke-width="3"/>
-                            <path d="M18 2.0845
-                                    a 15.9155 15.9155 0 0 1 0 31.831
-                                    a 15.9155 15.9155 0 0 1 0 -31.831"
-                                  fill="none" stroke="#4f46e5" 
-                                  stroke-width="3" stroke-dasharray="{{ $score->score }}, 100"/>
-                        </svg>
-                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                            <span class="text-3xl font-bold text-gray-800">{{ $score->score }}</span>
-                            <span class="block text-sm text-gray-600">out of 100</span>
-                        </div>
-                    </div>
-                </div>
-                
-                @if($score->factors)
-                    <div class="space-y-3">
-                        @foreach($score->factors as $factor => $value)
-                            @if(is_bool($value) && $value)
-                                <div class="flex items-center text-green-600">
-                                    <i class="fas fa-check-circle mr-2"></i>
-                                    <span>{{ str_replace('_', ' ', ucfirst($factor)) }}</span>
-                                </div>
-                            @elseif(is_numeric($value))
-                                <div class="flex justify-between items-center">
-                                    <span>{{ str_replace('_', ' ', ucfirst($factor)) }}</span>
-                                    <span class="font-bold">{{ $value }} points</span>
-                                </div>
-                            @endif
-                        @endforeach
-                    </div>
-                @endif
-            @else
-                <p class="text-gray-500 text-center py-4">Score not available yet</p>
-            @endif
-        </div>
-
-        <!-- Next Steps -->
-        <div class="bg-white rounded-xl shadow-lg p-6">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Next Steps</h3>
-            
-            <div class="space-y-4">
-                @if($vendorProfile->vetting_status == 'pending')
-                    <div class="flex items-start">
-                        <div class="bg-blue-100 p-2 rounded-lg mr-3">
-                            <i class="fas fa-clock text-blue-600"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium">Awaiting Review</p>
-                            <p class="text-sm text-gray-600">Our team will review your documents within 24-48 hours</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start">
-                        <div class="bg-gray-100 p-2 rounded-lg mr-3">
-                            <i class="fas fa-check text-gray-400"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-400">Document Verification</p>
-                            <p class="text-sm text-gray-400">Will begin after initial review</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-start">
-                        <div class="bg-gray-100 p-2 rounded-lg mr-3">
-                            <i class="fas fa-check text-gray-400"></i>
-                        </div>
-                        <div>
-                            <p class="font-medium text-gray-400">Account Activation</p>
-                            <p class="text-sm text-gray-400">You'll receive email notification</p>
-                        </div>
-                    </div>
-                    
-                @elseif($vendorProfile->vetting_status == 'approved')
-                    <div class="bg-green-50 p-4 rounded-lg">
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-check-circle text-green-600 text-2xl mr-3"></i>
-                            <h4 class="font-bold text-green-800">Account Approved!</h4>
-                        </div>
-                        <p class="text-green-700">Your vendor account is now active. You can start:</p>
-                        <ul class="mt-2 space-y-2">
-                            <li class="flex items-center">
-                                <i class="fas fa-arrow-right text-green-500 mr-2"></i>
-                                <a href="{{ route('vendor.listings.create') }}" class="text-green-600 hover:text-green-800">Create your first listing</a>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-arrow-right text-green-500 mr-2"></i>
-                                <a href="{{ route('vendor.profile.show') }}" class="text-green-600 hover:text-green-800">Complete your store profile</a>
-                            </li>
-                            <li class="flex items-center">
-                                <i class="fas fa-arrow-right text-green-500 mr-2"></i>
-                                <a href="{{ route('vendor.dashboard') }}" class="text-green-600 hover:text-green-800">Go to vendor dashboard</a>
-                            </li>
-                        </ul>
-                    </div>
-                    
-                @elseif($vendorProfile->vetting_status == 'rejected')
-                    <div class="bg-red-50 p-4 rounded-lg">
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-times-circle text-red-600 text-2xl mr-3"></i>
-                            <h4 class="font-bold text-red-800">Application Rejected</h4>
-                        </div>
-                        <p class="text-red-700">Your application did not meet our requirements.</p>
-                        <div class="mt-3">
-                            <a href="{{ route('vendor.onboard.create') }}" 
-                               class="inline-block bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
-                                Re-apply with corrected documents
-                            </a>
-                        </div>
-                    </div>
-                    
-                @elseif($vendorProfile->vetting_status == 'manual_review')
-                    <div class="bg-blue-50 p-4 rounded-lg">
-                        <div class="flex items-center mb-2">
-                            <i class="fas fa-user-check text-blue-600 text-2xl mr-3"></i>
-                            <h4 class="font-bold text-blue-800">Manual Review Required</h4>
-                        </div>
-                        <p class="text-blue-700">Our team needs additional verification. You may be contacted for more information.</p>
-                        <div class="mt-3">
-                            <button onclick="uploadAdditional()" 
-                                    class="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                                Upload Additional Documents
-                            </button>
-                        </div>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Uploaded Documents -->
-    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-xl font-bold text-gray-800">Uploaded Documents</h3>
-            <button onclick="uploadAdditional()" 
-                    class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                <i class="fas fa-upload mr-2"></i>Upload Additional
-            </button>
-        </div>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+    <div class="max-w-4xl mx-auto">
         
-        @if($documents->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($documents as $document)
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Vendor Application Status</h1>
+            <p class="text-gray-600 text-lg">Track the progress of your vendor application</p>
+        </div>
+
+        <!-- Main Card -->
+        <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-8">
+                
+                <!-- Success Message -->
+                @if(session('success'))
+                <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-8">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-green-400"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-800">{{ session('success') }}</p>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Application Status -->
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">Application Status</h2>
+                    
                     @php
                         $statusColors = [
-                            'uploaded' => 'bg-yellow-100 text-yellow-800',
-                            'verified' => 'bg-green-100 text-green-800',
-                            'rejected' => 'bg-red-100 text-red-800'
+                            'pending' => 'bg-yellow-100 text-yellow-800',
+                            'approved' => 'bg-green-100 text-green-800',
+                            'rejected' => 'bg-red-100 text-red-800',
+                            'under_review' => 'bg-blue-100 text-blue-800',
                         ];
                         
-                        $typeLabels = [
-                            'national_id' => 'National ID',
-                            'bank_statement' => 'Bank Statement',
-                            'proof_of_address' => 'Proof of Address',
-                            'guarantor_id' => 'Guarantor ID',
-                            'company_docs' => 'Company Document',
-                            'additional_id' => 'Additional ID',
-                            'bank_statement_update' => 'Bank Statement Update',
-                            'business_license' => 'Business License',
-                            'other' => 'Other Document'
+                        $statusIcons = [
+                            'pending' => 'fas fa-clock',
+                            'approved' => 'fas fa-check-circle',
+                            'rejected' => 'fas fa-times-circle',
+                            'under_review' => 'fas fa-search',
+                        ];
+                        
+                        $statusMessages = [
+                            'pending' => 'Your application is pending review',
+                            'approved' => 'Your application has been approved!',
+                            'rejected' => 'Your application was rejected',
+                            'under_review' => 'Your application is under review',
                         ];
                     @endphp
                     
-                    <div class="border rounded-lg p-4 hover:shadow-md transition">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="font-medium">{{ $typeLabels[$document->type] ?? ucfirst($document->type) }}</span>
-                            <span class="text-xs {{ $statusColors[$document->status] }} px-2 py-1 rounded-full">
-                                {{ ucfirst($document->status) }}
+                    <div class="flex items-center justify-between p-6 bg-gray-50 rounded-xl">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full {{ $statusColors[$vendorProfile->vetting_status] ?? 'bg-gray-100 text-gray-800' }}">
+                                <i class="{{ $statusIcons[$vendorProfile->vetting_status] ?? 'fas fa-info-circle' }} text-2xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-gray-900">
+                                    {{ ucfirst(str_replace('_', ' ', $vendorProfile->vetting_status)) }}
+                                </h3>
+                                <p class="text-gray-600">
+                                    {{ $statusMessages[$vendorProfile->vetting_status] ?? 'Status unknown' }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        @if($vendorProfile->vetting_status === 'pending')
+                        <div class="animate-pulse">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                                <span class="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                                Processing
                             </span>
                         </div>
-                        
-                        <p class="text-sm text-gray-600 mb-3">
-                            {{ basename($document->path) }}
-                        </p>
-                        
-                        <div class="flex space-x-2">
-                            <a href="{{ Storage::url($document->path) }}" target="_blank" 
-                               class="text-sm text-blue-600 hover:text-blue-800">
-                                <i class="fas fa-eye mr-1"></i>View
-                            </a>
-                            <span class="text-gray-300">|</span>
-                            <a href="{{ Storage::url($document->path) }}" download 
-                               class="text-sm text-green-600 hover:text-green-800">
-                                <i class="fas fa-download mr-1"></i>Download
-                            </a>
-                        </div>
-                        
-                        @if($document->ocr_data && isset($document->ocr_data['uploaded_at']))
-                            <p class="text-xs text-gray-500 mt-2">
-                                Uploaded: {{ \Carbon\Carbon::parse($document->ocr_data['uploaded_at'])->format('M d, Y') }}
-                            </p>
                         @endif
                     </div>
-                @endforeach
-            </div>
-        @else
-            <p class="text-gray-500 text-center py-4">No documents uploaded yet</p>
-        @endif
-    </div>
+                    
+                    <!-- Status Notes -->
+                    @if($vendorProfile->vetting_notes)
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-2">Review Notes:</h4>
+                        <p class="text-blue-700">{{ $vendorProfile->vetting_notes }}</p>
+                    </div>
+                    @endif
+                </div>
 
-    <!-- Additional Info -->
-    <div class="bg-gray-50 rounded-xl p-6">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Need Help?</h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div class="text-center">
-                <div class="bg-white p-4 rounded-xl inline-block mb-3">
-                    <i class="fas fa-envelope text-indigo-600 text-2xl"></i>
+                <!-- Business Information -->
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">Business Information</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Business Name</label>
+                            <p class="text-gray-900 font-medium">{{ $vendorProfile->business_name }}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Vendor Type</label>
+                            <p class="text-gray-900 font-medium">
+                                @switch($vendorProfile->vendor_type)
+                                    @case('local_retail')
+                                        Local Retailer
+                                        @break
+                                    @case('china_supplier')
+                                        International Supplier
+                                        @break
+                                    @case('dropship')
+                                        Dropshipper
+                                        @break
+                                    @default
+                                        {{ $vendorProfile->vendor_type }}
+                                @endswitch
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Country</label>
+                            <p class="text-gray-900 font-medium">{{ $vendorProfile->country }}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">City</label>
+                            <p class="text-gray-900 font-medium">{{ $vendorProfile->city }}</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Currency</label>
+                            <p class="text-gray-900 font-medium">{{ $vendorProfile->preferred_currency }}</p>
+                        </div>
+                        
+                        @if($vendorProfile->annual_turnover)
+                        <div>
+                            <label class="block text-sm font-medium text-gray-500 mb-1">Annual Turnover</label>
+                            <p class="text-gray-900 font-medium">${{ number_format($vendorProfile->annual_turnover, 2) }}</p>
+                        </div>
+                        @endif
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label class="block text-sm font-medium text-gray-500 mb-1">Business Address</label>
+                        <p class="text-gray-900">{{ $vendorProfile->address }}</p>
+                    </div>
                 </div>
-                <h4 class="font-bold mb-2">Email Support</h4>
-                <p class="text-gray-600 text-sm">vendors@jclone.com</p>
-            </div>
-            
-            <div class="text-center">
-                <div class="bg-white p-4 rounded-xl inline-block mb-3">
-                    <i class="fas fa-phone text-green-600 text-2xl"></i>
+
+                <!-- Uploaded Documents -->
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">Uploaded Documents</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        @foreach($documents as $document)
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    @if(in_array($document->mime, ['image/jpeg', 'image/png', 'image/jpg']))
+                                        <i class="fas fa-image text-indigo-500 text-2xl"></i>
+                                    @elseif($document->mime == 'application/pdf')
+                                        <i class="fas fa-file-pdf text-red-500 text-2xl"></i>
+                                    @else
+                                        <i class="fas fa-file text-gray-500 text-2xl"></i>
+                                    @endif
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="font-medium text-gray-900">
+                                        @php
+                                            $docTypes = [
+                                                'national_id' => 'National ID',
+                                                'bank_statement' => 'Bank Statement',
+                                                'proof_of_address' => 'Proof of Address',
+                                                'guarantor_id' => 'Guarantor ID',
+                                                'company_docs' => 'Company Document',
+                                            ];
+                                        @endphp
+                                        {{ $docTypes[$document->type] ?? ucfirst($document->type) }}
+                                        @if(isset($document->ocr_data['side']))
+                                            <span class="text-sm text-gray-500">({{ ucfirst($document->ocr_data['side']) }})</span>
+                                        @endif
+                                    </h4>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Uploaded: {{ \Carbon\Carbon::parse($document->created_at)->format('M d, Y') }}
+                                    </p>
+                                    <p class="text-xs text-gray-400 mt-1">
+                                        {{ $document->mime }}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <a href="{{ Storage::url($document->path) }}" 
+                                   target="_blank"
+                                   class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-eye mr-2"></i>
+                                    View Document
+                                </a>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
                 </div>
-                <h4 class="font-bold mb-2">Phone Support</h4>
-                <p class="text-gray-600 text-sm">+256 700 123 456</p>
-            </div>
-            
-            <div class="text-center">
-                <div class="bg-white p-4 rounded-xl inline-block mb-3">
-                    <i class="fas fa-comments text-purple-600 text-2xl"></i>
+
+                <!-- Next Steps -->
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">What Happens Next?</h2>
+                    
+                    <div class="bg-indigo-50 border-l-4 border-indigo-400 p-6 rounded-lg">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-info-circle text-indigo-400 text-2xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="text-lg font-semibold text-indigo-800 mb-2">Application Review Process</h3>
+                                
+                                <ul class="space-y-3 text-gray-700">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check text-green-500 mt-1 mr-3"></i>
+                                        <span><strong>Step 1:</strong> Application submitted successfully ✓</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-clock text-yellow-500 mt-1 mr-3"></i>
+                                        <span><strong>Step 2:</strong> Our team reviews your documents (24-48 hours)</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-envelope text-blue-500 mt-1 mr-3"></i>
+                                        <span><strong>Step 3:</strong> You'll receive email notification</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-store text-purple-500 mt-1 mr-3"></i>
+                                        <span><strong>Step 4:</strong> Start listing products after approval</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <h4 class="font-bold mb-2">Live Chat</h4>
-                <p class="text-gray-600 text-sm">Available Mon-Fri, 9AM-5PM</p>
+
+                <!-- Score (if available) -->
+                @if($score)
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">Vendor Score</h2>
+                    
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Initial Trust Score</h3>
+                                <p class="text-gray-600">Based on document completeness and verification</p>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-5xl font-bold text-indigo-600 mb-1">{{ $score->score }}/100</div>
+                                <div class="text-sm text-gray-500">Trust Score</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Progress bar -->
+                        <div class="mt-6">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                                <span>Document Completeness</span>
+                                <span>{{ $score->score }}%</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ $score->score }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Guarantor Information -->
+                @if($vendorProfile->meta && isset($vendorProfile->meta['guarantor']))
+                <div class="mb-10">
+                    <h2 class="text-xl font-bold text-gray-800 mb-6 pb-3 border-b">Guarantor Information</h2>
+                    
+                    <div class="bg-gray-50 p-6 rounded-xl">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Guarantor Name</label>
+                                <p class="text-gray-900 font-medium">{{ $vendorProfile->meta['guarantor']['name'] }}</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-500 mb-1">Guarantor Phone</label>
+                                <p class="text-gray-900 font-medium">{{ $vendorProfile->meta['guarantor']['phone'] }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col sm:flex-row gap-4 justify-between pt-8 border-t">
+                    <div>
+                        <a href="{{ route('welcome') }}" 
+                           class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition">
+                            <i class="fas fa-home mr-2"></i>
+                            Back to Home
+                        </a>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <!-- Only show dashboard button if approved -->
+                        @if($vendorProfile->vetting_status === 'approved')
+                        <a href="{{ route('vendor.dashboard') }}" 
+                           class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition">
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            Go to Dashboard
+                        </a>
+                        @endif
+                        
+                        <!-- Logout button -->
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" 
+                                    class="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition">
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                Logout
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal for Additional Documents -->
-<div id="additionalModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Upload Additional Document</h3>
-        
-        <form action="{{ route('vendor.onboard.additional') }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Document Type</label>
-                <select name="document_type" required 
-                        class="w-full px-4 py-3 border border-gray-300 rounded-lg">
-                    <option value="">Select Type</option>
-                    <option value="additional_id">Additional ID</option>
-                    <option value="bank_statement_update">Updated Bank Statement</option>
-                    <option value="business_license">Business License</option>
-                    <option value="other">Other</option>
-                </select>
-            </div>
-            
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Document</label>
-                <input type="file" name="document" required 
-                       class="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                       accept=".jpg,.jpeg,.png,.pdf">
-                <p class="text-sm text-gray-500 mt-1">Max file size: 5MB</p>
-            </div>
-            
-            <div class="mb-6">
-                <label class="block text-gray-700 mb-2">Description (Optional)</label>
-                <textarea name="description" rows="3"
-                          class="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                          placeholder="Describe what this document is for..."></textarea>
-            </div>
-            
-            <div class="flex justify-end space-x-3">
-                <button type="button" onclick="closeAdditionalModal()" 
-                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    Cancel
-                </button>
-                <button type="submit" 
-                        class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                    Upload
-                </button>
-            </div>
-        </form>
+        <!-- Support Info -->
+        <div class="mt-8 text-center">
+            <p class="text-gray-600">
+                <i class="fas fa-question-circle mr-2"></i>
+                Need help? Contact support at 
+                <a href="mailto:support@jclone.com" class="text-indigo-600 hover:text-indigo-800">support@jclone.com</a>
+            </p>
+            <p class="text-sm text-gray-500 mt-2">
+                Application ID: VENDOR-{{ str_pad($vendorProfile->id, 6, '0', STR_PAD_LEFT) }}
+            </p>
+        </div>
+
     </div>
 </div>
 
 <script>
-    function uploadAdditional() {
-        document.getElementById('additionalModal').classList.remove('hidden');
-    }
-    
-    function closeAdditionalModal() {
-        document.getElementById('additionalModal').classList.add('hidden');
-    }
-    
-    // Close modal when clicking outside
-    document.getElementById('additionalModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeAdditionalModal();
-        }
-    });
+    // Auto-refresh page every 30 seconds if status is pending
+    @if($vendorProfile->vetting_status === 'pending')
+    setTimeout(function() {
+        window.location.reload();
+    }, 30000); // 30 seconds
+    @endif
 </script>
 @endsection

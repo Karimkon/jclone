@@ -297,7 +297,7 @@
                     <div class="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-{{ $category->icon ?? 'tag' }} text-primary text-xl"></i>
                     </div>
-                    <h3 class="font-semibold text-sm">{{ $category->name }}</h3>
+                    <h3 class="font-semibold text-sm">{{ $category->name ?? $category }}</h3>
                     <p class="text-xs text-gray-500 mt-1">{{ $category->listings_count ?? 0 }} products</p>
                 </a>
                 @endforeach

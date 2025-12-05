@@ -14,56 +14,58 @@ class LandingController extends Controller
      * Display homepage
      */
     public function index()
-    {
-        // Get active categories for navigation
-        $categories = Category::where('is_active', true)
-            ->whereNull('parent_id')
-            ->orderBy('order')
-            ->take(12)
-            ->get()
-            ->pluck('name');
-        
-        // Get flash sales (active promotions)
-        $flashSales = Promotion::with(['listing.images', 'listing.vendor'])
-            ->where('type', 'flash_sale')
-            ->where('starts_at', '<=', now())
-            ->where('ends_at', '>=', now())
-            ->orderBy('created_at', 'desc')
-            ->take(4)
-            ->get();
-        
-        // Get new arrivals (recent imported products)
-        $newArrivals = Listing::with(['images', 'vendor'])
-            ->where('is_active', true)
-            ->where('origin', 'imported')
-            ->orderBy('created_at', 'desc')
-            ->take(8)
-            ->get();
-        
-        // Get featured local products
-        $localProducts = Listing::with(['images', 'vendor'])
-            ->where('is_active', true)
-            ->where('origin', 'local')
-            ->orderBy('created_at', 'desc')
-            ->take(8)
-            ->get();
-        
-        // Get top categories with product count
-        $topCategories = Category::withCount('listings')
-            ->where('is_active', true)
-            ->whereNull('parent_id')
-            ->orderBy('listings_count', 'desc')
-            ->take(6)
-            ->get();
-        
-        return view('welcome', compact(
-            'categories',
-            'flashSales',
-            'newArrivals',
-            'localProducts',
-            'topCategories'
-        ));
-    }
+{
+    // Get categories WITH listings count
+    $categories = Category::withCount(['listings' => function($query) {
+            $query->where('is_active', true);
+        }])
+        ->where('is_active', true)
+        ->whereNull('parent_id')
+        ->orderBy('order')
+        ->take(12)
+        ->get();
+    
+    // Get flash sales (active promotions)
+    $flashSales = Promotion::with(['listing.images', 'listing.vendor'])
+        ->where('type', 'flash_sale')
+        ->where('starts_at', '<=', now())
+        ->where('ends_at', '>=', now())
+        ->orderBy('created_at', 'desc')
+        ->take(4)
+        ->get();
+    
+    // Get new arrivals (recent imported products)
+    $newArrivals = Listing::with(['images', 'vendor'])
+        ->where('is_active', true)
+        ->where('origin', 'imported')
+        ->orderBy('created_at', 'desc')
+        ->take(8)
+        ->get();
+    
+    // Get featured local products
+    $localProducts = Listing::with(['images', 'vendor'])
+        ->where('is_active', true)
+        ->where('origin', 'local')
+        ->orderBy('created_at', 'desc')
+        ->take(8)
+        ->get();
+    
+    // Get top categories with product count (for top section if needed)
+    $topCategories = Category::withCount('listings')
+        ->where('is_active', true)
+        ->whereNull('parent_id')
+        ->orderBy('listings_count', 'desc')
+        ->take(6)
+        ->get();
+    
+    return view('welcome', compact(
+        'categories',
+        'flashSales',
+        'newArrivals',
+        'localProducts',
+        'topCategories'
+    ));
+}
 
     /**
      * Display about page

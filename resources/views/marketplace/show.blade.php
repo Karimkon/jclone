@@ -68,12 +68,13 @@
                             <!-- Thumbnail Images -->
                             @if($listing->images->count() > 1)
                             <div class="mt-4 flex space-x-2 overflow-x-auto pb-2">
-                                @foreach($listing->images as $image)
-                                <button onclick="changeMainImage('{{ asset('storage/' . $image->path) }}')"
+                               @foreach($listing->images as $image)
+                                <button onclick="changeMainImage(this)" 
+                                        data-src="{{ asset('storage/' . $image->path) }}"
                                         class="flex-shrink-0 w-20 h-20 border-2 border-transparent hover:border-primary rounded-lg overflow-hidden">
                                     <img src="{{ asset('storage/' . $image->path) }}" 
-                                         alt="{{ $listing->title }}" 
-                                         class="w-full h-full object-cover">
+                                        alt="{{ $listing->title }}" 
+                                        class="w-full h-full object-cover">
                                 </button>
                                 @endforeach
                             </div>
@@ -141,19 +142,19 @@
                                 
                                 <!-- Action Buttons -->
                                 <div class="space-y-3">
-                                    <button onclick="addToCart()"
+                                    <button onclick="addToCart({{ $listing->id }})"
                                             class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center justify-center">
                                         <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                                     </button>
                                     
-                                    <button onclick="addToWishlist()"
+                                    <button onclick="addToWishlist({{ $listing->id }})"
                                             class="w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold flex items-center justify-center">
                                         <i class="fas fa-heart mr-2"></i> Add to Wishlist
                                     </button>
                                     
                                     @auth
                                         @if(auth()->user()->role === 'buyer')
-                                        <button onclick="buyNow()"
+                                        <button onclick="buyNow({{ $listing->id }})"
                                                 class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:opacity-90 font-bold flex items-center justify-center">
                                             <i class="fas fa-bolt mr-2"></i> Buy Now
                                         </button>
@@ -445,11 +446,11 @@
                         @endforeach
                     </div>
                     
-                    @if($category)
+                    @if($listing->category)
                     <div class="mt-4 pt-4 border-t">
-                        <a href="{{ route('categories.show', $category) }}" 
+                        <a href="{{ route('categories.show', $listing->category) }}" 
                            class="block text-center px-4 py-2 border border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-medium">
-                            View More in {{ $category->name }}
+                            View More in {{ $listing->category->name }}
                         </a>
                     </div>
                     @endif
@@ -460,9 +461,65 @@
     </div>
 </div>
 
+<!-- Authentication Modal -->
+<div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-8 relative">
+        <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-lock text-blue-600 text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Sign in Required</h3>
+            <p class="text-gray-600">Please sign in or create an account to add items to your cart or wishlist.</p>
+        </div>
+        
+        <div class="space-y-3">
+            <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold text-center">
+                <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+            </a>
+            
+            <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold text-center">
+                <i class="fas fa-user-plus mr-2"></i> Create Account
+            </a>
+            
+            <button onclick="closeAuthModal()" 
+                    class="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-center">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+@endsection
+
 @section('scripts')
 <script>
-    // Tab functionality
+    // Check if user is authenticated
+    const isAuthenticated = {{ auth()->check() ? 'true' : 'false' }};
+    
+    // Show authentication modal
+    function showAuthModal() {
+        document.getElementById('authModal').classList.remove('hidden');
+    }
+    
+    // Close authentication modal
+    function closeAuthModal() {
+        document.getElementById('authModal').classList.add('hidden');
+    }
+    
+    // Close modal on background click
+    document.getElementById('authModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAuthModal();
+        }
+    });
+    
+    // Initialize when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
         // Tab switching
         const tabs = {
@@ -473,27 +530,122 @@
         };
         
         Object.keys(tabs).forEach(tabId => {
-            document.getElementById(tabId)?.addEventListener('click', function() {
-                // Hide all content
-                Object.values(tabs).forEach(contentId => {
-                    document.getElementById(contentId)?.classList.add('hidden');
+            const tabElement = document.getElementById(tabId);
+            if (tabElement) {
+                tabElement.addEventListener('click', function() {
+                    // Hide all content
+                    Object.values(tabs).forEach(contentId => {
+                        const content = document.getElementById(contentId);
+                        if (content) content.classList.add('hidden');
+                    });
+                    
+                    // Remove active from all tabs
+                    Object.keys(tabs).forEach(tab => {
+                        const tabEl = document.getElementById(tab);
+                        if (tabEl) {
+                            tabEl.classList.remove('border-primary', 'text-primary');
+                            tabEl.classList.add('text-gray-600');
+                        }
+                    });
+                    
+                    // Show selected content
+                    const selectedContent = document.getElementById(tabs[tabId]);
+                    if (selectedContent) {
+                        selectedContent.classList.remove('hidden');
+                    }
+                    
+                    // Activate selected tab
+                    this.classList.remove('text-gray-600');
+                    this.classList.add('border-primary', 'text-primary');
                 });
-                
-                // Remove active from all tabs
-                Object.keys(tabs).forEach(tab => {
-                    const tabElement = document.getElementById(tab);
-                    tabElement.classList.remove('border-primary', 'text-primary');
-                    tabElement.classList.add('text-gray-600');
-                });
-                
-                // Show selected content
-                document.getElementById(tabs[tabId])?.classList.remove('hidden');
-                
-                // Activate selected tab
-                this.classList.remove('text-gray-600');
-                this.classList.add('border-primary', 'text-primary');
+            }
+        });
+        
+        // Quantity minus button
+        const minusBtn = document.querySelector('button[onclick*="updateQuantity(-1)"]');
+        if (minusBtn) {
+            minusBtn.removeAttribute('onclick');
+            minusBtn.addEventListener('click', function() {
+                updateQuantity(-1);
+            });
+        }
+        
+        // Quantity plus button
+        const plusBtn = document.querySelector('button[onclick*="updateQuantity(1)"]');
+        if (plusBtn) {
+            plusBtn.removeAttribute('onclick');
+            plusBtn.addEventListener('click', function() {
+                updateQuantity(1);
+            });
+        }
+        
+        // Add to cart button
+        const addToCartBtn = document.querySelector('button[onclick*="addToCart"]');
+        if (addToCartBtn) {
+            const listingId = {{ $listing->id }};
+            addToCartBtn.removeAttribute('onclick');
+            addToCartBtn.addEventListener('click', function() {
+                addToCart(listingId);
+            });
+        }
+        
+        // Add to wishlist button
+        const addToWishlistBtn = document.querySelector('button[onclick*="addToWishlist"]');
+        if (addToWishlistBtn) {
+            const listingId = {{ $listing->id }};
+            addToWishlistBtn.removeAttribute('onclick');
+            addToWishlistBtn.addEventListener('click', function() {
+                addToWishlist(listingId);
+            });
+        }
+        
+        // Buy now button
+        const buyNowBtn = document.querySelector('button[onclick*="buyNow"]');
+        if (buyNowBtn) {
+            const listingId = {{ $listing->id }};
+            buyNowBtn.removeAttribute('onclick');
+            buyNowBtn.addEventListener('click', function() {
+                buyNow(listingId);
+            });
+        }
+        
+        // Write review button
+        const writeReviewBtn = document.querySelector('button[onclick*="writeReview"]');
+        if (writeReviewBtn) {
+            writeReviewBtn.removeAttribute('onclick');
+            writeReviewBtn.addEventListener('click', writeReview);
+        }
+        
+        // Contact vendor button
+        const contactVendorBtn = document.querySelector('button[onclick*="contactVendor"]');
+        if (contactVendorBtn) {
+            contactVendorBtn.removeAttribute('onclick');
+            contactVendorBtn.addEventListener('click', contactVendor);
+        }
+        
+        // Thumbnail images
+        document.querySelectorAll('button[onclick*="changeMainImage"]').forEach(button => {
+            const src = button.getAttribute('data-src');
+            button.removeAttribute('onclick');
+            button.addEventListener('click', function() {
+                changeMainImage(src);
             });
         });
+        
+        // If user is authenticated, fetch current cart count
+        if (isAuthenticated) {
+            fetch('/buyer/cart/summary')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.authenticated && data.cart_count > 0) {
+                        const cartCountElements = document.querySelectorAll('.cart-count');
+                        cartCountElements.forEach(element => {
+                            element.textContent = data.cart_count;
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching cart:', error));
+        }
     });
     
     // Image gallery
@@ -517,90 +669,325 @@
     }
     
     // Add to cart
-    function addToCart() {
+    function addToCart(listingId) {
+        // Check authentication
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
         const quantity = document.getElementById('quantity').value;
+        const button = document.querySelector('button[onclick*="addToCart"]');
+        const originalText = button.innerHTML;
         
         // Show loading
-        const button = event.target;
-        const originalText = button.innerHTML;
         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
         button.disabled = true;
         
-        // Simulate API call
-        setTimeout(() => {
-            // Show success
-            button.innerHTML = '<i class="fas fa-check mr-2"></i> Added to Cart!';
+        // Make AJAX request
+        fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: parseInt(quantity) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success
+                button.innerHTML = '<i class="fas fa-check mr-2"></i> Added to Cart!';
+                button.classList.remove('bg-primary');
+                button.classList.add('bg-green-500');
+                
+                // Update cart count in the navbar
+                updateCartCount(data.cart_count || 1);
+                
+                // Show success toast
+                showToast(data.message || 'Product added to cart successfully!', 'success');
+                
+                // Revert button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('bg-green-500');
+                    button.classList.add('bg-primary');
+                    button.disabled = false;
+                }, 2000);
+            } else {
+                // Show error
+                button.innerHTML = '<i class="fas fa-times mr-2"></i> Failed!';
+                button.classList.remove('bg-primary');
+                button.classList.add('bg-red-500');
+                button.disabled = true;
+                
+                // Revert after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('bg-red-500');
+                    button.classList.add('bg-primary');
+                    button.disabled = false;
+                }, 2000);
+                
+                // Show error message
+                if (data.message) {
+                    showToast(data.message, 'error');
+                }
+                
+                // Redirect to login if authentication required
+                if (data.redirect) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1500);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            button.innerHTML = '<i class="fas fa-times mr-2"></i> Error!';
             button.classList.remove('bg-primary');
-            button.classList.add('bg-green-500');
+            button.classList.add('bg-red-500');
             
-            // Reset after 2 seconds
             setTimeout(() => {
                 button.innerHTML = originalText;
-                button.classList.remove('bg-green-500');
+                button.classList.remove('bg-red-500');
                 button.classList.add('bg-primary');
                 button.disabled = false;
             }, 2000);
             
-            // Update cart count (you would update this from API response)
-            updateCartCount(parseInt(quantity));
-        }, 1000);
+            showToast('Something went wrong. Please try again.', 'error');
+        });
     }
     
     // Add to wishlist
-    function addToWishlist() {
-        const button = event.target;
+    function addToWishlist(listingId) {
+        // Check authentication
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
+        const button = document.querySelector('button[onclick*="addToWishlist"]');
         const originalText = button.innerHTML;
         
+        // Show loading
         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
         button.disabled = true;
         
-        setTimeout(() => {
-            button.innerHTML = '<i class="fas fa-heart mr-2"></i> Added to Wishlist';
+        // Make AJAX request
+        fetch(`/buyer/wishlist/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success
+                button.innerHTML = '<i class="fas fa-heart mr-2"></i> Added to Wishlist!';
+                button.classList.remove('border-primary', 'text-primary');
+                button.classList.add('bg-red-500', 'text-white', 'border-red-500');
+                
+                // Show success message
+                showToast('Product added to wishlist!', 'success');
+                
+                // Revert after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+                    button.classList.add('border-primary', 'text-primary');
+                    button.disabled = false;
+                }, 2000);
+            } else {
+                // Show error
+                button.innerHTML = '<i class="fas fa-times mr-2"></i> Failed!';
+                button.classList.remove('border-primary', 'text-primary');
+                button.classList.add('bg-red-500', 'text-white', 'border-red-500');
+                
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+                    button.classList.add('border-primary', 'text-primary');
+                    button.disabled = false;
+                }, 2000);
+                
+                showToast('Failed to add to wishlist', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            button.innerHTML = '<i class="fas fa-times mr-2"></i> Error!';
             button.classList.remove('border-primary', 'text-primary');
-            button.classList.add('bg-red-500', 'border-red-500', 'text-white');
-            button.disabled = true;
-        }, 1000);
+            button.classList.add('bg-red-500', 'text-white', 'border-red-500');
+            
+            setTimeout(() => {
+                button.innerHTML = originalText;
+                button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
+                button.classList.add('border-primary', 'text-primary');
+                button.disabled = false;
+            }, 2000);
+            
+            showToast('Something went wrong. Please try again.', 'error');
+        });
     }
     
-    // Buy now
-    function buyNow() {
+    // Buy now (redirects to checkout)
+    function buyNow(listingId) {
+        // Check authentication
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
         const quantity = document.getElementById('quantity').value;
-        // Redirect to checkout
-        window.location.href = `/checkout?listing_id={{ $listing->id }}&quantity=${quantity}`;
+        
+        // Add to cart first, then redirect to checkout
+        fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: parseInt(quantity) })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Redirect to checkout
+                window.location.href = '/buyer/orders/checkout';
+            } else {
+                showToast(data.message || 'Failed to add to cart', 'error');
+                
+                // Redirect to login if needed
+                if (data.redirect) {
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1500);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Something went wrong. Please try again.', 'error');
+        });
     }
     
     // Contact vendor
     function contactVendor() {
-        // Open contact modal or redirect to messages
-        alert('Contact vendor feature coming soon!');
+        // For now, show a message
+        showToast('Contact vendor feature coming soon!', 'info');
     }
     
     // Write review
     function writeReview() {
-        // Open review modal
-        alert('Review feature coming soon!');
+        // Check authentication
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
+        // For now, show a message
+        showToast('Review feature coming soon!', 'info');
     }
     
     // Update cart count in header
-    function updateCartCount(quantity) {
-        const cartCount = document.querySelector('.cart-count');
-        if (cartCount) {
-            const current = parseInt(cartCount.textContent) || 0;
-            cartCount.textContent = current + quantity;
-        }
+    function updateCartCount(addedCount) {
+        const cartCountElements = document.querySelectorAll('.cart-count');
+        
+        cartCountElements.forEach(element => {
+            const current = parseInt(element.textContent) || 0;
+            element.textContent = current + addedCount;
+            
+            // Add animation
+            element.classList.add('animate-bounce');
+            setTimeout(() => {
+                element.classList.remove('animate-bounce');
+            }, 1000);
+        });
+    }
+    
+    // Show toast notification
+    function showToast(message, type = 'info') {
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-0`;
+        
+        // Set styles based on type
+        const typeStyles = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+        
+        toast.className += ` ${typeStyles[type] || typeStyles.info}`;
+        
+        // Add icon
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas ${icons[type] || icons.info} mr-3"></i>
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        // Add to document
+        document.body.appendChild(toast);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
     }
     
     // Validate quantity input
-    document.getElementById('quantity')?.addEventListener('change', function() {
-        let value = parseInt(this.value) || 1;
-        const max = parseInt(this.max) || 99;
-        const min = parseInt(this.min) || 1;
+    const quantityInput = document.getElementById('quantity');
+    if (quantityInput) {
+        quantityInput.addEventListener('change', function() {
+            let value = parseInt(this.value) || 1;
+            const max = parseInt(this.max) || 99;
+            const min = parseInt(this.min) || 1;
+            
+            if (value < min) value = min;
+            if (value > max) value = max;
+            
+            this.value = value;
+        });
         
-        if (value < min) value = min;
-        if (value > max) value = max;
-        
-        this.value = value;
-    });
+        quantityInput.addEventListener('input', function() {
+            let value = parseInt(this.value) || 1;
+            const max = parseInt(this.max) || 99;
+            const min = parseInt(this.min) || 1;
+            
+            if (value < min) this.value = min;
+            if (value > max) this.value = max;
+        });
+    }
 </script>
 
 <style>
@@ -635,6 +1022,36 @@
     
     .overflow-x-auto::-webkit-scrollbar-thumb:hover {
         background: #a1a1a1;
+    }
+    
+    /* Toast animations */
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    .custom-toast {
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    /* Pulse animation for cart count */
+    @keyframes pulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(1.2);
+        }
+    }
+    
+    .animate-pulse-custom {
+        animation: pulse 0.5s ease-in-out;
     }
 </style>
 @endsection
