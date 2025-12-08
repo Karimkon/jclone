@@ -3,93 +3,124 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\Listing;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
+    /**
+     * Display cart
+     */
     public function index()
     {
-        $user = Auth::user();
-        $cart = $user->cart ?? Cart::create([
-            'user_id' => $user->id,
-            'items' => [],
-            'subtotal' => 0,
-            'shipping' => 0,
-            'tax' => 0,
-            'total' => 0
-        ]);
+        $cart = $this->getOrCreateCart();
+        $cartItems = [];
+        
+        if ($cart && !empty($cart->items)) {
+            // Enrich cart items with current listing data
+            foreach ($cart->items as $item) {
+                $listing = Listing::with('images', 'vendor')->find($item['listing_id']);
+                if ($listing && $listing->is_active && $listing->stock > 0) {
+                    $cartItems[] = [
+                        'listing_id' => $listing->id,
+                        'title' => $listing->title,
+                        'image' => $listing->images->first() ? asset('storage/' . $listing->images->first()->path) : null,
+                        'vendor_name' => $listing->vendor->business_name ?? 'Vendor',
+                        'unit_price' => $listing->price,
+                        'quantity' => $item['quantity'],
+                        'total' => $listing->price * $item['quantity'],
+                        'weight_kg' => $listing->weight_kg,
+                        'origin' => $listing->origin,
+                        'stock' => $listing->stock,
+                    ];
+                }
+            }
+            
+            // Update cart items with current data
+            $cart->items = $cartItems;
+            $cart->recalculateTotals();
+            $cart->save();
+        }
         
         return view('buyer.cart.index', compact('cart'));
     }
-    
+
     /**
-     * Add item to cart - requires authentication
+     * Add item to cart
      */
-    public function add(Request $request, Listing $listing)
+    public function add(Request $request, $listingId)
     {
-        // Check if user is authenticated
+        // Check authentication
         if (!Auth::check()) {
-            if ($request->ajax()) {
-                return response()->json([
-                    'success' => false,
-                    'redirect' => route('login'),
-                    'message' => 'Please login to add items to cart'
-                ], 401);
-            }
-            
-            return redirect()->route('login')
-                ->with('warning', 'Please login to add items to your cart')
-                ->with('intended', url()->previous());
+            return response()->json([
+                'success' => false,
+                'message' => 'Please login to add items to cart',
+                'redirect' => route('login', ['redirect' => url()->previous()])
+            ], 401);
         }
-        
+
         // Validate quantity
-        $request->validate([
-            'quantity' => 'nullable|integer|min:1|max:' . $listing->stock
-        ]);
-        
         $quantity = $request->input('quantity', 1);
+        if (!is_numeric($quantity) || $quantity < 1) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid quantity'
+            ], 400);
+        }
+
+        // Find listing
+        $listing = Listing::with('images', 'vendor')->find($listingId);
         
-        // Check if listing is active and in stock
+        if (!$listing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found'
+            ], 404);
+        }
+
         if (!$listing->is_active) {
-            return back()->with('error', 'This product is no longer available.');
+            return response()->json([
+                'success' => false,
+                'message' => 'This product is no longer available'
+            ], 400);
         }
-        
+
         if ($listing->stock < $quantity) {
-            return back()->with('error', 'Insufficient stock available.');
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient stock. Only ' . $listing->stock . ' available.'
+            ], 400);
         }
-        
-        // Get or create cart
-        $user = Auth::user();
-        $cart = $user->cart;
-        
-        if (!$cart) {
-            $cart = Cart::create([
-                'user_id' => $user->id,
-                'items' => [],
-                'subtotal' => 0,
-                'shipping' => 0,
-                'tax' => 0,
-                'total' => 0
-            ]);
-        }
-        
-        // Add item to cart
-        $cart->addItem($listing, $quantity);
-        
-        if ($request->ajax()) {
+
+        try {
+            DB::beginTransaction();
+            
+            $cart = $this->getOrCreateCart();
+            $cart->addItem($listing, $quantity);
+            
+            DB::commit();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Product added to cart',
-                'cart_count' => $cart->getItemCountAttribute()
+                'message' => 'Product added to cart successfully!',
+                'cart_count' => count($cart->items ?? []),
+                'cart_total' => number_format($cart->total, 2)
             ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Add to cart error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add product to cart. Please try again.'
+            ], 500);
         }
-        
-        return back()->with('success', 'Product added to cart successfully!');
     }
-    
+
     /**
      * Update cart item quantity
      */
@@ -98,109 +129,124 @@ class CartController extends Controller
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Authentication required'
+                'message' => 'Unauthorized'
             ], 401);
         }
+
+        $quantity = $request->input('quantity', 1);
         
-        $request->validate([
-            'quantity' => 'required|integer|min:1'
-        ]);
-        
-        $cart = Auth::user()->cart;
-        
-        if (!$cart) {
+        if (!is_numeric($quantity) || $quantity < 1) {
             return response()->json([
                 'success' => false,
-                'message' => 'Cart not found'
+                'message' => 'Invalid quantity'
+            ], 400);
+        }
+
+        // Check stock
+        $listing = Listing::find($listingId);
+        if (!$listing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Product not found'
             ], 404);
         }
-        
-        // Check stock availability
-        $listing = Listing::find($listingId);
-        if (!$listing || $listing->stock < $request->quantity) {
+
+        if ($listing->stock < $quantity) {
             return response()->json([
                 'success' => false,
-                'message' => 'Insufficient stock available'
-            ], 422);
+                'message' => 'Insufficient stock. Only ' . $listing->stock . ' available.'
+            ], 400);
         }
-        
-        $cart->updateQuantity($listingId, $request->quantity);
-        
-        return response()->json([
-            'success' => true,
-            'cart' => $cart,
-            'message' => 'Cart updated successfully'
-        ]);
+
+        try {
+            $cart = $this->getOrCreateCart();
+            $cart->updateQuantity($listingId, $quantity);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Cart updated successfully',
+                'cart_count' => count($cart->items ?? []),
+                'cart_total' => number_format($cart->total, 2),
+                'item_total' => number_format($quantity * $listing->price, 2),
+                'subtotal' => number_format($cart->subtotal, 2),
+                'shipping' => number_format($cart->shipping, 2),
+                'tax' => number_format($cart->tax, 2)
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Update cart error: ' . $e->getMessage());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update cart'
+            ], 500);
+        }
     }
-    
+
     /**
      * Remove item from cart
      */
-    public function remove(Request $request, $listingId)
+    public function remove($listingId)
     {
         if (!Auth::check()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Authentication required'
+                'message' => 'Unauthorized'
             ], 401);
         }
-        
-        $cart = Auth::user()->cart;
-        
-        if (!$cart) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cart not found'
-            ], 404);
-        }
-        
-        $cart->removeItem($listingId);
-        
-        if ($request->ajax()) {
+
+        try {
+            $cart = $this->getOrCreateCart();
+            $cart->removeItem($listingId);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Item removed from cart',
-                'cart_count' => $cart->getItemCountAttribute()
+                'cart_count' => count($cart->items ?? []),
+                'cart_total' => number_format($cart->total, 2),
+                'subtotal' => number_format($cart->subtotal, 2),
+                'shipping' => number_format($cart->shipping, 2),
+                'tax' => number_format($cart->tax, 2)
             ]);
-        }
-        
-        return back()->with('success', 'Item removed from cart');
-    }
-    
-    /**
-     * Clear entire cart
-     */
-    public function clear(Request $request)
-    {
-        if (!Auth::check()) {
+
+        } catch (\Exception $e) {
+            \Log::error('Remove from cart error: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Authentication required'
-            ], 401);
+                'message' => 'Failed to remove item'
+            ], 500);
         }
-        
-        $cart = Auth::user()->cart;
-        
-        if ($cart) {
-            $cart->update([
-                'items' => [],
-                'subtotal' => 0,
-                'shipping' => 0,
-                'tax' => 0,
-                'total' => 0
-            ]);
-        }
-        
-        if ($request->ajax()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Cart cleared'
-            ]);
-        }
-        
-        return back()->with('success', 'Cart cleared successfully');
     }
-    
+
+    /**
+     * Clear cart
+     */
+    public function clear()
+    {
+        if (!Auth::check()) {
+            return redirect()->route('login');
+        }
+
+        try {
+            $cart = Cart::where('user_id', Auth::id())->first();
+            if ($cart) {
+                $cart->items = [];
+                $cart->subtotal = 0;
+                $cart->shipping = 0;
+                $cart->tax = 0;
+                $cart->total = 0;
+                $cart->save();
+            }
+
+            return back()->with('success', 'Cart cleared successfully');
+
+        } catch (\Exception $e) {
+            \Log::error('Clear cart error: ' . $e->getMessage());
+            return back()->with('error', 'Failed to clear cart');
+        }
+    }
+
     /**
      * Get cart summary (AJAX)
      */
@@ -209,16 +255,43 @@ class CartController extends Controller
         if (!Auth::check()) {
             return response()->json([
                 'authenticated' => false,
-                'cart_count' => 0
+                'cart_count' => 0,
+                'cart_total' => '0.00'
             ]);
         }
-        
-        $cart = Auth::user()->cart;
+
+        $cart = Cart::where('user_id', Auth::id())->first();
         
         return response()->json([
             'authenticated' => true,
-            'cart_count' => $cart ? $cart->getItemCountAttribute() : 0,
-            'cart' => $cart
+            'cart_count' => $cart ? count($cart->items ?? []) : 0,
+            'cart_total' => $cart ? number_format($cart->total, 2) : '0.00',
+            'subtotal' => $cart ? number_format($cart->subtotal, 2) : '0.00',
+            'shipping' => $cart ? number_format($cart->shipping, 2) : '0.00',
+            'tax' => $cart ? number_format($cart->tax, 2) : '0.00'
         ]);
+    }
+
+    /**
+     * Get or create cart for authenticated user
+     */
+    private function getOrCreateCart()
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        $cart = Cart::firstOrCreate(
+            ['user_id' => Auth::id()],
+            [
+                'items' => [],
+                'subtotal' => 0,
+                'shipping' => 0,
+                'tax' => 0,
+                'total' => 0
+            ]
+        );
+
+        return $cart;
     }
 }

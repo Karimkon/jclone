@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }} - Buy & Sell Everything</title>
     
     <!-- Tailwind CSS -->
@@ -95,7 +96,7 @@
                     </a>
                 </div>
 
-          <!-- User Actions -->
+     <!-- User Actions Section - Fixed Routes -->
 <div class="flex items-center space-x-4">
     @auth
         <!-- Check vendor status using the new helper methods -->
@@ -136,25 +137,36 @@
             </a>
             
         @elseif(auth()->user()->isBuyer())
-            <!-- Regular buyer -->
-            <a href="{{ route('cart.index') }}" class="text-gray-700 hover:text-primary relative">
-                <i class="fas fa-shopping-cart text-xl"></i>
-                <span class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            <!-- Regular buyer - FIXED ROUTES -->
+            <a href="{{ route('buyer.cart.index') }}" class="text-gray-700 hover:text-primary relative">                <i class="fas fa-shopping-cart text-xl"></i>
+                <span class="cart-count absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
             </a>
+            
+            <a href="{{ route('buyer.wishlist.index') }}" class="text-gray-700 hover:text-primary relative">
+                <i class="fas fa-heart text-xl"></i>
+                <span class="wishlist-count absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+            </a>
+            
             <div class="relative group">
                 <button class="flex items-center space-x-2 text-gray-700 hover:text-primary">
                     <i class="fas fa-user-circle text-xl"></i>
                     <span class="hidden md:inline">{{ auth()->user()->name }}</span>
                     <i class="fas fa-chevron-down text-xs"></i>
                 </button>
-                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 hidden group-hover:block">
-                    <a href="{{ route('orders.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 hidden group-hover:block z-50">
+                    <a href="{{ route('buyer.dashboard') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+                    </a>
+                    <a href="{{ route('buyer.orders.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                         <i class="fas fa-shopping-bag mr-2"></i>My Orders
                     </a>
-                    <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                    <a href="{{ route('buyer.wishlist.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                         <i class="fas fa-heart mr-2"></i>Wishlist
                     </a>
-                    <a href="#" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                    <a href="{{ route('buyer.wallet.index') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                        <i class="fas fa-wallet mr-2"></i>Wallet
+                    </a>
+                    <a href="{{ route('buyer.profile') }}" class="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                         <i class="fas fa-cog mr-2"></i>Settings
                     </a>
                     <hr class="my-2">
@@ -169,7 +181,6 @@
             
         @else
             <!-- Logged in but not a buyer or in vendor process (could be admin, logistics, etc.) -->
-            <!-- Or logged in buyer who hasn't started vendor onboarding yet -->
             @if(auth()->user()->role === 'admin' || auth()->user()->role === 'logistics' || auth()->user()->role === 'finance' || auth()->user()->role === 'ceo')
                 <!-- Staff users - show their dashboard -->
                 <a href="{{ route(auth()->user()->role . '.dashboard') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">
@@ -187,7 +198,7 @@
         <a href="{{ route('login') }}" class="text-gray-700 hover:text-primary font-medium">
             <i class="fas fa-sign-in-alt mr-2"></i>Login
         </a>
-         <a href="{{ route('vendor.onboard.create') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">
+        <a href="{{ route('vendor.onboard.create') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">
             <i class="fas fa-store mr-2"></i>Become a Seller
         </a>
     @endauth
@@ -400,22 +411,23 @@
     @endif
 
     <!-- New Arrivals Section -->
-    <section class="py-16">
-        <div class="container mx-auto px-4">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-800 mb-2">🆕 New Arrivals</h2>
-                    <p class="text-gray-600">Freshly imported products just for you</p>
-                </div>
-                <a href="{{ route('marketplace.index') }}" class="mt-4 md:mt-0 inline-flex items-center text-primary font-semibold hover:text-indigo-700">
-                    View All Products <i class="fas fa-arrow-right ml-2"></i>
-                </a>
+<section class="py-16">
+    <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">🆕 New Arrivals</h2>
+                <p class="text-gray-600">Freshly imported products just for you</p>
             </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                @foreach($newArrivals as $listing)
-                <div class="product-card bg-white rounded-xl shadow-md overflow-hidden">
-                    <div class="relative">
+            <a href="{{ route('marketplace.index') }}" class="mt-4 md:mt-0 inline-flex items-center text-primary font-semibold hover:text-indigo-700">
+                View All Products <i class="fas fa-arrow-right ml-2"></i>
+            </a>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            @foreach($newArrivals as $listing)
+            <div class="product-card bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="relative">
+                    <a href="{{ route('marketplace.show', $listing) }}">
                         @if($listing->images->first())
                         <img src="{{ asset('storage/' . $listing->images->first()->path) }}" 
                              alt="{{ $listing->title }}" 
@@ -425,43 +437,62 @@
                             <i class="fas fa-image text-gray-400 text-4xl"></i>
                         </div>
                         @endif
-                        @if($listing->origin == 'imported')
-                        <div class="absolute top-2 left-2 import-badge text-white text-xs font-bold px-2 py-1 rounded">
-                            <i class="fas fa-plane mr-1"></i> Imported
+                    </a>
+                    
+                    @if($listing->origin == 'imported')
+                    <div class="absolute top-2 left-2 import-badge text-white text-xs font-bold px-2 py-1 rounded">
+                        <i class="fas fa-plane mr-1"></i> Imported
+                    </div>
+                    @endif
+                    
+                    <!-- Quick Wishlist Button -->
+                    <button data-quick-wishlist 
+                            data-listing-id="{{ $listing->id }}"
+                            class="absolute top-2 right-2 bg-white w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 transition shadow">
+                        <i class="far fa-heart"></i>
+                    </button>
+                </div>
+                
+                <div class="p-4">
+                    <a href="{{ route('marketplace.show', $listing) }}">
+                        <h3 class="font-bold text-gray-800 mb-2 line-clamp-1 hover:text-primary">
+                            {{ $listing->title }}
+                        </h3>
+                    </a>
+                    <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ $listing->description }}</p>
+                    
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <span class="text-xl font-bold text-primary">${{ number_format($listing->price, 2) }}</span>
+                            @if($listing->weight_kg)
+                            <div class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-weight-hanging mr-1"></i> {{ $listing->weight_kg }}kg
+                            </div>
+                            @endif
                         </div>
-                        @endif
-                        <button class="absolute top-2 right-2 bg-white w-8 h-8 rounded-full flex items-center justify-center text-gray-600 hover:text-red-500">
-                            <i class="fas fa-heart"></i>
-                        </button>
+                        <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                            <i class="fas fa-store mr-1"></i> {{ $listing->vendor->business_name ?? 'Vendor' }}
+                        </span>
                     </div>
                     
-                    <div class="p-4">
-                        <h3 class="font-bold text-gray-800 mb-2 line-clamp-1">{{ $listing->title }}</h3>
-                        <p class="text-gray-600 text-sm mb-3 line-clamp-2">{{ $listing->description }}</p>
-                        
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <span class="text-xl font-bold text-primary">${{ number_format($listing->price, 2) }}</span>
-                                @if($listing->weight_kg)
-                                <div class="text-xs text-gray-500 mt-1">
-                                    <i class="fas fa-weight-hanging mr-1"></i> {{ $listing->weight_kg }}kg
-                                </div>
-                                @endif
-                            </div>
-                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                <i class="fas fa-store mr-1"></i> {{ $listing->vendor->business_name ?? 'Vendor' }}
-                            </span>
-                        </div>
-                        
-                        <button class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition flex items-center justify-center">
-                            <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
-                        </button>
-                    </div>
+                    <!-- Quick Add to Cart Button -->
+                    @if($listing->stock > 0)
+                    <button data-quick-cart 
+                            data-listing-id="{{ $listing->id }}"
+                            class="w-full bg-primary text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition flex items-center justify-center">
+                        <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
+                    </button>
+                    @else
+                    <button disabled class="w-full bg-gray-300 text-gray-500 py-2 rounded-lg font-medium cursor-not-allowed flex items-center justify-center">
+                        <i class="fas fa-ban mr-2"></i> Out of Stock
+                    </button>
+                    @endif
                 </div>
-                @endforeach
             </div>
+            @endforeach
         </div>
-    </section>
+    </div>
+</section>
 
     <!-- Import Calculator Section -->
     <section id="import-calculator" class="py-16 bg-gray-900 text-white">
@@ -788,102 +819,417 @@
     </footer>
 
     <!-- JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
-    <script>
-        // Initialize Swiper
-        const swiper = new Swiper('.swiper-container', {
-            slidesPerView: 1,
-            spaceBetween: 20,
-            loop: true,
-            navigation: {
-                nextEl: '.swiper-button-next',
-                prevEl: '.swiper-button-prev',
+   <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+<script>
+    // Initialize Swiper
+    const swiper = new Swiper('.swiper-container', {
+        slidesPerView: 1,
+        spaceBetween: 20,
+        loop: true,
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+        breakpoints: {
+            640: { slidesPerView: 2 },
+            768: { slidesPerView: 3 },
+            1024: { slidesPerView: 4 },
+        }
+    });
+
+    // Flash Sale Countdown
+    function updateCountdown() {
+        const now = new Date();
+        const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        
+        function update() {
+            const now = new Date();
+            const timeLeft = endTime - now;
+            
+            if (timeLeft <= 0) {
+                document.getElementById('hours').textContent = '00';
+                document.getElementById('minutes').textContent = '00';
+                document.getElementById('seconds').textContent = '00';
+                return;
+            }
+            
+            const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+            
+            document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+        }
+        
+        update();
+        setInterval(update, 1000);
+    }
+
+    // Import Calculator
+    function calculateImportCost() {
+        const productValue = parseFloat(document.getElementById('productValue').value) || 0;
+        const shippingCost = parseFloat(document.getElementById('shippingCost').value) || 0;
+        const dutyRate = parseFloat(document.getElementById('dutyRate').value) || 10;
+        const vatRate = parseFloat(document.getElementById('vatRate').value) || 18;
+        
+        const cif = productValue + shippingCost;
+        const duty = cif * (dutyRate / 100);
+        const vatBase = cif + duty;
+        const vat = vatBase * (vatRate / 100);
+        const totalCost = cif + duty + vat;
+        
+        // Update results
+        document.getElementById('productValueResult').textContent = '$' + productValue.toFixed(2);
+        document.getElementById('shippingCostResult').textContent = '$' + shippingCost.toFixed(2);
+        document.getElementById('dutyCost').textContent = '$' + duty.toFixed(2);
+        document.getElementById('vatCost').textContent = '$' + vat.toFixed(2);
+        document.getElementById('totalCost').textContent = '$' + totalCost.toFixed(2);
+        
+        // Update duty and VAT rates in display
+        document.querySelector('#costBreakdown div:nth-child(3) span:first-child').textContent = 
+            `Import Duty (${dutyRate}%):`;
+        document.querySelector('#costBreakdown div:nth-child(4) span:first-child').textContent = 
+            `VAT (${vatRate}%):`;
+    }
+
+    // Cart and Wishlist Functions
+    function showAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.href);
+        }
+    }
+    
+    function closeAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    }
+    
+    function showToast(message, type = 'info') {
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-0`;
+        
+        const typeStyles = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+        
+        toast.className += ` ${typeStyles[type] || typeStyles.info}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas ${icons[type] || icons.info} mr-3"></i>
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+       
+    // Quick Add to Cart with better error handling - FIXED
+async function quickAddToCart(listingId, button) {
+    const isAuthenticated = @json(auth()->check());
+    
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
             },
-            breakpoints: {
-                640: { slidesPerView: 2 },
-                768: { slidesPerView: 3 },
-                1024: { slidesPerView: 4 },
+            body: JSON.stringify({ quantity: 1 })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.classList.remove('text-gray-600', 'bg-primary');
+            button.classList.add('text-green-500', 'bg-green-100');
+            
+            updateCartCount(data.cart_count);
+            showToast(data.message || 'Added to cart!', 'success');
+            
+            setTimeout(() => {
+                if (originalHtml.includes('Add to Cart')) {
+                    button.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Add to Cart';
+                    button.classList.remove('text-green-500', 'bg-green-100');
+                    button.classList.add('bg-primary', 'hover:bg-indigo-700', 'text-white');
+                } else {
+                    button.innerHTML = '<i class="fas fa-shopping-cart"></i>';
+                    button.classList.remove('text-green-500', 'bg-green-100');
+                    button.classList.add('text-gray-600');
+                }
+                button.disabled = false;
+            }, 2000);
+        } else {
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+            showToast(data.message || 'Failed to add to cart', 'error');
+            
+            if (data.redirect) {
+                setTimeout(() => window.location.href = data.redirect, 1500);
+            }
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+        showToast('Network error. Please try again.', 'error');
+    }
+}
+
+// Quick Add to Wishlist 
+async function quickAddToWishlist(listingId, button) {
+    const isAuthenticated = @json(auth()->check());
+    
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    const icon = button.querySelector('i');
+    const isFilled = icon.classList.contains('fas');
+    
+    try {
+        const response = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
             }
         });
-
-        // Flash Sale Countdown
-        function updateCountdown() {
-            const now = new Date();
-            const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
-            
-            function update() {
-                const now = new Date();
-                const timeLeft = endTime - now;
-                
-                if (timeLeft <= 0) {
-                    document.getElementById('hours').textContent = '00';
-                    document.getElementById('minutes').textContent = '00';
-                    document.getElementById('seconds').textContent = '00';
-                    return;
-                }
-                
-                const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-                
-                document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
-                document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
-                document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.in_wishlist) {
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                button.classList.remove('text-gray-600');
+                button.classList.add('text-red-500');
+            } else {
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                button.classList.remove('text-red-500');
+                button.classList.add('text-gray-600');
             }
             
-            update();
-            setInterval(update, 1000);
+            updateWishlistCount(data.wishlist_count);
+            showToast(data.message || 'Wishlist updated!', 'success');
+        } else {
+            showToast(data.message || 'Failed to update wishlist', 'error');
+            
+            if (data.redirect) {
+                setTimeout(() => window.location.href = data.redirect, 1500);
+            }
         }
-
-        // Import Calculator
-        function calculateImportCost() {
-            const productValue = parseFloat(document.getElementById('productValue').value) || 0;
-            const shippingCost = parseFloat(document.getElementById('shippingCost').value) || 0;
-            const dutyRate = parseFloat(document.getElementById('dutyRate').value) || 10;
-            const vatRate = parseFloat(document.getElementById('vatRate').value) || 18;
-            
-            const cif = productValue + shippingCost;
-            const duty = cif * (dutyRate / 100);
-            const vatBase = cif + duty;
-            const vat = vatBase * (vatRate / 100);
-            const totalCost = cif + duty + vat;
-            
-            // Update results
-            document.getElementById('productValueResult').textContent = '$' + productValue.toFixed(2);
-            document.getElementById('shippingCostResult').textContent = '$' + shippingCost.toFixed(2);
-            document.getElementById('dutyCost').textContent = '$' + duty.toFixed(2);
-            document.getElementById('vatCost').textContent = '$' + vat.toFixed(2);
-            document.getElementById('totalCost').textContent = '$' + totalCost.toFixed(2);
-            
-            // Update duty and VAT rates in display
-            document.querySelector('#costBreakdown div:nth-child(3) span:first-child').textContent = 
-                `Import Duty (${dutyRate}%):`;
-            document.querySelector('#costBreakdown div:nth-child(4) span:first-child').textContent = 
-                `VAT (${vatRate}%):`;
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Failed to update wishlist', 'error');
+    }
+}
+    
+    // Update cart count in navbar
+    function updateCartCount(count) {
+        document.querySelectorAll('.cart-count').forEach(element => {
+            element.textContent = count;
+            if (count > 0) {
+                element.classList.remove('hidden');
+                element.classList.add('animate-bounce');
+                setTimeout(() => element.classList.remove('animate-bounce'), 1000);
+            }
+        });
+    }
+    
+    // Update wishlist count in navbar
+    function updateWishlistCount(count) {
+        document.querySelectorAll('.wishlist-count').forEach(element => {
+            element.textContent = count;
+            if (count > 0) {
+                element.classList.remove('hidden');
+            } else {
+                element.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Load cart and wishlist counts
+   async function loadUserCounts() {
+    const isAuthenticated = {{ auth()->check() ? 'true' : 'false' }};
+    
+    if (!isAuthenticated) return;
+    
+    try {
+        // Fetch cart count using public route
+        const cartResponse = await fetch('/cart/count');
+        const cartData = await cartResponse.json();
+        
+        if (cartData.authenticated && cartData.cart_count > 0) {
+            updateCartCount(cartData.cart_count);
         }
-
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCountdown();
-            calculateImportCost(); // Show initial calculation
-            
-            // Smooth scrolling for anchor links
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const targetId = this.getAttribute('href');
-                    if (targetId === '#') return;
-                    
-                    const targetElement = document.querySelector(targetId);
-                    if (targetElement) {
-                        targetElement.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
-                    }
-                });
+        
+        // Fetch wishlist count using public route
+        const wishlistResponse = await fetch('/wishlist/count');
+        const wishlistData = await wishlistResponse.json();
+        
+        if (wishlistData.authenticated && wishlistData.count > 0) {
+            updateWishlistCount(wishlistData.count);
+        }
+    } catch (error) {
+        console.error('Error loading user counts:', error);
+    }
+}
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCountdown();
+        calculateImportCost();
+        
+        // Load user counts
+        loadUserCounts();
+        
+        // Setup all quick action buttons
+        document.querySelectorAll('[data-quick-cart]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToCart(listingId, this);
             });
         });
-    </script>
+        
+        document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToWishlist(listingId, this);
+            });
+        });
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+        
+        // Close auth modal on background click
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+            authModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAuthModal();
+                }
+            });
+        }
+    });
+</script>
+
+<!-- Authentication Modal -->
+<div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-8 relative">
+        <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-lock text-blue-600 text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Sign in Required</h3>
+            <p class="text-gray-600">Please sign in or create an account to continue.</p>
+        </div>
+        
+        <div class="space-y-3">
+            <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold text-center">
+                <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+            </a>
+            
+            <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold text-center">
+                <i class="fas fa-user-plus mr-2"></i> Create Account
+            </a>
+            
+            <button onclick="closeAuthModal()" 
+                    class="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-center">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.custom-toast {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
 </body>
 </html>

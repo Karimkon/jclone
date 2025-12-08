@@ -126,15 +126,17 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                                     <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden">
-                                        <button onclick="updateQuantity(-1)" 
-                                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700">
+                                        <button type="button"
+                                                id="quantityMinus"
+                                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer">
                                             <i class="fas fa-minus"></i>
                                         </button>
                                         <input type="number" id="quantity" 
                                                value="1" min="1" max="{{ $listing->stock }}" 
                                                class="w-16 text-center border-0 focus:ring-0">
-                                        <button onclick="updateQuantity(1)" 
-                                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700">
+                                        <button type="button"
+                                                id="quantityPlus"
+                                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 transition cursor-pointer">
                                             <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
@@ -142,20 +144,26 @@
                                 
                                 <!-- Action Buttons -->
                                 <div class="space-y-3">
-                                    <button onclick="addToCart({{ $listing->id }})"
-                                            class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center justify-center">
+                                    <button type="button" 
+                                            id="addToCartBtn"
+                                            data-listing-id="{{ $listing->id }}"
+                                            class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold flex items-center justify-center transition cursor-pointer">
                                         <i class="fas fa-shopping-cart mr-2"></i> Add to Cart
                                     </button>
                                     
-                                    <button onclick="addToWishlist({{ $listing->id }})"
-                                            class="w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold flex items-center justify-center">
+                                    <button type="button"
+                                            id="addToWishlistBtn"
+                                            data-listing-id="{{ $listing->id }}"
+                                            class="w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold flex items-center justify-center transition cursor-pointer">
                                         <i class="fas fa-heart mr-2"></i> Add to Wishlist
                                     </button>
                                     
                                     @auth
                                         @if(auth()->user()->role === 'buyer')
-                                        <button onclick="buyNow({{ $listing->id }})"
-                                                class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:opacity-90 font-bold flex items-center justify-center">
+                                        <button type="button"
+                                                id="buyNowBtn"
+                                                data-listing-id="{{ $listing->id }}"
+                                                class="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:opacity-90 font-bold flex items-center justify-center transition cursor-pointer">
                                             <i class="fas fa-bolt mr-2"></i> Buy Now
                                         </button>
                                         @endif
@@ -500,494 +508,168 @@
 @section('scripts')
 <script>
     // Check if user is authenticated
-    const isAuthenticated = {{ auth()->check() ? 'true' : 'false' }};
+    const isAuthenticated = @json(auth()->check());
     
     // Show authentication modal
     function showAuthModal() {
-        document.getElementById('authModal').classList.remove('hidden');
+        console.log('showAuthModal called');
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
     }
     
     // Close authentication modal
     function closeAuthModal() {
-        document.getElementById('authModal').classList.add('hidden');
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
     }
     
-    // Close modal on background click
-    document.getElementById('authModal')?.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeAuthModal();
-        }
-    });
-    
-    // Initialize when DOM is loaded
+    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        // Tab switching
-        const tabs = {
-            descriptionTab: 'descriptionContent',
-            specsTab: 'specsContent',
-            shippingTab: 'shippingContent',
-            reviewsTab: 'reviewsContent'
-        };
+        console.log('DOM loaded, isAuthenticated:', isAuthenticated);
         
-        Object.keys(tabs).forEach(tabId => {
-            const tabElement = document.getElementById(tabId);
-            if (tabElement) {
-                tabElement.addEventListener('click', function() {
-                    // Hide all content
-                    Object.values(tabs).forEach(contentId => {
-                        const content = document.getElementById(contentId);
-                        if (content) content.classList.add('hidden');
-                    });
-                    
-                    // Remove active from all tabs
-                    Object.keys(tabs).forEach(tab => {
-                        const tabEl = document.getElementById(tab);
-                        if (tabEl) {
-                            tabEl.classList.remove('border-primary', 'text-primary');
-                            tabEl.classList.add('text-gray-600');
-                        }
-                    });
-                    
-                    // Show selected content
-                    const selectedContent = document.getElementById(tabs[tabId]);
-                    if (selectedContent) {
-                        selectedContent.classList.remove('hidden');
-                    }
-                    
-                    // Activate selected tab
-                    this.classList.remove('text-gray-600');
-                    this.classList.add('border-primary', 'text-primary');
-                });
-            }
-        });
-        
-        // Quantity minus button
-        const minusBtn = document.querySelector('button[onclick*="updateQuantity(-1)"]');
-        if (minusBtn) {
-            minusBtn.removeAttribute('onclick');
-            minusBtn.addEventListener('click', function() {
-                updateQuantity(-1);
-            });
-        }
-        
-        // Quantity plus button
-        const plusBtn = document.querySelector('button[onclick*="updateQuantity(1)"]');
-        if (plusBtn) {
-            plusBtn.removeAttribute('onclick');
-            plusBtn.addEventListener('click', function() {
-                updateQuantity(1);
-            });
-        }
-        
-        // Add to cart button
-        const addToCartBtn = document.querySelector('button[onclick*="addToCart"]');
-        if (addToCartBtn) {
-            const listingId = {{ $listing->id }};
-            addToCartBtn.removeAttribute('onclick');
-            addToCartBtn.addEventListener('click', function() {
-                addToCart(listingId);
-            });
-        }
-        
-        // Add to wishlist button
-        const addToWishlistBtn = document.querySelector('button[onclick*="addToWishlist"]');
-        if (addToWishlistBtn) {
-            const listingId = {{ $listing->id }};
-            addToWishlistBtn.removeAttribute('onclick');
-            addToWishlistBtn.addEventListener('click', function() {
-                addToWishlist(listingId);
-            });
-        }
-        
-        // Buy now button
-        const buyNowBtn = document.querySelector('button[onclick*="buyNow"]');
-        if (buyNowBtn) {
-            const listingId = {{ $listing->id }};
-            buyNowBtn.removeAttribute('onclick');
-            buyNowBtn.addEventListener('click', function() {
-                buyNow(listingId);
-            });
-        }
-        
-        // Write review button
-        const writeReviewBtn = document.querySelector('button[onclick*="writeReview"]');
-        if (writeReviewBtn) {
-            writeReviewBtn.removeAttribute('onclick');
-            writeReviewBtn.addEventListener('click', writeReview);
-        }
-        
-        // Contact vendor button
-        const contactVendorBtn = document.querySelector('button[onclick*="contactVendor"]');
-        if (contactVendorBtn) {
-            contactVendorBtn.removeAttribute('onclick');
-            contactVendorBtn.addEventListener('click', contactVendor);
-        }
-        
-        // Thumbnail images
-        document.querySelectorAll('button[onclick*="changeMainImage"]').forEach(button => {
-            const src = button.getAttribute('data-src');
-            button.removeAttribute('onclick');
-            button.addEventListener('click', function() {
-                changeMainImage(src);
-            });
-        });
-        
-        // If user is authenticated, fetch current cart count
-        if (isAuthenticated) {
-            fetch('/buyer/cart/summary')
+        // Setup all quick action buttons
+        document.querySelectorAll('[data-quick-cart]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Check authentication FIRST
+                if (!isAuthenticated) {
+                    showAuthModal();
+                    return;
+                }
+                
+                // If authenticated, proceed with adding to cart
+                const listingId = this.getAttribute('data-listing-id');
+                const originalHtml = this.innerHTML;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                this.disabled = true;
+                
+                fetch(`/buyer/cart/add/${listingId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ quantity: 1 })
+                })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.authenticated && data.cart_count > 0) {
-                        const cartCountElements = document.querySelectorAll('.cart-count');
-                        cartCountElements.forEach(element => {
-                            element.textContent = data.cart_count;
-                        });
+                    if (data.success) {
+                        this.innerHTML = '<i class="fas fa-check"></i>';
+                        this.classList.remove('text-gray-600');
+                        this.classList.add('text-green-500');
+                        
+                        alert('Added to cart!');
+                        
+                        setTimeout(() => {
+                            this.innerHTML = originalHtml;
+                            this.classList.remove('text-green-500');
+                            this.classList.add('text-gray-600');
+                            this.disabled = false;
+                        }, 2000);
+                    } else {
+                        this.innerHTML = originalHtml;
+                        this.disabled = false;
+                        alert(data.message || 'Failed to add to cart');
+                        
+                        if (data.redirect) {
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 1500);
+                        }
                     }
                 })
-                .catch(error => console.error('Error fetching cart:', error));
-        }
-    });
-    
-    // Image gallery
-    function changeMainImage(src) {
-        document.getElementById('mainImage').src = src;
-    }
-    
-    // Quantity control
-    function updateQuantity(change) {
-        const input = document.getElementById('quantity');
-        let current = parseInt(input.value) || 1;
-        const max = parseInt(input.max) || 99;
-        const min = parseInt(input.min) || 1;
+                .catch(error => {
+                    console.error('Error:', error);
+                    this.innerHTML = originalHtml;
+                    this.disabled = false;
+                    alert('Failed to add to cart');
+                });
+            });
+        });
         
-        current += change;
-        
-        if (current < min) current = min;
-        if (current > max) current = max;
-        
-        input.value = current;
-    }
-    
-    // Add to cart
-    function addToCart(listingId) {
-        // Check authentication
-        if (!isAuthenticated) {
-            showAuthModal();
-            return;
-        }
-        
-        const quantity = document.getElementById('quantity').value;
-        const button = document.querySelector('button[onclick*="addToCart"]');
-        const originalText = button.innerHTML;
-        
-        // Show loading
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
-        button.disabled = true;
-        
-        // Make AJAX request
-        fetch(`/buyer/cart/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ quantity: parseInt(quantity) })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success
-                button.innerHTML = '<i class="fas fa-check mr-2"></i> Added to Cart!';
-                button.classList.remove('bg-primary');
-                button.classList.add('bg-green-500');
+        // Setup all wishlist buttons
+        document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                // Update cart count in the navbar
-                updateCartCount(data.cart_count || 1);
-                
-                // Show success toast
-                showToast(data.message || 'Product added to cart successfully!', 'success');
-                
-                // Revert button after 2 seconds
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-green-500');
-                    button.classList.add('bg-primary');
-                    button.disabled = false;
-                }, 2000);
-            } else {
-                // Show error
-                button.innerHTML = '<i class="fas fa-times mr-2"></i> Failed!';
-                button.classList.remove('bg-primary');
-                button.classList.add('bg-red-500');
-                button.disabled = true;
-                
-                // Revert after 2 seconds
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-red-500');
-                    button.classList.add('bg-primary');
-                    button.disabled = false;
-                }, 2000);
-                
-                // Show error message
-                if (data.message) {
-                    showToast(data.message, 'error');
+                // Check authentication FIRST
+                if (!isAuthenticated) {
+                    showAuthModal();
+                    return;
                 }
                 
-                // Redirect to login if authentication required
-                if (data.redirect) {
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 1500);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            button.innerHTML = '<i class="fas fa-times mr-2"></i> Error!';
-            button.classList.remove('bg-primary');
-            button.classList.add('bg-red-500');
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.classList.remove('bg-red-500');
-                button.classList.add('bg-primary');
-                button.disabled = false;
-            }, 2000);
-            
-            showToast('Something went wrong. Please try again.', 'error');
-        });
-    }
-    
-    // Add to wishlist
-    function addToWishlist(listingId) {
-        // Check authentication
-        if (!isAuthenticated) {
-            showAuthModal();
-            return;
-        }
-        
-        const button = document.querySelector('button[onclick*="addToWishlist"]');
-        const originalText = button.innerHTML;
-        
-        // Show loading
-        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Adding...';
-        button.disabled = true;
-        
-        // Make AJAX request
-        fetch(`/buyer/wishlist/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Show success
-                button.innerHTML = '<i class="fas fa-heart mr-2"></i> Added to Wishlist!';
-                button.classList.remove('border-primary', 'text-primary');
-                button.classList.add('bg-red-500', 'text-white', 'border-red-500');
+                // If authenticated, proceed with adding to wishlist
+                const listingId = this.getAttribute('data-listing-id');
+                const icon = this.querySelector('i');
+                const isFilled = icon.classList.contains('fas');
                 
-                // Show success message
-                showToast('Product added to wishlist!', 'success');
-                
-                // Revert after 2 seconds
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
-                    button.classList.add('border-primary', 'text-primary');
-                    button.disabled = false;
-                }, 2000);
-            } else {
-                // Show error
-                button.innerHTML = '<i class="fas fa-times mr-2"></i> Failed!';
-                button.classList.remove('border-primary', 'text-primary');
-                button.classList.add('bg-red-500', 'text-white', 'border-red-500');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
-                    button.classList.add('border-primary', 'text-primary');
-                    button.disabled = false;
-                }, 2000);
-                
-                showToast('Failed to add to wishlist', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            button.innerHTML = '<i class="fas fa-times mr-2"></i> Error!';
-            button.classList.remove('border-primary', 'text-primary');
-            button.classList.add('bg-red-500', 'text-white', 'border-red-500');
-            
-            setTimeout(() => {
-                button.innerHTML = originalText;
-                button.classList.remove('bg-red-500', 'text-white', 'border-red-500');
-                button.classList.add('border-primary', 'text-primary');
-                button.disabled = false;
-            }, 2000);
-            
-            showToast('Something went wrong. Please try again.', 'error');
-        });
-    }
-    
-    // Buy now (redirects to checkout)
-    function buyNow(listingId) {
-        // Check authentication
-        if (!isAuthenticated) {
-            showAuthModal();
-            return;
-        }
-        
-        const quantity = document.getElementById('quantity').value;
-        
-        // Add to cart first, then redirect to checkout
-        fetch(`/buyer/cart/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ quantity: parseInt(quantity) })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Redirect to checkout
-                window.location.href = '/buyer/orders/checkout';
-            } else {
-                showToast(data.message || 'Failed to add to cart', 'error');
-                
-                // Redirect to login if needed
-                if (data.redirect) {
-                    setTimeout(() => {
-                        window.location.href = data.redirect;
-                    }, 1500);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showToast('Something went wrong. Please try again.', 'error');
-        });
-    }
-    
-    // Contact vendor
-    function contactVendor() {
-        // For now, show a message
-        showToast('Contact vendor feature coming soon!', 'info');
-    }
-    
-    // Write review
-    function writeReview() {
-        // Check authentication
-        if (!isAuthenticated) {
-            showAuthModal();
-            return;
-        }
-        
-        // For now, show a message
-        showToast('Review feature coming soon!', 'info');
-    }
-    
-    // Update cart count in header
-    function updateCartCount(addedCount) {
-        const cartCountElements = document.querySelectorAll('.cart-count');
-        
-        cartCountElements.forEach(element => {
-            const current = parseInt(element.textContent) || 0;
-            element.textContent = current + addedCount;
-            
-            // Add animation
-            element.classList.add('animate-bounce');
-            setTimeout(() => {
-                element.classList.remove('animate-bounce');
-            }, 1000);
-        });
-    }
-    
-    // Show toast notification
-    function showToast(message, type = 'info') {
-        // Remove existing toasts
-        const existingToasts = document.querySelectorAll('.custom-toast');
-        existingToasts.forEach(toast => toast.remove());
-        
-        // Create toast element
-        const toast = document.createElement('div');
-        toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-0`;
-        
-        // Set styles based on type
-        const typeStyles = {
-            success: 'bg-green-500 text-white',
-            error: 'bg-red-500 text-white',
-            warning: 'bg-yellow-500 text-white',
-            info: 'bg-blue-500 text-white'
-        };
-        
-        toast.className += ` ${typeStyles[type] || typeStyles.info}`;
-        
-        // Add icon
-        const icons = {
-            success: 'fa-check-circle',
-            error: 'fa-times-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
-        
-        toast.innerHTML = `
-            <div class="flex items-center">
-                <i class="fas ${icons[type] || icons.info} mr-3"></i>
-                <span>${message}</span>
-                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        
-        // Add to document
-        document.body.appendChild(toast);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (toast.parentElement) {
-                toast.style.transform = 'translateX(100%)';
-                setTimeout(() => {
-                    if (toast.parentElement) {
-                        toast.remove();
+                fetch(`/buyer/wishlist/toggle/${listingId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
                     }
-                }, 300);
-            }
-        }, 5000);
-    }
-    
-    // Validate quantity input
-    const quantityInput = document.getElementById('quantity');
-    if (quantityInput) {
-        quantityInput.addEventListener('change', function() {
-            let value = parseInt(this.value) || 1;
-            const max = parseInt(this.max) || 99;
-            const min = parseInt(this.min) || 1;
-            
-            if (value < min) value = min;
-            if (value > max) value = max;
-            
-            this.value = value;
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.in_wishlist) {
+                            // Added to wishlist
+                            icon.classList.remove('far');
+                            icon.classList.add('fas');
+                            this.classList.add('text-red-500');
+                        } else {
+                            // Removed from wishlist
+                            icon.classList.remove('fas');
+                            icon.classList.add('far');
+                            this.classList.remove('text-red-500');
+                        }
+                        
+                        alert('Wishlist updated!');
+                    } else {
+                        alert('Failed to update wishlist');
+                        
+                        if (data.redirect) {
+                            setTimeout(() => {
+                                window.location.href = data.redirect;
+                            }, 1500);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to update wishlist');
+                });
+            });
         });
         
-        quantityInput.addEventListener('input', function() {
-            let value = parseInt(this.value) || 1;
-            const max = parseInt(this.max) || 99;
-            const min = parseInt(this.min) || 1;
-            
-            if (value < min) this.value = min;
-            if (value > max) this.value = max;
+        // Close modal on background click
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+            authModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAuthModal();
+                }
+            });
+        }
+        
+        // Close modal on close button click
+        const closeModalBtns = document.querySelectorAll('[onclick="closeAuthModal()"]');
+        closeModalBtns.forEach(btn => {
+            btn.addEventListener('click', closeAuthModal);
         });
-    }
+    });
 </script>
 
 <style>

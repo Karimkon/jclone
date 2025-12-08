@@ -60,4 +60,19 @@ public function isInVendorOnboarding()
     return $this->vendorProfile && 
            $this->vendorProfile->vetting_status !== 'approved';
 }
+
+public function cart()
+{
+    return $this->hasOne(\App\Models\Cart::class);
+}
+
+public function wishlists()
+{
+    return $this->hasMany(\App\Models\Wishlist::class);
+}
+
+public function orders()
+{
+    return $this->hasMany(\App\Models\Order::class, 'buyer_id');
+}
 }

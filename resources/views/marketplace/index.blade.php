@@ -244,12 +244,11 @@
                             </div>
                             
                             <!-- Quick Actions -->
-                            <div class="absolute top-3 right-3 flex flex-col space-y-2">
-                                <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 shadow">
-                                    <i class="fas fa-heart"></i>
-                                </button>
-                                <button class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-primary shadow">
-                                    <i class="fas fa-eye"></i>
+                           <div class="absolute top-3 right-3 flex flex-col space-y-2">
+                                <button data-quick-wishlist 
+                                        data-listing-id="{{ $listing->id }}"
+                                        class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-gray-600 hover:text-red-500 shadow transition">
+                                    <i class="far fa-heart"></i>
                                 </button>
                             </div>
                         </div>
@@ -299,11 +298,19 @@
                                 </div>
                                 
                                 <div class="flex space-x-2">
-                                    <button class="p-2 text-gray-600 hover:text-primary">
+                                    @if($listing->stock > 0)
+                                    <button data-quick-cart 
+                                            data-listing-id="{{ $listing->id }}"
+                                            class="p-2 text-gray-600 hover:text-primary">
                                         <i class="fas fa-shopping-cart text-lg"></i>
                                     </button>
+                                    @else
+                                    <button disabled class="p-2 text-gray-400 cursor-not-allowed">
+                                        <i class="fas fa-shopping-cart text-lg"></i>
+                                    </button>
+                                    @endif
                                     <a href="{{ route('marketplace.show', $listing) }}" 
-                                       class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 font-medium text-sm">
+                                    class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 font-medium text-sm">
                                         View Details
                                     </a>
                                 </div>
@@ -403,62 +410,349 @@
 
 @section('scripts')
 <script>
-    // Price range filter validation
-    document.addEventListener('DOMContentLoaded', function() {
-        const minPriceInput = document.querySelector('input[name="min_price"]');
-        const maxPriceInput = document.querySelector('input[name="max_price"]');
+
+// Check if user is authenticated - FIXED VERSION
+const isAuthenticated = @json(auth()->check());
+
+// Quick add to cart from product cards - FIXED
+function quickAddToCart(listingId, button) {
+    console.log('quickAddToCart called', listingId, isAuthenticated);
+    
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    const originalHtml = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    fetch(`/buyer/cart/add/${listingId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ quantity: 1 })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Response data:', data);
         
-        if (minPriceInput && maxPriceInput) {
-            const priceForm = minPriceInput.closest('form');
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.classList.remove('text-gray-600');
+            button.classList.add('text-green-500');
             
-            priceForm.addEventListener('submit', function(e) {
-                const minPrice = parseFloat(minPriceInput.value) || 0;
-                const maxPrice = parseFloat(maxPriceInput.value) || 0;
-                
-                if (maxPrice > 0 && minPrice > maxPrice) {
-                    e.preventDefault();
-                    alert('Minimum price cannot be greater than maximum price');
-                    minPriceInput.focus();
-                }
-            });
+            // Update cart count
+            if (data.cart_count) {
+                updateCartCount(data.cart_count);
+            }
+            
+            showToast(data.message || 'Added to cart!', 'success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalHtml;
+                button.classList.remove('text-green-500');
+                button.classList.add('text-gray-600');
+                button.disabled = false;
+            }, 2000);
+        } else {
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+            showToast(data.message || 'Failed to add to cart', 'error');
+            
+            if (data.redirect) {
+                setTimeout(() => window.location.href = data.redirect, 1500);
+            }
         }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        button.innerHTML = originalHtml;
+        button.disabled = false;
+        showToast('Failed to add to cart', 'error');
+    });
+}
+
+// Quick add to wishlist from product cards - FIXED
+function quickAddToWishlist(listingId, button) {
+    console.log('quickAddToWishlist called', listingId, isAuthenticated);
+    
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    const icon = button.querySelector('i');
+    const isFilled = icon.classList.contains('fas');
+    
+    fetch(`/buyer/wishlist/toggle/${listingId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Wishlist response:', data);
         
-        // Add to cart functionality
-        document.querySelectorAll('[data-add-to-cart]').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const listingId = this.getAttribute('data-listing-id');
-                
-                // Add to cart logic here
-                console.log('Adding to cart:', listingId);
-                
-                // Show success message
-                const originalText = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-check mr-2"></i> Added!';
-                this.classList.remove('bg-primary');
-                this.classList.add('bg-green-500');
-                this.disabled = true;
-                
-                setTimeout(() => {
-                    this.innerHTML = originalText;
-                    this.classList.remove('bg-green-500');
-                    this.classList.add('bg-primary');
-                    this.disabled = false;
-                }, 2000);
-            });
-        });
-        
-        // Update product count on filter change
-        const filterInputs = document.querySelectorAll('input[name], select[name]');
-        filterInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                // You could add AJAX filtering here
-                // For now, just submit the form
-                if (this.closest('form')) {
-                    this.closest('form').submit();
+        if (data.success) {
+            if (data.in_wishlist) {
+                // Added to wishlist
+                icon.classList.remove('far');
+                icon.classList.add('fas');
+                button.classList.add('text-red-500');
+            } else {
+                // Removed from wishlist
+                icon.classList.remove('fas');
+                icon.classList.add('far');
+                button.classList.remove('text-red-500');
+            }
+            
+            // Update wishlist count
+            if (data.wishlist_count !== undefined) {
+                updateWishlistCount(data.wishlist_count);
+            }
+            
+            showToast(data.message || 'Wishlist updated!', 'success');
+        } else {
+            showToast(data.message || 'Failed to update wishlist', 'error');
+            
+            if (data.redirect) {
+                setTimeout(() => window.location.href = data.redirect, 1500);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to update wishlist', 'error');
+    });
+}
+
+// Update cart count in navbar
+function updateCartCount(count) {
+    console.log('Updating cart count:', count);
+    document.querySelectorAll('.cart-count').forEach(element => {
+        element.textContent = count;
+        if (count > 0) {
+            element.classList.remove('hidden');
+            element.classList.add('animate-bounce');
+            setTimeout(() => element.classList.remove('animate-bounce'), 1000);
+        }
+    });
+}
+
+// Update wishlist count in navbar
+function updateWishlistCount(count) {
+    console.log('Updating wishlist count:', count);
+    document.querySelectorAll('.wishlist-count').forEach(element => {
+        element.textContent = count;
+        if (count > 0) {
+            element.classList.remove('hidden');
+        } else {
+            element.classList.add('hidden');
+        }
+    });
+}
+
+// Show authentication modal - FIXED
+function showAuthModal() {
+    console.log('Showing auth modal');
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    } else {
+        console.error('Auth modal not found!');
+        // Fallback: redirect to login
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    }
+}
+
+// Close authentication modal - FIXED
+function closeAuthModal() {
+    console.log('Closing auth modal');
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300`;
+    
+    const typeStyles = {
+        success: 'bg-green-500 text-white',
+        error: 'bg-red-500 text-white',
+        warning: 'bg-yellow-500 text-white',
+        info: 'bg-blue-500 text-white'
+    };
+    
+    toast.className += ` ${typeStyles[type] || typeStyles.info}`;
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${icons[type] || icons.info} mr-3"></i>
+            <span>${message}</span>
+            <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.remove();
                 }
-            });
+            }, 300);
+        }
+    }, 5000);
+}
+
+// Initialize on page load - FIXED
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, isAuthenticated:', isAuthenticated);
+    
+    // Setup all quick action buttons
+    document.querySelectorAll('[data-quick-cart]').forEach(button => {
+        console.log('Setting up cart button:', button);
+        button.addEventListener('click', function(e) {
+            console.log('Cart button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            const listingId = this.getAttribute('data-listing-id');
+            console.log('Listing ID:', listingId);
+            quickAddToCart(listingId, this);
         });
     });
+    
+    document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
+        console.log('Setting up wishlist button:', button);
+        button.addEventListener('click', function(e) {
+            console.log('Wishlist button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            const listingId = this.getAttribute('data-listing-id');
+            console.log('Listing ID:', listingId);
+            quickAddToWishlist(listingId, this);
+        });
+    });
+    
+    // Close modal on background click
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAuthModal();
+            }
+        });
+    }
+    
+    // Close modal on close button
+    const closeButtons = document.querySelectorAll('[onclick="closeAuthModal()"]');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', closeAuthModal);
+    });
+    
+    // Load cart and wishlist counts if authenticated
+    if (isAuthenticated) {
+        console.log('User is authenticated, loading counts...');
+        
+        fetch('/cart/count')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Cart count response:', data);
+                if (data.authenticated && data.cart_count > 0) {
+                    updateCartCount(data.cart_count);
+                }
+            })
+            .catch(error => console.error('Error fetching cart:', error));
+        
+        fetch('/wishlist/count')
+            .then(response => response.json())
+            .then(data => {
+                console.log('Wishlist count response:', data);
+                if (data.authenticated && data.count > 0) {
+                    updateWishlistCount(data.count);
+                }
+            })
+            .catch(error => console.error('Error fetching wishlist:', error));
+    }
+});
 </script>
+
+<!-- Authentication Modal (Add this to both pages if not present) -->
+<div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-8 relative">
+        <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+        
+        <div class="text-center mb-6">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-lock text-blue-600 text-2xl"></i>
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-2">Sign in Required</h3>
+            <p class="text-gray-600">Please sign in or create an account to continue.</p>
+        </div>
+        
+        <div class="space-y-3">
+            <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold text-center">
+                <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+            </a>
+            
+            <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
+               class="block w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold text-center">
+                <i class="fas fa-user-plus mr-2"></i> Create Account
+            </a>
+            
+            <button onclick="closeAuthModal()" 
+                    class="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-center">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.custom-toast {
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+</style>
 @endsection

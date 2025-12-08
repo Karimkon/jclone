@@ -285,13 +285,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/wishlist/remove/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'remove'])->name('wishlist.remove');
         Route::post('/wishlist/toggle/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'toggle'])->name('wishlist.toggle');
         Route::post('/wishlist/move-to-cart/{listing}', [\App\Http\Controllers\Buyer\WishlistController::class, 'moveToCart'])->name('wishlist.move-to-cart');
+        Route::get('/wishlist/count', [\App\Http\Controllers\Buyer\WishlistController::class, 'getCount'])->name('wishlist.count');
         
         // Orders
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Buyer\OrderController::class, 'index'])->name('index');
-            Route::get('/{order}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->name('show');
             Route::get('/checkout', [\App\Http\Controllers\Buyer\OrderController::class, 'checkout'])->name('checkout');
             Route::post('/place-order', [\App\Http\Controllers\Buyer\OrderController::class, 'placeOrder'])->name('place-order');
+            Route::get('/{order}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->name('show');
             Route::post('/{order}/cancel', [\App\Http\Controllers\Buyer\OrderController::class, 'cancelOrder'])->name('cancel');
             Route::post('/{order}/confirm-delivery', [\App\Http\Controllers\Buyer\OrderController::class, 'confirmDelivery'])->name('confirm-delivery');
         });
@@ -320,6 +321,31 @@ Route::prefix('api')->name('api.')->group(function () {
 // ====================
 Route::post('/webhooks/flutterwave', [\App\Http\Controllers\Payment\FlutterwaveWebhookController::class, 'handle'])->name('webhooks.flutterwave');
 Route::post('/webhooks/pesapal', [\App\Http\Controllers\Payment\PesaPalWebhookController::class, 'handle'])->name('webhooks.pesapal');
+
+// ====================
+// PUBLIC AJAX ROUTES (for cart/wishlist counts)
+// ====================
+Route::get('/cart/count', function() {
+    if (auth()->check()) {
+        $cart = \App\Models\Cart::where('user_id', auth()->id())->first();
+        return response()->json([
+            'authenticated' => true,
+            'cart_count' => $cart ? count($cart->items ?? []) : 0
+        ]);
+    }
+    return response()->json(['authenticated' => false, 'cart_count' => 0]);
+})->name('cart.count');
+
+Route::get('/wishlist/count', function() {
+    if (auth()->check()) {
+        $count = \App\Models\Wishlist::where('user_id', auth()->id())->count();
+        return response()->json([
+            'authenticated' => true,
+            'count' => $count
+        ]);
+    }
+    return response()->json(['authenticated' => false, 'count' => 0]);
+})->name('wishlist.count');
 
 // ====================
 // DEBUG ROUTES (Development only)
