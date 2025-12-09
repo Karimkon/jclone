@@ -8,7 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Cart;
 use App\Models\Listing;
 use App\Models\Escrow;
-use App\Models\Wallet;
+use App\Models\BuyerWallet;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,10 +31,12 @@ class OrderController extends Controller
     }
 
     /**
-     * Display single order
+     * Display single order - FIXED METHOD
      */
-    public function show(Order $order)
+    public function show($id)
     {
+        $order = Order::findOrFail($id);
+        
         // Check ownership
         if ($order->buyer_id !== Auth::id()) {
             abort(403);
@@ -57,29 +59,8 @@ class OrderController extends Controller
                 ->with('error', 'Your cart is empty');
         }
 
-        // Validate cart items still exist and have stock
-        $validItems = [];
-        foreach ($cart->items as $item) {
-            $listing = Listing::find($item['listing_id']);
-            if ($listing && $listing->is_active && $listing->stock >= $item['quantity']) {
-                $validItems[] = $item;
-            }
-        }
-
-        if (empty($validItems)) {
-            return redirect()->route('buyer.cart.index')
-                ->with('error', 'Some items in your cart are no longer available');
-        }
-
-        // Update cart with valid items only
-        if (count($validItems) != count($cart->items)) {
-            $cart->items = $validItems;
-            $cart->recalculateTotals();
-            $cart->save();
-        }
-
         // Get user's wallet
-        $wallet = Wallet::where('user_id', Auth::id())->first();
+        $wallet = BuyerWallet::where('user_id', Auth::id())->first();
 
         return view('buyer.orders.checkout', compact('cart', 'wallet'));
     }
@@ -107,8 +88,8 @@ class OrderController extends Controller
 
         // Validate wallet balance if wallet payment
         if ($validated['payment_method'] === 'wallet') {
-            $wallet = Wallet::where('user_id', Auth::id())->first();
-            if (!$wallet || $wallet->available_balance < $cart->total) {
+            $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+            if (!$wallet || $wallet->balance < $cart->total) {
                 return back()->with('error', 'Insufficient wallet balance');
             }
         }
@@ -121,103 +102,114 @@ class OrderController extends Controller
                 $listing = Listing::with('vendor')->find($item['listing_id']);
                 
                 if (!$listing || !$listing->is_active) {
-                    throw new \Exception('Product ' . $item['title'] . ' is no longer available');
+                    throw new \Exception('Product "' . $item['title'] . '" is no longer available');
                 }
                 
                 if ($listing->stock < $item['quantity']) {
-                    throw new \Exception('Insufficient stock for ' . $item['title']);
+                    throw new \Exception('Insufficient stock for "' . $item['title'] . '"');
                 }
                 
                 $vendorId = $listing->vendor_profile_id;
                 if (!isset($itemsByVendor[$vendorId])) {
-                    $itemsByVendor[$vendorId] = [];
+                    $itemsByVendor[$vendorId] = [
+                        'items' => [],
+                        'vendor' => $listing->vendor
+                    ];
                 }
-                $itemsByVendor[$vendorId][] = [
+                $itemsByVendor[$vendorId]['items'][] = [
                     'listing' => $listing,
-                    'quantity' => $item['quantity']
+                    'cart_item' => $item
                 ];
             }
 
             $orders = [];
             
             // Create separate order for each vendor
-            foreach ($itemsByVendor as $vendorId => $items) {
-                $orderNumber = 'ORD-' . strtoupper(Str::random(10));
+            foreach ($itemsByVendor as $vendorId => $vendorData) {
+                $orderNumber = 'ORD-' . strtoupper(Str::random(8));
                 
                 // Calculate order totals
                 $subtotal = 0;
-                foreach ($items as $item) {
-                    $subtotal += $item['listing']->price * $item['quantity'];
+                foreach ($vendorData['items'] as $itemData) {
+                    $subtotal += $itemData['listing']->price * $itemData['cart_item']['quantity'];
                 }
                 
-                $shipping = $this->calculateShipping($items);
+                $shipping = $this->calculateShipping($vendorData['items']);
                 $taxes = $subtotal * 0.18; // 18% VAT
                 $platformCommission = $subtotal * 0.15; // 15% platform fee
                 $total = $subtotal + $shipping + $taxes;
 
-                // Create order
+                // Create order with proper status
+                $orderStatus = 'pending';
+                if ($validated['payment_method'] === 'cash_on_delivery') {
+                    $orderStatus = 'pending';
+                } elseif ($validated['payment_method'] === 'wallet') {
+                    $orderStatus = 'confirmed';
+                } else {
+                    $orderStatus = 'payment_pending';
+                }
+
                 $order = Order::create([
                     'order_number' => $orderNumber,
                     'buyer_id' => Auth::id(),
                     'vendor_profile_id' => $vendorId,
-                    'status' => $validated['payment_method'] === 'cash_on_delivery' ? 'pending' : 'payment_pending',
+                    'status' => $orderStatus,
                     'subtotal' => $subtotal,
                     'shipping' => $shipping,
                     'taxes' => $taxes,
                     'platform_commission' => $platformCommission,
                     'total' => $total,
-                    'meta' => [
+                    'meta' => json_encode([
                         'shipping_address' => $validated['shipping_address'],
                         'shipping_city' => $validated['shipping_city'],
                         'shipping_country' => $validated['shipping_country'],
                         'shipping_postal_code' => $validated['shipping_postal_code'] ?? null,
                         'payment_method' => $validated['payment_method'],
                         'notes' => $validated['notes'] ?? null,
-                    ]
+                    ])
                 ]);
 
                 // Create order items
-                foreach ($items as $item) {
+                foreach ($vendorData['items'] as $itemData) {
+                    $listing = $itemData['listing'];
+                    $cartItem = $itemData['cart_item'];
+                    
                     OrderItem::create([
                         'order_id' => $order->id,
-                        'listing_id' => $item['listing']->id,
-                        'title' => $item['listing']->title,
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['listing']->price,
-                        'line_total' => $item['listing']->price * $item['quantity'],
-                        'attributes' => [
-                            'sku' => $item['listing']->sku,
-                            'weight_kg' => $item['listing']->weight_kg,
-                            'origin' => $item['listing']->origin,
-                        ]
+                        'listing_id' => $listing->id,
+                        'title' => $listing->title,
+                        'quantity' => $cartItem['quantity'],
+                        'unit_price' => $listing->price,
+                        'line_total' => $listing->price * $cartItem['quantity'],
+                        'attributes' => json_encode([
+                            'sku' => $listing->sku ?? '',
+                            'weight_kg' => $listing->weight_kg ?? 0,
+                            'origin' => $listing->origin ?? 'local',
+                        ])
                     ]);
 
                     // Reduce stock
-                    $item['listing']->decrement('stock', $item['quantity']);
+                    $listing->decrement('stock', $cartItem['quantity']);
                 }
 
                 // Handle payment based on method
                 if ($validated['payment_method'] === 'cash_on_delivery') {
-                    // For COD, order is confirmed but payment is pending
-                    $order->update(['status' => 'confirmed']);
-                    
-                    // Create payment record
                     Payment::create([
                         'order_id' => $order->id,
+                        'provider' => 'cash',
                         'amount' => $total,
                         'payment_method' => 'cash_on_delivery',
                         'status' => 'pending',
-                        'meta' => [
+                        'meta' => json_encode([
                             'payment_due' => 'on_delivery',
                             'created_at' => now()->toDateTimeString()
-                        ]
+                        ])
                     ]);
                     
                 } elseif ($validated['payment_method'] === 'wallet') {
                     // Deduct from wallet
-                    $wallet = Wallet::where('user_id', Auth::id())->first();
-                    $wallet->decrement('available_balance', $total);
-                    $wallet->increment('pending_balance', $total);
+                    $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+                    $wallet->decrement('balance', $total);
                     
                     // Create escrow
                     Escrow::create([
@@ -225,41 +217,38 @@ class OrderController extends Controller
                         'amount' => $total,
                         'status' => 'holding',
                         'released_at' => null,
-                        'meta' => [
+                        'meta' => json_encode([
                             'payment_method' => 'wallet',
                             'created_at' => now()->toDateTimeString()
-                        ]
+                        ])
                     ]);
                     
                     // Create payment record
                     Payment::create([
                         'order_id' => $order->id,
+                        'provider' => 'wallet',
                         'amount' => $total,
                         'payment_method' => 'wallet',
                         'status' => 'completed',
                         'transaction_id' => 'WALLET-' . Str::random(12),
-                        'meta' => [
+                        'meta' => json_encode([
                             'wallet_id' => $wallet->id,
                             'paid_at' => now()->toDateTimeString()
-                        ]
+                        ])
                     ]);
                     
-                    $order->update(['status' => 'confirmed']);
-                    
                 } else {
-                    // For other payment methods (card, mobile money, bank transfer)
-                    // We'll handle payment gateway integration later
-                    // For now, just create payment record and keep status as payment_pending
-                    
+                    // For other payment methods
                     Payment::create([
                         'order_id' => $order->id,
+                        'provider' => $validated['payment_method'],
                         'amount' => $total,
                         'payment_method' => $validated['payment_method'],
                         'status' => 'pending',
-                        'meta' => [
-                            'payment_url' => null, // Will be populated by payment gateway
+                        'meta' => json_encode([
+                            'payment_url' => null,
                             'created_at' => now()->toDateTimeString()
-                        ]
+                        ])
                     ]);
                 }
 
@@ -267,22 +256,21 @@ class OrderController extends Controller
             }
 
             // Clear cart
-            $cart->items = [];
-            $cart->subtotal = 0;
-            $cart->shipping = 0;
-            $cart->tax = 0;
-            $cart->total = 0;
-            $cart->save();
+            $cart->update([
+                'items' => [],
+                'subtotal' => 0,
+                'shipping' => 0,
+                'tax' => 0,
+                'total' => 0
+            ]);
 
             DB::commit();
 
             // Redirect based on payment method
             if ($validated['payment_method'] === 'cash_on_delivery' || $validated['payment_method'] === 'wallet') {
-                return redirect()->route('buyer.orders.show', $orders[0])
+                return redirect()->route('buyer.orders.show', $orders[0]->id)
                     ->with('success', 'Order placed successfully!');
             } else {
-                // For other payment methods, redirect to payment gateway
-                // For now, just show success message
                 return redirect()->route('buyer.orders.index')
                     ->with('success', 'Order created. Please complete payment to confirm your order.');
             }
@@ -290,16 +278,19 @@ class OrderController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             \Log::error('Place order error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
             
-            return back()->withInput()->with('error', $e->getMessage());
+            return back()->withInput()->with('error', 'Failed to place order: ' . $e->getMessage());
         }
     }
 
     /**
      * Cancel order
      */
-    public function cancelOrder(Request $request, Order $order)
+    public function cancelOrder(Request $request, $id)
     {
+        $order = Order::findOrFail($id);
+        
         // Check ownership
         if ($order->buyer_id !== Auth::id()) {
             abort(403);
@@ -319,9 +310,8 @@ class OrderController extends Controller
 
             // Refund if payment was made
             if ($order->escrow) {
-                $wallet = Wallet::where('user_id', Auth::id())->first();
-                $wallet->decrement('pending_balance', $order->escrow->amount);
-                $wallet->increment('available_balance', $order->escrow->amount);
+                $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+                $wallet->increment('balance', $order->escrow->amount);
                 
                 $order->escrow->update([
                     'status' => 'refunded',
@@ -331,7 +321,7 @@ class OrderController extends Controller
 
             $order->update([
                 'status' => 'cancelled',
-                'meta' => array_merge($order->meta ?? [], [
+                'meta' => array_merge(json_decode($order->meta, true) ?? [], [
                     'cancelled_at' => now()->toDateTimeString(),
                     'cancelled_by' => 'buyer',
                     'cancellation_reason' => $request->input('reason', 'Buyer requested cancellation')
@@ -353,8 +343,10 @@ class OrderController extends Controller
     /**
      * Confirm delivery
      */
-    public function confirmDelivery(Order $order)
+    public function confirmDelivery($id)
     {
+        $order = Order::findOrFail($id);
+        
         // Check ownership
         if ($order->buyer_id !== Auth::id()) {
             abort(403);
@@ -369,7 +361,7 @@ class OrderController extends Controller
             // Update order status
             $order->update([
                 'status' => 'delivered',
-                'meta' => array_merge($order->meta ?? [], [
+                'meta' => array_merge(json_decode($order->meta, true) ?? [], [
                     'delivered_at' => now()->toDateTimeString(),
                     'confirmed_by_buyer' => true
                 ])
@@ -377,20 +369,14 @@ class OrderController extends Controller
 
             // Release escrow to vendor
             if ($order->escrow && $order->escrow->status === 'holding') {
-                $vendorWallet = Wallet::firstOrCreate(
+                $vendorWallet = BuyerWallet::firstOrCreate(
                     ['user_id' => $order->vendorProfile->user_id],
-                    ['available_balance' => 0, 'pending_balance' => 0]
+                    ['balance' => 0]
                 );
 
                 $amountToVendor = $order->total - $order->platform_commission;
                 
-                $vendorWallet->increment('available_balance', $amountToVendor);
-                
-                // Update buyer's wallet
-                $buyerWallet = Wallet::where('user_id', Auth::id())->first();
-                if ($buyerWallet) {
-                    $buyerWallet->decrement('pending_balance', $order->escrow->amount);
-                }
+                $vendorWallet->increment('balance', $amountToVendor);
                 
                 $order->escrow->update([
                     'status' => 'released',
@@ -399,12 +385,13 @@ class OrderController extends Controller
             }
 
             // Handle COD payment if applicable
-            if ($order->meta['payment_method'] === 'cash_on_delivery') {
+            $meta = json_decode($order->meta, true);
+            if (isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery') {
                 $payment = $order->payments()->where('status', 'pending')->first();
                 if ($payment) {
                     $payment->update([
                         'status' => 'completed',
-                        'meta' => array_merge($payment->meta ?? [], [
+                        'meta' => array_merge(json_decode($payment->meta, true) ?? [], [
                             'paid_at' => now()->toDateTimeString(),
                             'payment_confirmed' => true
                         ])
@@ -430,8 +417,10 @@ class OrderController extends Controller
     private function calculateShipping($items)
     {
         $totalWeight = 0;
-        foreach ($items as $item) {
-            $totalWeight += ($item['listing']->weight_kg ?? 0) * $item['quantity'];
+        foreach ($items as $itemData) {
+            $listing = $itemData['listing'];
+            $cartItem = $itemData['cart_item'];
+            $totalWeight += ($listing->weight_kg ?? 0) * $cartItem['quantity'];
         }
 
         // Simplified shipping calculation

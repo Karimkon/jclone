@@ -510,47 +510,311 @@
     // Check if user is authenticated
     const isAuthenticated = @json(auth()->check());
     
+    // Quick add to cart function (same as marketplace)
+    function quickAddToCart(listingId, button) {
+        console.log('quickAddToCart called', listingId, isAuthenticated);
+        
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
+        // Get quantity from input
+        const quantity = parseInt(document.getElementById('quantity').value) || 1;
+        
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: quantity })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                button.innerHTML = '<i class="fas fa-check mr-2"></i> Added!';
+                button.classList.remove('bg-primary', 'hover:bg-indigo-700');
+                button.classList.add('bg-green-600', 'hover:bg-green-700');
+                
+                // Update cart count
+                if (data.cart_count) {
+                    updateCartCount(data.cart_count);
+                }
+                
+                showToast(data.message || 'Added to cart!', 'success');
+                
+                setTimeout(() => {
+                    button.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i> Add to Cart';
+                    button.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    button.classList.add('bg-primary', 'hover:bg-indigo-700');
+                    button.disabled = false;
+                }, 2000);
+            } else {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+                showToast(data.message || 'Failed to add to cart', 'error');
+                
+                if (data.redirect) {
+                    setTimeout(() => window.location.href = data.redirect, 1500);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            button.innerHTML = originalHtml;
+            button.disabled = false;
+            showToast('Failed to add to cart', 'error');
+        });
+    }
+
+    // Quick add to wishlist function (same as marketplace)
+    function quickAddToWishlist(listingId, button) {
+        console.log('quickAddToWishlist called', listingId, isAuthenticated);
+        
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
+        const icon = button.querySelector('i');
+        const isFilled = icon.classList.contains('fas');
+        const originalText = button.innerHTML;
+        
+        // Show loading
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Processing...';
+        button.disabled = true;
+        
+        fetch(`/buyer/wishlist/toggle/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Wishlist response:', data);
+            
+            if (data.success) {
+                if (data.in_wishlist) {
+                    // Added to wishlist
+                    button.innerHTML = '<i class="fas fa-heart mr-2"></i> In Wishlist';
+                    button.classList.remove('border-primary', 'text-primary', 'hover:bg-primary', 'hover:text-white');
+                    button.classList.add('border-red-500', 'text-red-500', 'hover:bg-red-500', 'hover:text-white');
+                } else {
+                    // Removed from wishlist
+                    button.innerHTML = '<i class="far fa-heart mr-2"></i> Add to Wishlist';
+                    button.classList.remove('border-red-500', 'text-red-500', 'hover:bg-red-500', 'hover:text-white');
+                    button.classList.add('border-primary', 'text-primary', 'hover:bg-primary', 'hover:text-white');
+                }
+                
+                // Update wishlist count
+                if (data.wishlist_count !== undefined) {
+                    updateWishlistCount(data.wishlist_count);
+                }
+                
+                showToast(data.message || 'Wishlist updated!', 'success');
+                
+                setTimeout(() => {
+                    button.disabled = false;
+                }, 1000);
+            } else {
+                button.innerHTML = originalText;
+                button.disabled = false;
+                showToast(data.message || 'Failed to update wishlist', 'error');
+                
+                if (data.redirect) {
+                    setTimeout(() => window.location.href = data.redirect, 1500);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            button.innerHTML = originalText;
+            button.disabled = false;
+            showToast('Failed to update wishlist', 'error');
+        });
+    }
+
+    // Update cart count in navbar (same as marketplace)
+    function updateCartCount(count) {
+        console.log('Updating cart count:', count);
+        document.querySelectorAll('.cart-count').forEach(element => {
+            element.textContent = count;
+            if (count > 0) {
+                element.classList.remove('hidden');
+                element.classList.add('animate-bounce');
+                setTimeout(() => element.classList.remove('animate-bounce'), 1000);
+            }
+        });
+    }
+
+    // Update wishlist count in navbar (same as marketplace)
+    function updateWishlistCount(count) {
+        console.log('Updating wishlist count:', count);
+        document.querySelectorAll('.wishlist-count').forEach(element => {
+            element.textContent = count;
+            if (count > 0) {
+                element.classList.remove('hidden');
+            } else {
+                element.classList.add('hidden');
+            }
+        });
+    }
+
     // Show authentication modal
     function showAuthModal() {
-        console.log('showAuthModal called');
+        console.log('Showing auth modal');
         const modal = document.getElementById('authModal');
         if (modal) {
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        } else {
+            console.error('Auth modal not found!');
+            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
         }
     }
-    
+
     // Close authentication modal
     function closeAuthModal() {
+        console.log('Closing auth modal');
         const modal = document.getElementById('authModal');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
         }
     }
-    
+
+    // Show toast notification (same as marketplace)
+    function showToast(message, type = 'info') {
+        const existingToasts = document.querySelectorAll('.custom-toast');
+        existingToasts.forEach(toast => toast.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300`;
+        
+        const typeStyles = {
+            success: 'bg-green-500 text-white',
+            error: 'bg-red-500 text-white',
+            warning: 'bg-yellow-500 text-white',
+            info: 'bg-blue-500 text-white'
+        };
+        
+        toast.className += ` ${typeStyles[type] || typeStyles.info}`;
+        
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-times-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        
+        toast.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas ${icons[type] || icons.info} mr-3"></i>
+                <span>${message}</span>
+                <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (toast.parentElement) {
+                        toast.remove();
+                    }
+                }, 300);
+            }
+        }, 5000);
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         console.log('DOM loaded, isAuthenticated:', isAuthenticated);
         
-        // Setup all quick action buttons
-        document.querySelectorAll('[data-quick-cart]').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
+        // Quantity controls
+        const quantityInput = document.getElementById('quantity');
+        const quantityMinus = document.getElementById('quantityMinus');
+        const quantityPlus = document.getElementById('quantityPlus');
+        
+        if (quantityMinus && quantityPlus && quantityInput) {
+            quantityMinus.addEventListener('click', function() {
+                let current = parseInt(quantityInput.value) || 1;
+                if (current > 1) {
+                    quantityInput.value = current - 1;
+                }
+            });
+            
+            quantityPlus.addEventListener('click', function() {
+                let current = parseInt(quantityInput.value) || 1;
+                const max = parseInt(quantityInput.getAttribute('max')) || 99;
+                if (current < max) {
+                    quantityInput.value = current + 1;
+                }
+            });
+            
+            quantityInput.addEventListener('change', function() {
+                let value = parseInt(this.value) || 1;
+                const max = parseInt(this.getAttribute('max')) || 99;
+                const min = parseInt(this.getAttribute('min')) || 1;
                 
-                // Check authentication FIRST
+                if (value < min) value = min;
+                if (value > max) value = max;
+                
+                this.value = value;
+            });
+        }
+        
+        // Add to cart button
+        const addToCartBtn = document.getElementById('addToCartBtn');
+        if (addToCartBtn) {
+            addToCartBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToCart(listingId, this);
+            });
+        }
+        
+        // Add to wishlist button
+        const addToWishlistBtn = document.getElementById('addToWishlistBtn');
+        if (addToWishlistBtn) {
+            addToWishlistBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToWishlist(listingId, this);
+            });
+        }
+        
+        // Buy now button
+        const buyNowBtn = document.getElementById('buyNowBtn');
+        if (buyNowBtn) {
+            buyNowBtn.addEventListener('click', function(e) {
+                e.preventDefault();
                 if (!isAuthenticated) {
                     showAuthModal();
                     return;
                 }
                 
-                // If authenticated, proceed with adding to cart
                 const listingId = this.getAttribute('data-listing-id');
-                const originalHtml = this.innerHTML;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                this.disabled = true;
+                const quantity = parseInt(document.getElementById('quantity').value) || 1;
                 
+                // First add to cart, then redirect to checkout
                 fetch(`/buyer/cart/add/${listingId}`, {
                     method: 'POST',
                     headers: {
@@ -558,101 +822,22 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ quantity: 1 })
+                    body: JSON.stringify({ quantity: quantity })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        this.innerHTML = '<i class="fas fa-check"></i>';
-                        this.classList.remove('text-gray-600');
-                        this.classList.add('text-green-500');
-                        
-                        alert('Added to cart!');
-                        
-                        setTimeout(() => {
-                            this.innerHTML = originalHtml;
-                            this.classList.remove('text-green-500');
-                            this.classList.add('text-gray-600');
-                            this.disabled = false;
-                        }, 2000);
+                        window.location.href = '/buyer/orders/checkout';
                     } else {
-                        this.innerHTML = originalHtml;
-                        this.disabled = false;
-                        alert(data.message || 'Failed to add to cart');
-                        
-                        if (data.redirect) {
-                            setTimeout(() => {
-                                window.location.href = data.redirect;
-                            }, 1500);
-                        }
+                        showToast(data.message || 'Failed to add to cart', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    this.innerHTML = originalHtml;
-                    this.disabled = false;
-                    alert('Failed to add to cart');
+                    showToast('Failed to add to cart', 'error');
                 });
             });
-        });
-        
-        // Setup all wishlist buttons
-        document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Check authentication FIRST
-                if (!isAuthenticated) {
-                    showAuthModal();
-                    return;
-                }
-                
-                // If authenticated, proceed with adding to wishlist
-                const listingId = this.getAttribute('data-listing-id');
-                const icon = this.querySelector('i');
-                const isFilled = icon.classList.contains('fas');
-                
-                fetch(`/buyer/wishlist/toggle/${listingId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        if (data.in_wishlist) {
-                            // Added to wishlist
-                            icon.classList.remove('far');
-                            icon.classList.add('fas');
-                            this.classList.add('text-red-500');
-                        } else {
-                            // Removed from wishlist
-                            icon.classList.remove('fas');
-                            icon.classList.add('far');
-                            this.classList.remove('text-red-500');
-                        }
-                        
-                        alert('Wishlist updated!');
-                    } else {
-                        alert('Failed to update wishlist');
-                        
-                        if (data.redirect) {
-                            setTimeout(() => {
-                                window.location.href = data.redirect;
-                            }, 1500);
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to update wishlist');
-                });
-            });
-        });
+        }
         
         // Close modal on background click
         const authModal = document.getElementById('authModal');
@@ -664,16 +849,147 @@
             });
         }
         
-        // Close modal on close button click
-        const closeModalBtns = document.querySelectorAll('[onclick="closeAuthModal()"]');
-        closeModalBtns.forEach(btn => {
-            btn.addEventListener('click', closeAuthModal);
+        // Close modal on close button
+        const closeButtons = document.querySelectorAll('[onclick="closeAuthModal()"]');
+        closeButtons.forEach(button => {
+            button.addEventListener('click', closeAuthModal);
         });
+        
+        // Tab switching functionality
+        const tabs = {
+            descriptionTab: document.getElementById('descriptionTab'),
+            specsTab: document.getElementById('specsTab'),
+            shippingTab: document.getElementById('shippingTab'),
+            reviewsTab: document.getElementById('reviewsTab'),
+            descriptionContent: document.getElementById('descriptionContent'),
+            specsContent: document.getElementById('specsContent'),
+            shippingContent: document.getElementById('shippingContent'),
+            reviewsContent: document.getElementById('reviewsContent')
+        };
+        
+        if (tabs.descriptionTab) {
+            tabs.descriptionTab.addEventListener('click', () => switchTab('description'));
+            tabs.specsTab.addEventListener('click', () => switchTab('specs'));
+            tabs.shippingTab.addEventListener('click', () => switchTab('shipping'));
+            tabs.reviewsTab.addEventListener('click', () => switchTab('reviews'));
+        }
+        
+        function switchTab(tabName) {
+            // Hide all content
+            tabs.descriptionContent.classList.add('hidden');
+            tabs.specsContent.classList.add('hidden');
+            tabs.shippingContent.classList.add('hidden');
+            tabs.reviewsContent.classList.add('hidden');
+            
+            // Remove active styles from all tabs
+            tabs.descriptionTab.classList.remove('border-b-2', 'border-primary', 'text-primary');
+            tabs.specsTab.classList.remove('border-b-2', 'border-primary', 'text-primary');
+            tabs.shippingTab.classList.remove('border-b-2', 'border-primary', 'text-primary');
+            tabs.reviewsTab.classList.remove('border-b-2', 'border-primary', 'text-primary');
+            
+            // Add default styles
+            tabs.descriptionTab.classList.add('text-gray-600', 'hover:text-primary');
+            tabs.specsTab.classList.add('text-gray-600', 'hover:text-primary');
+            tabs.shippingTab.classList.add('text-gray-600', 'hover:text-primary');
+            tabs.reviewsTab.classList.add('text-gray-600', 'hover:text-primary');
+            
+            // Show selected content and style tab
+            switch(tabName) {
+                case 'description':
+                    tabs.descriptionContent.classList.remove('hidden');
+                    tabs.descriptionTab.classList.remove('text-gray-600', 'hover:text-primary');
+                    tabs.descriptionTab.classList.add('border-b-2', 'border-primary', 'text-primary');
+                    break;
+                case 'specs':
+                    tabs.specsContent.classList.remove('hidden');
+                    tabs.specsTab.classList.remove('text-gray-600', 'hover:text-primary');
+                    tabs.specsTab.classList.add('border-b-2', 'border-primary', 'text-primary');
+                    break;
+                case 'shipping':
+                    tabs.shippingContent.classList.remove('hidden');
+                    tabs.shippingTab.classList.remove('text-gray-600', 'hover:text-primary');
+                    tabs.shippingTab.classList.add('border-b-2', 'border-primary', 'text-primary');
+                    break;
+                case 'reviews':
+                    tabs.reviewsContent.classList.remove('hidden');
+                    tabs.reviewsTab.classList.remove('text-gray-600', 'hover:text-primary');
+                    tabs.reviewsTab.classList.add('border-b-2', 'border-primary', 'text-primary');
+                    break;
+            }
+        }
+        
+        // Load cart and wishlist counts if authenticated
+        if (isAuthenticated) {
+            console.log('User is authenticated, loading counts...');
+            
+            fetch('/cart/count')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Cart count response:', data);
+                    if (data.authenticated && data.cart_count > 0) {
+                        updateCartCount(data.cart_count);
+                    }
+                })
+                .catch(error => console.error('Error fetching cart:', error));
+            
+            fetch('/wishlist/count')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Wishlist count response:', data);
+                    if (data.authenticated && data.count > 0) {
+                        updateWishlistCount(data.count);
+                    }
+                })
+                .catch(error => console.error('Error fetching wishlist:', error));
+        }
     });
+    
+    // Helper functions for product page
+    function changeMainImage(button) {
+        const src = button.getAttribute('data-src');
+        const mainImage = document.getElementById('mainImage');
+        if (mainImage && src) {
+            mainImage.src = src;
+        }
+    }
+    
+    function contactVendor() {
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        // Implement contact vendor functionality
+        alert('Contact vendor functionality coming soon!');
+    }
+    
+    function writeReview() {
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        // Implement write review functionality
+        alert('Review functionality coming soon!');
+    }
+
+    
 </script>
 
 <style>
-    /* Custom styles for product page */
+    .custom-toast {
+        animation: slideInRight 0.3s ease-out;
+    }
+    
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
     #mainImage {
         max-height: 480px;
     }
@@ -682,12 +998,10 @@
         transition: all 0.3s ease;
     }
     
-    /* Smooth transitions */
     .transition-all {
         transition: all 0.3s ease;
     }
     
-    /* Custom scrollbar for thumbnails */
     .overflow-x-auto::-webkit-scrollbar {
         height: 4px;
     }
@@ -706,23 +1020,6 @@
         background: #a1a1a1;
     }
     
-    /* Toast animations */
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    .custom-toast {
-        animation: slideInRight 0.3s ease-out;
-    }
-    
-    /* Pulse animation for cart count */
     @keyframes pulse {
         0%, 100% {
             transform: scale(1);

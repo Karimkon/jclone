@@ -91,8 +91,8 @@
                         <span>Browse Marketplace</span>
                     </a>
                     
-                    <a href="{{ route('cart.index') }}" 
-                       class="nav-item flex items-center px-4 py-3 rounded-lg {{ request()->routeIs('cart.*') ? 'active' : '' }}">
+                    <a href="{{ route('buyer.cart.index') }}" 
+                       class="nav-item flex items-center px-4 py-3 rounded-lg {{ request()->routeIs('buyer.cart.*') ? 'active' : '' }}">
                         <i class="fas fa-shopping-cart mr-3"></i>
                         <span>Shopping Cart</span>
                         @php
@@ -194,7 +194,7 @@
                         </div>
                         
                         <!-- Quick Cart -->
-                        <a href="{{ route('cart.index') }}" class="p-2 text-gray-600 hover:text-blue-600 relative">
+                        <a href="{{ route('buyer.cart.index') }}" class="p-2 text-gray-600 hover:text-blue-600 relative">
                             <i class="fas fa-shopping-cart text-xl"></i>
                             @php
                                 $cartCount = Auth::user()->cart ? count(Auth::user()->cart->items ?? []) : 0;
@@ -272,6 +272,7 @@
         });
     </script>
     
+    @yield('scripts')
     @stack('scripts')
 </body>
 </html>

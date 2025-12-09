@@ -100,19 +100,21 @@ class AuthController extends Controller
                 'city' => $request->city ?? 'Kampala',
                 'vetting_status' => 'pending',
             ]);
-        } 
-        // If buyer registration, create wallet automatically
+        }
+        // If buyer registration, create wallet here (single source of truth)
         elseif ($role === 'buyer') {
-            BuyerWallet::create([
-                'user_id' => $user->id,
-                'balance' => 0,
-                'locked_balance' => 0,
-                'currency' => 'USD',
-                'meta' => [
-                    'created_at' => now()->toDateTimeString(),
-                    'initial_balance' => 0,
+            BuyerWallet::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'balance' => 0,
+                    'locked_balance' => 0,
+                    'currency' => 'USD',
+                    'meta' => [
+                        'created_at' => now()->toDateTimeString(),
+                        'initial_balance' => 0,
+                    ]
                 ]
-            ]);
+            );
         }
 
         Auth::login($user);

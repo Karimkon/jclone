@@ -153,54 +153,60 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // ====================
-    // ADMIN ROUTES
-    // ====================
-    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-        
-        // User management
-        Route::resource('users', AdminUserController::class);
-        
-        // Vendor vetting
-        Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
-        Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
-        Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
-        Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
-        Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
-        Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
-        Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
+// ADMIN ROUTES
+// ====================
+Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    
+    // User management
+    Route::resource('users', AdminUserController::class);
+    
+    // Vendor vetting
+    Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
+    Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
+    Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
+    Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
+    Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
+    Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
+    Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
 
-        // Document verification
-        Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
-        Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
-        
-        // Category management
-        Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
-        Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
-        Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-        Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
-        Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
-        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-        Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
-        
-        // Orders
-        Route::get('/orders', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('orders.show');
-        
-        // Disputes
-        Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
-        Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
-        
-        // Reports
-        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
-
-        // Escrow management
-        Route::prefix('escrows')->name('escrows.')->group(function () {
-            Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
-            Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
-            Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
-        });
+    // Document verification
+    Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
+    Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
+    
+    // Category management
+    Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+    Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+    Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+    Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+    Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
+    
+    // Orders - ADD THESE ROUTES
+    Route::prefix('orders')->name('orders.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('index');
+        Route::get('/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('show');
+        Route::post('/{order}/status', [\App\Http\Controllers\Admin\AdminOrderController::class, 'updateStatus'])->name('update-status'); // THIS LINE IS MISSING!
+        Route::post('/{order}/refund', [\App\Http\Controllers\Admin\AdminOrderController::class, 'refund'])->name('refund');
+        Route::get('/{order}/invoice', [\App\Http\Controllers\Admin\AdminOrderController::class, 'invoice'])->name('invoice');
+        Route::get('/export', [\App\Http\Controllers\Admin\AdminOrderController::class, 'export'])->name('export');
     });
+    
+    // Disputes
+    Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
+    Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
+    
+    // Reports
+    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+
+    // Escrow management
+    Route::prefix('escrows')->name('escrows.')->group(function () {
+        Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
+        Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
+        Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
+    });
+});
     
     // ====================
     // LOGISTICS ROUTES

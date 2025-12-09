@@ -17,6 +17,7 @@
         [x-cloak] { display: none !important; }
     </style>
     
+    @yield('styles')
     @stack('styles')
 </head>
 <body class="bg-gray-50">
@@ -110,7 +111,7 @@
                     <a href="{{ route('login') }}" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg text-center hover:bg-indigo-700 transition">
                         <i class="fas fa-sign-in-alt mr-2"></i>Login
                     </a>
-                    <a href="{{ route('login') }}" class="flex-1 border-2 border-indigo-600 text-indigo-600 py-2 px-4 rounded-lg text-center hover:bg-indigo-50 transition">
+                    <a href="{{ route('register') }}" class="flex-1 border-2 border-indigo-600 text-indigo-600 py-2 px-4 rounded-lg text-center hover:bg-indigo-50 transition">
                         <i class="fas fa-user-plus mr-2"></i>Sign Up
                     </a>
                 </div>
@@ -118,7 +119,7 @@
         </div>
     </div>
 
-    
+    @yield('scripts')
     @stack('scripts')
 </body>
 </html>

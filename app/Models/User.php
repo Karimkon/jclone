@@ -75,4 +75,15 @@ public function orders()
 {
     return $this->hasMany(\App\Models\Order::class, 'buyer_id');
 }
+
+// In User.php model
+public function buyerWallet()
+{
+    return $this->hasOne(\App\Models\BuyerWallet::class);
+}
+
+public function walletTransactions()
+{
+    return $this->hasMany(\App\Models\WalletTransaction::class);
+}
 }
