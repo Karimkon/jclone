@@ -36,4 +36,38 @@ class Listing extends Model {
     public function scopeImported($query) {
         return $query->where('origin', 'imported');
     }
+
+    /**
+ * Get reviews for this listing
+ */
+public function reviews()
+{
+    return $this->hasMany(\App\Models\Review::class);
+}
+
+/**
+ * Get approved reviews
+ */
+public function approvedReviews()
+{
+    return $this->reviews()->where('status', 'approved');
+}
+
+/**
+ * Get average rating
+ */
+public function getAverageRatingAttribute()
+{
+    return $this->approvedReviews()->avg('rating') ?? 0;
+}
+
+/**
+ * Get reviews count
+ */
+public function getReviewsCountAttribute()
+{
+    return $this->approvedReviews()->count();
+}
+
+
 }

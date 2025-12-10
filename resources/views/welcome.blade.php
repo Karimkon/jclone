@@ -4,49 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ config('app.name') }} - Buy & Sell Everything</title>
+    <title>{{ config('app.name') }} - Your Trusted Marketplace</title>
+    <meta name="description" content="Shop securely with escrow protection. Buy local and imported products with confidence.">
     
-    <!-- Tailwind CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Swiper CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
     <script>
         tailwind.config = {
             theme: {
                 extend: {
+                    fontFamily: { 'body': ['Outfit', 'sans-serif'], 'display': ['Sora', 'sans-serif'] },
                     colors: {
-                        primary: '#4f46e5',
-                        secondary: '#10b981',
-                        accent: '#f59e0b'
+                        brand: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' },
+                        mint: { 400: '#34d399', 500: '#10b981', 600: '#059669' },
+                        coral: { 400: '#fb7185', 500: '#f43f5e', 600: '#e11d48' },
+                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+                        ink: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a', 950: '#020617' }
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.6s ease-out',
-                        'slide-up': 'slideUp 0.8s ease-out',
-                        'scale-in': 'scaleIn 0.5s ease-out',
-                        'float': 'float 3s ease-in-out infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                        'slide-up': 'slideUp 0.5s ease forwards',
+                        'bounce-soft': 'bounceSoft 2s ease-in-out infinite',
                     },
                     keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' }
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(30px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' }
-                        },
-                        scaleIn: {
-                            '0%': { transform: 'scale(0.9)', opacity: '0' },
-                            '100%': { transform: 'scale(1)', opacity: '1' }
-                        },
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0px)' },
-                            '50%': { transform: 'translateY(-20px)' }
-                        }
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-8px)' } },
+                        slideUp: { '0%': { opacity: '0', transform: 'translateY(20px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        bounceSoft: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-5px)' } },
                     }
                 }
             }
@@ -54,1195 +42,1103 @@
     </script>
     
     <style>
-        /* Performance optimizations */
-        * {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
         
-        /* Smooth transitions */
-        .smooth-transition {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        * { -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Outfit', sans-serif; }
+        h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', sans-serif; }
         
-        /* Glassmorphism effect */
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+        /* Category Sidebar with Subcategory on Hover - FIXED Z-INDEX */
+        .cat-sidebar-item { 
+            position: relative; 
+            transition: all 0.2s ease; 
+            border-left: 3px solid transparent; 
+            overflow: visible !important;
         }
-        
-        /* Gradient backgrounds */
-        .hero-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            position: relative;
-            overflow: hidden;
+        .cat-sidebar-item:hover { 
+            background: linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%); 
+            border-left-color: #6366f1; 
         }
-        
-        .hero-gradient::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: grid-move 20s linear infinite;
-        }
-        
-        @keyframes grid-move {
-            0% { transform: translate(0, 0); }
-            100% { transform: translate(50px, 50px); }
-        }
-        
-        /* Card hover effects */
-        .card-hover {
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-        }
-        
-        .card-hover:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        }
-        
-        /* Category card effects */
-        .category-card {
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .category-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
-        }
-        
-        .category-card:hover::before {
-            left: 100%;
-        }
-        
-        .category-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(79, 70, 229, 0.2);
-        }
-        
-        /* Product card */
-        .product-card {
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            position: relative;
-        }
-        
-        .product-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-        }
-        
-        .product-card img {
-            transition: transform 0.4s ease;
-        }
-        
-        .product-card:hover img {
+        .cat-sidebar-item:hover > a .cat-icon { 
+            color: #6366f1; 
             transform: scale(1.1);
         }
         
-        /* Button animations */
-        .btn-primary {
+        /* Subcategory Panel - Shows on parent hover - FIXED Z-INDEX */
+        .cat-submenu { 
+            display: none; 
+            position: absolute; 
+            left: 100%; 
+            top: 0;
+            min-width: 420px;
+            max-width: 500px;
+            background: white; 
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
+            border-radius: 16px; 
+            z-index: 9999; /* MUCH HIGHER Z-INDEX */
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+            animation: fadeIn 0.2s ease forwards;
+            transform-origin: top left;
+        }
+        
+        /* Ensure the sidebar container doesn't clip the submenu */
+        aside > div {
+            overflow: visible !important;
+        }
+        
+        /* Adjust positioning for better visibility */
+        .cat-sidebar-item:hover > .cat-submenu { 
+            display: block; 
+            margin-left: 4px;
+        }
+        
+        /* Product Cards - Ensure they have lower z-index */
+        .product-card { 
+            transition: all 0.3s ease; 
+            background: white; 
+            border-radius: 16px; 
+            overflow: hidden; 
             position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
+            z-index: 1; /* Lower z-index than submenu */
+        }
+        .product-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px -15px rgba(0,0,0,0.15); }
+        .product-card:hover .product-image { transform: scale(1.05); }
+        .product-card:hover .product-actions { opacity: 1; transform: translateY(0); }
+        .product-card:hover .quick-add { opacity: 1; }
+        .product-image { transition: transform 0.4s ease; }
+        .product-actions { opacity: 0; transform: translateY(8px); transition: all 0.3s ease; }
+        .quick-add { opacity: 0; transition: opacity 0.3s ease; }
+        
+        /* Buttons */
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(99,102,241,0.3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+        
+        /* Hero Banner - Smaller */
+        .hero-banner { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4c1d95 100%); }
+        .flash-gradient { background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f59e0b 100%); }
+        
+        /* Timer */
+        .timer-box { background: rgba(0,0,0,0.2); backdrop-filter: blur(8px); }
+        
+        /* Category Cards */
+        .category-card { transition: all 0.3s ease; }
+        .category-card:hover { transform: translateY(-4px); box-shadow: 0 15px 30px -10px rgba(0,0,0,0.12); }
+        
+        /* Trust Badges */
+        .trust-badge { transition: all 0.3s ease; }
+        .trust-badge:hover { transform: translateY(-3px); }
+        
+        /* Section Headers */
+        .section-line { position: relative; padding-left: 16px; }
+        .section-line::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 4px; height: 24px; border-radius: 4px; }
+        .section-line.brand::before { background: linear-gradient(180deg, #6366f1, #a855f7); }
+        .section-line.fire::before { background: linear-gradient(180deg, #ef4444, #f97316); }
+        .section-line.mint::before { background: linear-gradient(180deg, #10b981, #14b8a6); }
+        .section-line.purple::before { background: linear-gradient(180deg, #8b5cf6, #a855f7); }
+        
+        /* Glass */
+        .glass { background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); }
+        
+        /* Badges */
+        .badge-new { background: linear-gradient(135deg, #8b5cf6, #a855f7); }
+        .badge-hot { background: linear-gradient(135deg, #ef4444, #f97316); }
+        .badge-sale { background: linear-gradient(135deg, #dc2626, #ea580c); }
+        .badge-imported { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
+        .badge-local { background: linear-gradient(135deg, #10b981, #14b8a6); }
+        
+        /* Stars */
+        .star-filled { color: #fbbf24; }
+        .star-empty { color: #e2e8f0; }
+        
+        /* Calculator */
+        .calc-card { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
+        
+        /* Promo */
+        .promo-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
+        
+        .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        html { scroll-behavior: smooth; }
+
+        /* Chatbot Styles */
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
         }
         
-        .btn-primary:hover::before {
-            width: 300px;
-            height: 300px;
+        .cat-sidebar-item.hover-active {
+            background: linear-gradient(90deg, rgba(99,102,241,0.08) 0%, transparent 100%);
+            border-left-color: #6366f1;
         }
         
-        /* Smooth scroll */
-        html {
-            scroll-behavior: smooth;
+        .cat-sidebar-item.hover-active > a .cat-icon {
+            color: #6366f1;
         }
         
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
+        /* Loading spinner */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
         }
         
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        ::-webkit-scrollbar-thumb {
-            background: #4f46e5;
-            border-radius: 5px;
+        /* Improved Subcategory Links */
+        .cat-submenu a {
+            transition: all 0.2s ease;
+            padding: 8px 12px;
+            border-radius: 8px;
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: #4338ca;
+        .cat-submenu a:hover {
+            background: #f8fafc;
+            transform: translateX(4px);
         }
         
-        /* Trust badge pulse */
-        .trust-badge {
-            animation: badge-pulse 2s ease-in-out infinite;
+        @media (max-width: 1024px) { 
+            .cat-submenu { 
+                display: none !important; 
+            } 
         }
         
-        @keyframes badge-pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        /* IMPORTANT: Ensure the main content area has proper stacking */
+        main {
+            position: relative;
+            z-index: 1;
         }
         
-        /* Newsletter input */
-        .newsletter-input:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        /* Ensure sidebar has proper stacking context */
+        aside {
+            position: relative;
+            z-index: 10; /* Higher than main content */
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- Top Navigation -->
-    <nav class="bg-white shadow-lg sticky top-0 z-50 animate-slide-up">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center py-4">
-                <!-- Logo -->
-                <div class="flex items-center space-x-2 animate-fade-in">
-                    <a href="{{ route('welcome') }}" class="text-2xl font-bold text-primary smooth-transition hover:scale-110">
-                        <i class="fas fa-store mr-2"></i>{{ config('app.name') }}
-                    </a>
-                    <span class="text-xs bg-gradient-to-r from-primary to-purple-600 text-white px-2 py-1 rounded-full animate-pulse">Beta</span>
-                </div>
+<body class="bg-ink-50 font-body">
 
-                <!-- Desktop Navigation -->
-                <div class="hidden lg:flex items-center space-x-8">
-                    <a href="{{ route('marketplace.index') }}" class="text-gray-700 hover:text-primary font-medium smooth-transition hover:scale-105">
-                        <i class="fas fa-th-large mr-2"></i>Marketplace
-                    </a>
-                    <a href="#how-it-works" class="text-gray-700 hover:text-primary font-medium smooth-transition hover:scale-105">
-                        <i class="fas fa-play-circle mr-2"></i>How it Works
-                    </a>
-                    <a href="#import-calculator" class="text-gray-700 hover:text-primary font-medium smooth-transition hover:scale-105">
-                        <i class="fas fa-calculator mr-2"></i>Calculator
-                    </a>
-                    <a href="#categories" class="text-gray-700 hover:text-primary font-medium smooth-transition hover:scale-105">
-                        <i class="fas fa-tags mr-2"></i>Categories
-                    </a>
-                </div>
-
-                <!-- User Actions -->
-                <div class="flex items-center space-x-4">
-                    @auth
-                        @if(auth()->user()->isVendor())
-                            <a href="{{ route('vendor.dashboard') }}" class="hidden md:inline-flex bg-gradient-to-r from-primary to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg smooth-transition">
-                                <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
-                            </a>
-                        @elseif(auth()->user()->isInVendorOnboarding())
-                            <a href="{{ route('vendor.onboard.status') }}" class="hidden md:inline-flex bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg smooth-transition">
-                                <i class="fas fa-clipboard-check mr-2"></i>Status
-                            </a>
-                        @elseif(auth()->user()->isBuyer())
-                            <a href="{{ route('buyer.cart.index') }}" class="relative text-gray-700 hover:text-primary smooth-transition">
-                                <i class="fas fa-shopping-cart text-xl"></i>
-                                <span class="cart-count absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
-                            </a>
-                            
-                            <a href="{{ route('buyer.wishlist.index') }}" class="relative text-gray-700 hover:text-primary smooth-transition">
-                                <i class="fas fa-heart text-xl"></i>
-                                <span class="wishlist-count absolute -top-2 -right-2 bg-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
-                            </a>
-                            
-                            <a href="{{ route('buyer.dashboard') }}" class="hidden md:inline-flex text-gray-700 hover:text-primary font-medium smooth-transition">
-                                <i class="fas fa-user-circle mr-2"></i>Account
-                            </a>
-                        @endif
-                    @else
-                        <button class="relative text-gray-700 hover:text-primary smooth-transition">
-                            <i class="fas fa-shopping-cart text-xl"></i>
-                            <span class="cart-count absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
-                        </button>
-                        
-                        <a href="{{ route('login') }}" class="text-gray-700 hover:text-primary font-medium smooth-transition hover:scale-105">
-                            <i class="fas fa-sign-in-alt mr-2"></i>Login
-                        </a>
-                    @endauth
-                    
-                    <a href="{{ route('vendor.onboard.create') }}" class="btn-primary bg-gradient-to-r from-primary to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg hidden md:inline-flex">
-                        <i class="fas fa-store mr-2"></i>Sell Now
-                    </a>
-                    
-                    <!-- Mobile Menu Button -->
-                    <button class="lg:hidden text-gray-700" onclick="toggleMobileMenu()">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                </div>
+<!-- TOP BAR -->
+<div class="bg-ink-900 text-white text-sm py-2">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-5">
+                <span class="flex items-center gap-2">
+                    <i class="fas fa-shield-alt text-mint-400 text-xs"></i>
+                    <span class="hidden sm:inline">100% Secure Escrow</span>
+                </span>
+                <span class="hidden md:flex items-center gap-2">
+                    <i class="fas fa-truck text-gold-400 text-xs"></i>
+                    <span>Free Shipping $50+</span>
+                </span>
             </div>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section class="hero-gradient text-white py-20 lg:py-32 relative overflow-hidden">
-        <div class="container mx-auto px-4 relative z-10">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <div class="animate-slide-up">
-                    <div class="inline-block mb-4">
-                        <span class="bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full text-sm font-medium">
-                            🎉 Trusted by 10,000+ Users
-                        </span>
-                    </div>
-                    
-                    <h1 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-                        Buy Local & Imported Products
-                        <span class="text-yellow-300 block mt-2">with Confidence</span>
-                    </h1>
-                    
-                    <p class="text-xl mb-8 opacity-90 leading-relaxed">
-                        Secure marketplace with escrow protection, integrated logistics, and customs clearance for hassle-free shopping.
-                    </p>
-                    
-                    <div class="flex flex-wrap gap-4 mb-12">
-                        <a href="{{ route('marketplace.index') }}" class="btn-primary bg-white text-primary px-8 py-4 rounded-xl font-semibold hover:shadow-2xl smooth-transition flex items-center group">
-                            <i class="fas fa-shopping-bag mr-2 group-hover:scale-110 smooth-transition"></i> 
-                            Start Shopping
-                        </a>
-                        
-                        <a href="{{ route('vendor.onboard.create') }}" class="glass border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-primary smooth-transition flex items-center group">
-                            <i class="fas fa-store mr-2 group-hover:scale-110 smooth-transition"></i> 
-                            Start Selling
-                        </a>
-                    </div>
-                    
-                    <!-- Trust Indicators -->
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in">
-                        <div class="text-center trust-badge">
-                            <div class="text-3xl font-bold mb-1">10K+</div>
-                            <div class="text-sm opacity-80">Happy Customers</div>
-                        </div>
-                        <div class="text-center trust-badge">
-                            <div class="text-3xl font-bold mb-1">{{ $categories->count() }}+</div>
-                            <div class="text-sm opacity-80">Categories</div>
-                        </div>
-                        <div class="text-center trust-badge">
-                            <div class="text-3xl font-bold mb-1">24/7</div>
-                            <div class="text-sm opacity-80">Support</div>
-                        </div>
-                        <div class="text-center trust-badge">
-                            <div class="text-3xl font-bold mb-1">100%</div>
-                            <div class="text-sm opacity-80">Secure</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Hero Image with Floating Cards -->
-                <div class="relative animate-scale-in">
-                    <div class="relative z-10 float-animation">
-                        <img src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80" 
-                             alt="Shopping" class="rounded-2xl shadow-2xl">
-                    </div>
-                    
-                    <!-- Floating Card 1 -->
-                    <div class="absolute -top-6 -left-6 glass p-4 rounded-xl shadow-2xl animate-float z-20" style="animation-delay: 0.2s">
-                        <div class="flex items-center">
-                            <div class="bg-primary text-white p-3 rounded-xl mr-3">
-                                <i class="fas fa-shield-alt text-xl"></i>
-                            </div>
-                            <div>
-                                <div class="font-bold text-white text-sm">Escrow Protection</div>
-                                <div class="text-xs text-white/80">Money safe until delivery</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Floating Card 2 -->
-                    <div class="absolute -bottom-6 -right-6 glass p-4 rounded-xl shadow-2xl animate-float z-20" style="animation-delay: 0.5s">
-                        <div class="flex items-center">
-                            <div class="bg-secondary text-white p-3 rounded-xl mr-3">
-                                <i class="fas fa-truck text-xl"></i>
-                            </div>
-                            <div>
-                                <div class="font-bold text-white text-sm">Fast Delivery</div>
-                                <div class="text-xs text-white/80">Doorstep delivery</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Categories Section -->
-    <section id="categories" class="py-20 bg-white">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-12 animate-slide-up">
-                <h2 class="text-4xl font-bold text-gray-800 mb-4">Shop by Category</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto text-lg">
-                    Browse through our wide range of categories from local artisans and imported goods
-                </p>
-            </div>
-            
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                @php
-                    $categoryColors = [
-                        'blue' => ['from' => 'from-blue-50', 'to' => 'to-blue-100', 'icon' => 'text-primary'],
-                        'pink' => ['from' => 'from-pink-50', 'to' => 'to-pink-100', 'icon' => 'text-pink-600'],
-                        'green' => ['from' => 'from-green-50', 'to' => 'to-green-100', 'icon' => 'text-green-600'],
-                        'purple' => ['from' => 'from-purple-50', 'to' => 'to-purple-100', 'icon' => 'text-purple-600'],
-                        'yellow' => ['from' => 'from-yellow-50', 'to' => 'to-yellow-100', 'icon' => 'text-yellow-600'],
-                        'red' => ['from' => 'from-red-50', 'to' => 'to-red-100', 'icon' => 'text-red-600'],
-                    ];
-                    $colorKeys = array_keys($categoryColors);
-                @endphp
-                
-                @foreach($categories->take(12) as $index => $category)
-                    @php
-                        $color = $categoryColors[$colorKeys[$index % count($colorKeys)]];
-                    @endphp
-                    <a href="{{ route('marketplace.index', ['category' => $category->id]) }}" 
-                       class="category-card bg-gradient-to-br {{ $color['from'] }} {{ $color['to'] }} rounded-2xl p-6 text-center cursor-pointer">
-                        <div class="bg-white w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                            <i class="fas fa-{{ $category->icon ?? 'tag' }} {{ $color['icon'] }} text-2xl"></i>
-                        </div>
-                        <h3 class="font-semibold text-gray-800 mb-1">{{ $category->name }}</h3>
-                        <p class="text-xs text-gray-500">{{ $category->listings_count ?? 0 }} products</p>
-                    </a>
-                @endforeach
-            </div>
-            
-            <div class="text-center mt-10">
-                <a href="{{ route('marketplace.index') }}" class="inline-flex items-center text-primary font-semibold hover:text-indigo-700 smooth-transition text-lg">
-                    View All Categories 
-                    <i class="fas fa-arrow-right ml-2 smooth-transition hover:translate-x-2"></i>
+            <div class="flex items-center gap-4">
+                <a href="{{ route('vendor.onboard.create') }}" class="hover:text-brand-300 transition">
+                    <i class="fas fa-store text-xs mr-1"></i><span class="hidden sm:inline">Sell on {{ config('app.name') }}</span>
                 </a>
-            </div>
+                <span class="text-ink-600">|</span>
+                <a href="#" id="helpLink" class="hover:text-brand-300 transition"><i class="fas fa-headset text-xs mr-1"></i>Help</a>            </div>
         </div>
-    </section>
+    </div>
+</div>
 
-    <!-- Featured Products Section -->
-    <section class="py-20 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center mb-12">
-                <div class="animate-slide-up">
-                    <h2 class="text-4xl font-bold text-gray-800 mb-2">🔥 Trending Products</h2>
-                    <p class="text-gray-600 text-lg">Hot deals you don't want to miss</p>
+<!-- HEADER -->
+<header class="bg-white shadow-sm sticky top-0 z-50">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between py-3">
+            <!-- Logo -->
+            <a href="{{ route('welcome') }}" class="flex items-center gap-2">
+                <div class="w-10 h-10 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <i class="fas fa-store text-white"></i>
                 </div>
-                <a href="{{ route('marketplace.index') }}" class="hidden md:inline-flex items-center text-primary font-semibold hover:text-indigo-700 smooth-transition">
-                    View All <i class="fas fa-arrow-right ml-2"></i>
-                </a>
-            </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                @foreach($newArrivals as $listing)
-                <div class="product-card bg-white rounded-2xl shadow-lg overflow-hidden">
-                    <div class="relative overflow-hidden h-64">
-                        <a href="{{ route('marketplace.show', $listing) }}">
-                            @if($listing->images->first())
-                            <img src="{{ asset('storage/' . $listing->images->first()->path) }}" 
-                                 alt="{{ $listing->title }}" class="w-full h-full object-cover">
-                            @else
-                            <div class="w-full h-full bg-gray-200 flex items-center justify-center">
-                                <i class="fas fa-image text-gray-400 text-4xl"></i>
-                            </div>
-                            @endif
-                        </a>
-                        
-                        <div class="absolute top-4 left-4">
-                            @if($listing->origin == 'imported')
-                            <span class="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                <i class="fas fa-plane mr-1"></i>Imported
-                            </span>
-                            @else
-                            <span class="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                                <i class="fas fa-home mr-1"></i>Local
-                            </span>
-                            @endif
-                        </div>
-                        
-                        <button data-quick-wishlist 
-                                data-listing-id="{{ $listing->id }}"
-                                class="absolute top-4 right-4 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg hover:bg-red-50 smooth-transition">
-                            <i class="far fa-heart text-gray-600 hover:text-red-500"></i>
-                        </button>
-                    </div>
-                    
-                    <div class="p-6">
-                        <div class="text-xs text-gray-500 mb-2">{{ $listing->category->name ?? 'Uncategorized' }}</div>
-                        <a href="{{ route('marketplace.show', $listing) }}">
-                            <h3 class="font-bold text-lg text-gray-800 mb-2 line-clamp-2 hover:text-primary smooth-transition">
-                                {{ $listing->title }}
-                            </h3>
-                        </a>
-                        <p class="text-sm text-gray-600 mb-4 line-clamp-2">
-                            {{ $listing->description }}
-                        </p>
-                        
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <span class="text-2xl font-bold text-primary">${{ number_format($listing->price, 2) }}</span>
-                            </div>
-                            <div class="flex items-center text-yellow-400">
-                                <i class="fas fa-star text-xs"></i>
-                                <span class="text-sm text-gray-600 ml-1">{{ number_format(rand(40, 50) / 10, 1) }}</span>
-                            </div>
-                        </div>
-                        
-                        @if($listing->stock > 0)
-                        <button data-quick-cart 
-                                data-listing-id="{{ $listing->id }}"
-                                class="w-full bg-gradient-to-r from-primary to-indigo-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg smooth-transition">
-                            <i class="fas fa-shopping-cart mr-2"></i>Add to Cart
-                        </button>
-                        @else
-                        <button disabled class="w-full bg-gray-300 text-gray-500 py-3 rounded-xl font-semibold cursor-not-allowed">
-                            <i class="fas fa-ban mr-2"></i>Out of Stock
-                        </button>
-                        @endif
-                    </div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <!-- How It Works Section -->
-    <section id="how-it-works" class="py-20 bg-white">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-16 animate-slide-up">
-                <h2 class="text-4xl font-bold text-gray-800 mb-4">🎯 How It Works</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto text-lg">
-                    Simple steps to buy and sell on our secure marketplace
-                </p>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <!-- For Buyers -->
-                <div class="card-hover bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-gradient-to-br from-primary to-indigo-600 text-white w-12 h-12 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                            <i class="fas fa-shopping-cart text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-800">For Buyers</h3>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-primary to-indigo-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">1</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Browse & Select</h4>
-                                <p class="text-sm text-gray-600">Find products from verified local and international vendors</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-primary to-indigo-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">2</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Secure Payment</h4>
-                                <p class="text-sm text-gray-600">Pay through escrow - money held safely until delivery</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-primary to-indigo-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">3</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Receive & Confirm</h4>
-                                <p class="text-sm text-gray-600">Get delivery and confirm receipt to release payment</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- For Vendors -->
-                <div class="card-hover bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-gradient-to-br from-secondary to-green-600 text-white w-12 h-12 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                            <i class="fas fa-store text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-800">For Vendors</h3>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-secondary to-green-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">1</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Get Verified</h4>
-                                <p class="text-sm text-gray-600">Complete onboarding with document verification</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-secondary to-green-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">2</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">List Products</h4>
-                                <p class="text-sm text-gray-600">Add products with detailed descriptions and images</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-secondary to-green-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">3</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Sell & Get Paid</h4>
-                                <p class="text-sm text-gray-600">Receive orders and get paid after successful delivery</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- For Importers -->
-                <div class="card-hover bg-gradient-to-br from-yellow-50 to-orange-100 rounded-2xl p-8">
-                    <div class="flex items-center mb-6">
-                        <div class="bg-gradient-to-br from-accent to-orange-600 text-white w-12 h-12 rounded-xl flex items-center justify-center mr-4 shadow-lg">
-                            <i class="fas fa-plane text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-bold text-gray-800">For Importers</h3>
-                    </div>
-                    
-                    <div class="space-y-6">
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-accent to-orange-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">1</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Calculate Costs</h4>
-                                <p class="text-sm text-gray-600">Use our import calculator for accurate cost estimation</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-accent to-orange-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">2</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Request Import</h4>
-                                <p class="text-sm text-gray-600">Submit import request with product details</p>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-start">
-                            <span class="bg-gradient-to-br from-accent to-orange-600 text-white text-sm font-bold w-8 h-8 rounded-lg flex items-center justify-center mr-4 mt-1 shadow-lg">3</span>
-                            <div>
-                                <h4 class="font-bold text-gray-800 mb-1">Track & Sell</h4>
-                                <p class="text-sm text-gray-600">Track shipment and sell imported goods</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Import Calculator Section -->
-    <section id="import-calculator" class="py-20 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <div class="absolute inset-0" style="background-image: radial-gradient(circle, white 1px, transparent 1px); background-size: 50px 50px;"></div>
-        </div>
-        
-        <div class="container mx-auto px-4 relative z-10">
-            <div class="text-center mb-12 animate-slide-up">
-                <h2 class="text-4xl font-bold mb-4">📊 Import Cost Calculator</h2>
-                <p class="text-gray-300 max-w-2xl mx-auto text-lg">
-                    Calculate customs duties, shipping costs, and total landed cost for imported products
-                </p>
-            </div>
-            
-            <div class="max-w-5xl mx-auto bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 border border-white/20 shadow-2xl">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div>
-                        <h3 class="text-2xl font-bold mb-6">Calculate Your Import Costs</h3>
-                        <form class="space-y-6">
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Product Value ($)</label>
-                                <input type="number" id="productValue" 
-                                       class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:ring-2 focus:ring-primary/50 smooth-transition text-white placeholder-gray-400" 
-                                       placeholder="e.g., 1000">
-                            </div>
-                            
-                            <div>
-                                <label class="block text-sm font-medium mb-2">Shipping Cost ($)</label>
-                                <input type="number" id="shippingCost" 
-                                       class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:ring-2 focus:ring-primary/50 smooth-transition text-white placeholder-gray-400" 
-                                       placeholder="e.g., 200">
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">Duty Rate (%)</label>
-                                    <input type="number" id="dutyRate" 
-                                           class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:ring-2 focus:ring-primary/50 smooth-transition text-white" 
-                                           value="10" step="0.1">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium mb-2">VAT Rate (%)</label>
-                                    <input type="number" id="vatRate" 
-                                           class="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 focus:border-primary focus:ring-2 focus:ring-primary/50 smooth-transition text-white" 
-                                           value="18" step="0.1">
-                                </div>
-                            </div>
-                            
-                            <button type="button" onclick="calculateImportCost()" 
-                                    class="w-full bg-gradient-to-r from-primary to-indigo-600 text-white py-4 rounded-xl font-bold hover:shadow-2xl smooth-transition">
-                                <i class="fas fa-calculator mr-2"></i> Calculate Total Cost
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <div>
-                        <h3 class="text-2xl font-bold mb-6">Cost Breakdown</h3>
-                        <div id="costBreakdown" class="space-y-4 bg-white/5 rounded-2xl p-6 border border-white/10">
-                            <div class="flex justify-between items-center pb-3 border-b border-white/10">
-                                <span class="text-gray-300">Product Value:</span>
-                                <span id="productValueResult" class="font-bold text-xl">$0.00</span>
-                            </div>
-                            <div class="flex justify-between items-center pb-3 border-b border-white/10">
-                                <span class="text-gray-300">Shipping Cost:</span>
-                                <span id="shippingCostResult" class="font-bold text-xl">$0.00</span>
-                            </div>
-                            <div class="flex justify-between items-center pb-3 border-b border-white/10">
-                                <span class="text-gray-300">Import Duty (10%):</span>
-                                <span id="dutyCost" class="font-bold text-xl">$0.00</span>
-                            </div>
-                            <div class="flex justify-between items-center pb-4 border-b border-white/10">
-                                <span class="text-gray-300">VAT (18%):</span>
-                                <span id="vatCost" class="font-bold text-xl">$0.00</span>
-                            </div>
-                            <div class="flex justify-between items-center pt-2">
-                                <span class="text-xl font-bold">Total Landed Cost:</span>
-                                <span id="totalCost" class="text-3xl font-bold text-yellow-400">$0.00</span>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-8 bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-6 rounded-2xl border border-blue-400/30">
-                            <h4 class="font-bold mb-3 flex items-center">
-                                <i class="fas fa-lightbulb text-yellow-400 mr-2"></i>
-                                Pro Tip
-                            </h4>
-                            <p class="text-sm text-gray-200 leading-relaxed">
-                                For accurate calculations, include insurance and handling fees. Our platform automatically calculates all costs when vendors list imported products.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="py-20 bg-gradient-to-r from-primary via-indigo-600 to-purple-600 text-white relative overflow-hidden">
-        <div class="absolute inset-0 opacity-20">
-            <div class="absolute inset-0" style="background-image: url('data:image/svg+xml,%3Csvg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;%3E%3Cg fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;%3E%3Cg fill=&quot;%23ffffff&quot; fill-opacity=&quot;0.4&quot;%3E%3Cpath d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/%3E%3C/g%3E%3C/g%3E%3C/svg%3E'); background-size: 60px 60px;"></div>
-        </div>
-        
-        <div class="container mx-auto px-4 text-center relative z-10">
-            <h2 class="text-4xl md:text-5xl font-bold mb-6 animate-slide-up">
-                Ready to Start Your Journey?
-            </h2>
-            <p class="text-xl opacity-90 mb-10 max-w-3xl mx-auto leading-relaxed animate-fade-in">
-                Join thousands of satisfied customers and vendors on our secure marketplace platform. Experience seamless buying and selling today!
-            </p>
-            <div class="flex flex-wrap justify-center gap-4 animate-scale-in">
-                <a href="{{ route('marketplace.index') }}" class="bg-white text-primary px-10 py-4 rounded-xl font-bold hover:shadow-2xl smooth-transition flex items-center text-lg">
-                    <i class="fas fa-shopping-bag mr-3"></i> Browse Products
-                </a>
-                <a href="{{ route('vendor.onboard.create') }}" class="glass border-2 border-white text-white px-10 py-4 rounded-xl font-bold hover:bg-white hover:text-primary smooth-transition flex items-center text-lg">
-                    <i class="fas fa-store mr-3"></i> Start Selling
-                </a>
-            </div>
-            
-            <!-- Trust Badges -->
-            <div class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-shield-alt text-3xl"></i>
-                    </div>
-                    <div class="font-bold">100% Secure</div>
-                    <div class="text-sm opacity-75">Escrow Protection</div>
-                </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-truck text-3xl"></i>
-                    </div>
-                    <div class="font-bold">Fast Delivery</div>
-                    <div class="text-sm opacity-75">Nationwide Shipping</div>
-                </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-headset text-3xl"></i>
-                    </div>
-                    <div class="font-bold">24/7 Support</div>
-                    <div class="text-sm opacity-75">Always Here to Help</div>
-                </div>
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-undo text-3xl"></i>
-                    </div>
-                    <div class="font-bold">Easy Returns</div>
-                    <div class="text-sm opacity-75">30-Day Policy</div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="bg-gray-900 text-white py-16">
-        <div class="container mx-auto px-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-                <!-- Company Info -->
                 <div>
-                    <div class="flex items-center mb-6">
-                        <i class="fas fa-store text-3xl text-primary mr-3"></i>
-                        <span class="text-2xl font-bold">{{ config('app.name') }}</span>
-                    </div>
-                    <p class="text-gray-400 mb-6 leading-relaxed">
-                        Secure marketplace for local and imported goods with integrated logistics and escrow protection.
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary smooth-transition">
-                            <i class="fab fa-facebook"></i>
-                        </a>
-                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary smooth-transition">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary smooth-transition">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                        <a href="#" class="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary smooth-transition">
-                            <i class="fab fa-linkedin"></i>
-                        </a>
-                    </div>
+                    <span class="text-xl font-bold text-ink-800 font-display">{{ config('app.name') }}</span>
+                    <span class="hidden lg:block text-xs text-ink-400 -mt-0.5">Trusted Marketplace</span>
                 </div>
-                
-                <!-- Quick Links -->
-                <div>
-                    <h4 class="text-lg font-bold mb-6">Quick Links</h4>
-                    <ul class="space-y-3">
-                        <li><a href="{{ route('marketplace.index') }}" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Marketplace</a></li>
-                        <li><a href="#how-it-works" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">How It Works</a></li>
-                        <li><a href="#import-calculator" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Import Calculator</a></li>
-                        <li><a href="#categories" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Categories</a></li>
-                        <li><a href="{{ route('vendor.onboard.create') }}" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Vendor Benefits</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Support -->
-                <div>
-                    <h4 class="text-lg font-bold mb-6">Support</h4>
-                    <ul class="space-y-3">
-                        <li><a href="#" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Help Center</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">FAQs</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Contact Us</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Dispute Resolution</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white smooth-transition hover:translate-x-1 inline-block">Shipping Policy</a></li>
-                    </ul>
-                </div>
-                
-                <!-- Newsletter -->
-                <div>
-                    <h4 class="text-lg font-bold mb-6">Stay Updated</h4>
-                    <p class="text-gray-400 mb-4">Subscribe to get special offers and updates</p>
-                    <form class="mb-6">
-                        <div class="flex">
-                            <input type="email" placeholder="Your email" 
-                                   class="newsletter-input flex-1 px-4 py-3 rounded-l-xl text-gray-800 focus:outline-none border-2 border-transparent focus:border-primary smooth-transition">
-                            <button type="submit" class="bg-gradient-to-r from-primary to-indigo-600 px-6 py-3 rounded-r-xl hover:shadow-lg smooth-transition">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </form>
-                    
-                    <!-- Payment Methods -->
-                    <div>
-                        <p class="text-gray-400 mb-3 text-sm">Secure Payments:</p>
-                        <div class="flex space-x-3">
-                            <div class="w-12 h-8 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fab fa-cc-visa text-xl text-blue-500"></i>
-                            </div>
-                            <div class="w-12 h-8 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fab fa-cc-mastercard text-xl text-red-500"></i>
-                            </div>
-                            <div class="w-12 h-8 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fab fa-cc-paypal text-xl text-blue-400"></i>
-                            </div>
-                            <div class="w-12 h-8 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fas fa-mobile-alt text-xl text-green-500"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            </a>
+            
+            <!-- Search - IMPROVED WITH FORM -->
+            <div class="hidden md:flex flex-1 max-w-xl mx-6">
+                <form method="GET" action="{{ route('marketplace.index') }}" class="relative w-full" id="searchForm">
+                    <input type="text" 
+                           name="search" 
+                           placeholder="Search products, brands, categories..." 
+                           class="w-full pl-10 pr-24 py-3 bg-ink-50 border border-ink-200 rounded-xl focus:border-brand-500 focus:bg-white focus:outline-none transition text-sm"
+                           value="{{ request('search') ?? '' }}">
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"></i>
+                    <button type="submit" class="absolute right-1.5 top-1/2 -translate-y-1/2 btn-primary px-4 py-2 rounded-lg font-semibold text-sm">Search</button>
+                </form>
             </div>
             
-            <!-- Bottom Bar -->
-            <div class="border-t border-gray-800 pt-8 text-center">
-                <p class="text-gray-400 mb-3">&copy; {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
-                <div class="flex flex-wrap justify-center gap-6 text-sm">
-                    <a href="#" class="text-gray-400 hover:text-white smooth-transition">Terms of Service</a>
-                    <span class="text-gray-700">|</span>
-                    <a href="#" class="text-gray-400 hover:text-white smooth-transition">Privacy Policy</a>
-                    <span class="text-gray-700">|</span>
-                    <a href="#" class="text-gray-400 hover:text-white smooth-transition">Cookie Policy</a>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Authentication Modal -->
-    <div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl max-w-md w-full p-8 relative">
-            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-                <i class="fas fa-times text-xl"></i>
-            </button>
-            
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-lock text-blue-600 text-2xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-800 mb-2">Sign in Required</h3>
-                <p class="text-gray-600">Please sign in or create an account to continue.</p>
-            </div>
-            
-            <div class="space-y-3">
-                <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
-                   class="block w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-bold text-center">
-                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+            <!-- Actions -->
+            <div class="flex items-center gap-3">
+                @auth
+                <a href="{{ route('buyer.dashboard') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
+                    <i class="fas fa-user text-lg"></i>
+                    <span class="text-sm font-medium">Account</span>
+                </a>
+                @else
+                <a href="{{ route('login') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
+                    <i class="fas fa-user text-lg"></i>
+                    <span class="text-sm font-medium">Login</span>
+                </a>
+                @endauth
+                
+                <a href="{{ route('buyer.wishlist.index') }}" class="relative p-2 text-ink-600 hover:text-coral-500 transition">
+                    <i class="fas fa-heart text-lg"></i>
+                    <span class="wishlist-count absolute -top-1 -right-1 bg-coral-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
                 </a>
                 
-                <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
-                   class="block w-full px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-bold text-center">
-                    <i class="fas fa-user-plus mr-2"></i> Create Account
+                <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-ink-600 hover:text-brand-600 transition">
+                    <i class="fas fa-shopping-cart text-lg"></i>
+                    <span class="cart-count absolute -top-1 -right-1 bg-brand-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
                 </a>
-                
-                <button onclick="closeAuthModal()" 
-                        class="block w-full px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-center">
-                    Cancel
-                </button>
             </div>
         </div>
     </div>
-
-    <!-- Scroll to Top Button -->
-    <button id="scrollTop" class="fixed bottom-8 right-8 bg-gradient-to-r from-primary to-indigo-600 text-white w-14 h-14 rounded-full shadow-2xl hover:shadow-3xl smooth-transition opacity-0 pointer-events-none z-50">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-
-    <!-- Swiper JS -->
-    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
     
-    <!-- Main JavaScript -->
-    <script>
-        // Check if user is authenticated
-        const isAuthenticated = @json(auth()->check());
-        
-        // Import Calculator
-        function calculateImportCost() {
-            const productValue = parseFloat(document.getElementById('productValue').value) || 0;
-            const shippingCost = parseFloat(document.getElementById('shippingCost').value) || 0;
-            const dutyRate = parseFloat(document.getElementById('dutyRate').value) || 10;
-            const vatRate = parseFloat(document.getElementById('vatRate').value) || 18;
-            
-            const cif = productValue + shippingCost;
-            const duty = cif * (dutyRate / 100);
-            const vatBase = cif + duty;
-            const vat = vatBase * (vatRate / 100);
-            const totalCost = cif + duty + vat;
-            
-            // Animate numbers
-            animateValue('productValueResult', 0, productValue, 500);
-            animateValue('shippingCostResult', 0, shippingCost, 500);
-            animateValue('dutyCost', 0, duty, 500);
-            animateValue('vatCost', 0, vat, 500);
-            animateValue('totalCost', 0, totalCost, 800);
-        }
-        
-        // Animate number counting
-        function animateValue(id, start, end, duration) {
-            const obj = document.getElementById(id);
-            const range = end - start;
-            const increment = range / (duration / 16);
-            let current = start;
-            
-            const timer = setInterval(() => {
-                current += increment;
-                if ((increment > 0 && current >= end) || (increment < 0 && current <= end)) {
-                    current = end;
-                    clearInterval(timer);
-                }
-                obj.textContent = ' + current.toFixed(2);
-            }, 16);
-        }
-        
-        // Show authentication modal
-        function showAuthModal() {
-            const modal = document.getElementById('authModal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                modal.classList.add('flex');
-            }
-        }
-        
-        // Close authentication modal
-        function closeAuthModal() {
-            const modal = document.getElementById('authModal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        }
-        
-        // Show toast notification
-        function showToast(message, type = 'info') {
-            const existingToasts = document.querySelectorAll('.custom-toast');
-            existingToasts.forEach(toast => toast.remove());
-            
-            const toast = document.createElement('div');
-            toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300`;
-            
-            const typeStyles = {
-                success: 'bg-green-500 text-white',
-                error: 'bg-red-500 text-white',
-                warning: 'bg-yellow-500 text-white',
-                info: 'bg-blue-500 text-white'
-            };
-            
-            toast.className += ` ${typeStyles[type] || typeStyles.info}`;
-            
-            const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-times-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
-            };
-            
-            toast.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas ${icons[type] || icons.info} mr-3"></i>
-                    <span>${message}</span>
-                    <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
-                        <i class="fas fa-times"></i>
-                    </button>
+  <!-- Navigation - IMPROVED WITH NEW LINKS -->
+<div class="bg-gradient-to-r from-brand-600 to-purple-600 relative">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between">
+            <!-- Navigation links -->
+            <nav class="hidden lg:flex items-center">
+                <a href="{{ route('marketplace.index') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-fire text-gold-400"></i>Deals
+                </a>
+                <a href="{{ route('marketplace.index', ['origin' => 'imported']) }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-plane text-cyan-400"></i>Imported
+                </a>
+                <a href="{{ route('marketplace.index', ['origin' => 'local']) }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-map-marker-alt text-mint-400"></i>Local
+                </a>
+                <a href="{{ route('vendor.onboard.create') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-store text-pink-400"></i>Sell
+                </a>
+                
+                <!-- NEW ADDITIONAL LINKS ON THE RIGHT -->
+                <div class="ml-auto flex items-center">
+                    <a href="{{ route('site.howItWorks') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                        <i class="fas fa-question-circle text-yellow-400"></i>How It Works
+                    </a>
+                    <a href="{{ route('site.vendorBenefits') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                        <i class="fas fa-star text-gold-400"></i>Vendor Benefits
+                    </a>
+                    <a href="{{ route('site.faq') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                        <i class="fas fa-comments text-green-400"></i>FAQ
+                    </a>
                 </div>
-            `;
+            </nav>
             
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.style.transform = 'translateX(100%)';
-                    setTimeout(() => {
-                        if (toast.parentElement) {
-                            toast.remove();
-                        }
-                    }, 300);
-                }
-            }, 5000);
-        }
-        
-        // Quick add to cart
-        async function quickAddToCart(listingId, button) {
-            if (!isAuthenticated) {
-                showAuthModal();
-                return;
-            }
-            
-            const originalHtml = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            button.disabled = true;
-            
-            try {
-                const response = await fetch(`/buyer/cart/add/${listingId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ quantity: 1 })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    button.innerHTML = '<i class="fas fa-check"></i>';
-                    showToast(data.message || 'Added to cart!', 'success');
-                    
-                    setTimeout(() => {
-                        button.innerHTML = originalHtml;
-                        button.disabled = false;
-                    }, 2000);
-                } else {
-                    button.innerHTML = originalHtml;
-                    button.disabled = false;
-                    showToast(data.message || 'Failed to add to cart', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                button.innerHTML = originalHtml;
-                button.disabled = false;
-                showToast('Network error. Please try again.', 'error');
-            }
-        }
-        
-        // Quick add to wishlist
-        async function quickAddToWishlist(listingId, button) {
-            if (!isAuthenticated) {
-                showAuthModal();
-                return;
-            }
-            
-            const icon = button.querySelector('i');
-            const isFilled = icon.classList.contains('fas');
-            
-            try {
-                const response = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    if (data.in_wishlist) {
-                        icon.classList.remove('far');
-                        icon.classList.add('fas');
-                        button.classList.remove('text-gray-600');
-                        button.classList.add('text-red-500');
-                    } else {
-                        icon.classList.remove('fas');
-                        icon.classList.add('far');
-                        button.classList.remove('text-red-500');
-                        button.classList.add('text-gray-600');
-                    }
-                    showToast(data.message || 'Wishlist updated!', 'success');
-                } else {
-                    showToast(data.message || 'Failed to update wishlist', 'error');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('Failed to update wishlist', 'error');
-            }
-        }
-        
-        // Scroll to top
-        const scrollTopBtn = document.getElementById('scrollTop');
-        
-        window.addEventListener('scroll', () => {
-            if (window.pageYOffset > 300) {
-                scrollTopBtn.style.opacity = '1';
-                scrollTopBtn.style.pointerEvents = 'auto';
-            } else {
-                scrollTopBtn.style.opacity = '0';
-                scrollTopBtn.style.pointerEvents = 'none';
-            }
-        });
-        
-        scrollTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-        
-        // Mobile menu toggle
-        function toggleMobileMenu() {
-            alert('Mobile menu - implement navigation drawer');
-        }
-        
-        // Smooth scroll for anchor links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            });
-        });
-        
-        // Initialize on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Setup all quick action buttons
-            document.querySelectorAll('[data-quick-cart]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const listingId = this.getAttribute('data-listing-id');
-                    quickAddToCart(listingId, this);
-                });
-            });
-            
-            document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const listingId = this.getAttribute('data-listing-id');
-                    quickAddToWishlist(listingId, this);
-                });
-            });
-            
-            // Close modal on background click
-            const authModal = document.getElementById('authModal');
-            if (authModal) {
-                authModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeAuthModal();
-                    }
-                });
-            }
-            
-            // Add entrance animations on scroll
-            const observerOptions = {
-                threshold: 0.1,
-                rootMargin: '0px 0px -50px 0px'
-            };
-            
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.style.opacity = '1';
-                        entry.target.style.transform = 'translateY(0)';
-                    }
-                });
-            }, observerOptions);
-            
-            // Observe elements
-            document.querySelectorAll('.card-hover, .product-card, .category-card').forEach(el => {
-                el.style.opacity = '0';
-                el.style.transform = 'translateY(30px)';
-                el.style.transition = 'all 0.6s ease-out';
-                observer.observe(el);
-            });
-            
-            // Initialize calculator with default calculation
-            calculateImportCost();
-        });
-    </script>
+            <button class="lg:hidden ml-auto text-white p-2" onclick="toggleMobileMenu()">
+                <i class="fas fa-bars text-xl"></i>
+            </button>
+        </div>
+    </div>
+</div>
     
-    <style>
-        .custom-toast {
-            animation: slideInRight 0.3s ease-out;
+    <!-- Mobile Search - IMPROVED WITH FORM -->
+    <div class="md:hidden px-4 py-2 bg-ink-50 border-t">
+        <form method="GET" action="{{ route('marketplace.index') }}" class="relative">
+            <input type="text" 
+                   name="search" 
+                   placeholder="Search products..." 
+                   class="w-full pl-9 pr-4 py-2.5 bg-white border border-ink-200 rounded-lg focus:border-brand-500 focus:outline-none text-sm"
+                   value="{{ request('search') ?? '' }}">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 text-sm"></i>
+        </form>
+    </div>
+</header>
+
+<!-- MAIN -->
+<main class="bg-ink-50 min-h-screen">
+    <div class="container mx-auto px-4 py-4">
+        <div class="flex gap-5">
+            
+            <!-- Left Sidebar - Categories with Subcategory Hover -->
+            <aside class="hidden lg:block w-56 flex-shrink-0" style="z-index: 50;">
+                <div class="bg-white rounded-xl shadow-sm sticky top-32 border border-ink-100" style="overflow: visible;">
+                    <div class="bg-gradient-to-r from-brand-600 to-purple-600 text-white px-4 py-3 font-semibold flex items-center gap-2 text-sm">
+                        <i class="fas fa-th-large"></i>Browse Categories
+                    </div>
+                    <div class="divide-y divide-ink-50">
+                        @php $catIcons = ['car','laptop','mobile-alt','couch','tshirt','blender','futbol','baby-carriage','gem','book','pills','gamepad']; @endphp
+                        @foreach($categories->take(15) as $i => $cat)
+                        <div class="cat-sidebar-item">
+                            <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                               class="flex items-center justify-between px-4 py-2.5 text-ink-600 transition">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
+                                    <span class="text-sm">{{ $cat->name }}</span>
+                                </span>
+                                @if($cat->children && $cat->children->count() > 0)
+                                <i class="fas fa-chevron-right text-xs text-ink-300"></i>
+                                @endif
+                            </a>
+                            
+                            {{-- Subcategory Panel - Shows on Hover --}}
+                            @if($cat->children && $cat->children->count() > 0)
+                            <div class="cat-submenu">
+                                <h4 class="font-bold text-ink-800 mb-3 pb-2 border-b border-ink-100 font-display">{{ $cat->name }}</h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    @foreach($cat->children as $child)
+                                    <div>
+                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
+                                           class="font-semibold text-ink-700 hover:text-brand-600 text-sm block mb-2 px-3 py-2 rounded-lg hover:bg-ink-50 transition">
+                                            <i class="fas fa-chevron-right text-xs mr-2 text-ink-400"></i>
+                                            {{ $child->name }}
+                                        </a>
+                                        @if($child->children && $child->children->count() > 0)
+                                        <ul class="space-y-1 ml-4">
+                                            @foreach($child->children->take(5) as $grandchild)
+                                            <li>
+                                                <a href="{{ route('marketplace.index', ['category' => $grandchild->id]) }}" 
+                                                   class="text-xs text-ink-500 hover:text-brand-600 transition block px-3 py-1.5 rounded hover:bg-ink-50">
+                                                    {{ $grandchild->name }}
+                                                </a>
+                                            </li>
+                                            @endforeach
+                                        </ul>
+                                        @endif
+                                    </div>
+                                    @endforeach
+                                </div>
+                                <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                                   class="inline-block mt-4 text-brand-600 text-sm font-medium hover:underline px-3 py-2 rounded-lg hover:bg-brand-50 transition">
+                                    View all in {{ $cat->name }} →
+                                </a>
+                            </div>
+                            @endif
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </aside>
+            
+            <!-- Main Content -->
+            <div class="flex-1 min-w-0 space-y-6" style="z-index: 1;">
+                <!-- Featured Products Section -->
+                @if(isset($featuredProducts) && $featuredProducts->count())
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-line brand">
+                            <h2 class="text-lg font-bold text-ink-800 font-display">⭐ Featured Products</h2>
+                        </div>
+                        <a href="{{ route('marketplace.index') }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
+                    </div>
+                    <div id="featuredProductsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                        @foreach($featuredProducts->take(10) as $product)
+                        <div class="product-card shadow-sm border border-ink-100">
+                            <div class="relative aspect-square overflow-hidden bg-ink-50">
+                                <a href="{{ route('marketplace.show', $product) }}">
+                                    @if($product->images->first())
+                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
+                                    @else
+                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-ink-300 text-3xl"></i></div>
+                                    @endif
+                                </a>
+                                <div class="absolute top-2 left-2">
+                                    @if($product->origin == 'imported')
+                                    <span class="badge-imported text-white text-xs px-2 py-0.5 rounded-full font-medium"><i class="fas fa-plane mr-1"></i>Import</span>
+                                    @else
+                                    <span class="badge-local text-white text-xs px-2 py-0.5 rounded-full font-medium"><i class="fas fa-map-pin mr-1"></i>Local</span>
+                                    @endif
+                                </div>
+                                <div class="product-actions absolute top-2 right-2 flex flex-col gap-1">
+                                    <button data-quick-wishlist data-listing-id="{{ $product->id }}" class="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center hover:bg-coral-50 transition">
+                                        <i class="far fa-heart text-ink-500 hover:text-coral-500 text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
+                                <a href="{{ route('marketplace.show', $product) }}">
+                                    <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">{{ $product->title }}</h3>
+                                </a>
+                                <div class="flex items-center gap-1 mb-2">
+                                    @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= 4 ? 'star-filled' : 'star-empty' }}"></i>@endfor
+                                    <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-base font-bold text-brand-600">UGX {{ number_format($product->price) }}</span>
+                                    @if($product->stock > 0)
+                                    <button data-quick-cart data-listing-id="{{ $product->id }}" class="quick-add w-8 h-8 btn-primary rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-shopping-cart text-xs"></i>
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
+                
+                <!-- SHOP BY CATEGORY -->
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-line mint">
+                            <h2 class="text-lg font-bold text-ink-800 font-display">🏷️ Shop by Category</h2>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        @php 
+                        $catColors = [
+                            ['bg-brand-50','text-brand-600'],['bg-pink-50','text-pink-600'],['bg-amber-50','text-amber-600'],
+                            ['bg-emerald-50','text-emerald-600'],['bg-cyan-50','text-cyan-600'],['bg-purple-50','text-purple-600'],
+                            ['bg-rose-50','text-rose-600'],['bg-teal-50','text-teal-600']
+                        ]; 
+                        @endphp
+                        @foreach($categories->take(8) as $i => $cat)
+                        @php $cc = $catColors[$i % 8]; @endphp
+                        <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="category-card bg-white rounded-xl p-3 text-center shadow-sm border border-ink-100 group">
+                            <div class="w-10 h-10 mx-auto mb-2 rounded-xl {{ $cc[0] }} {{ $cc[1] }} flex items-center justify-center transition-transform group-hover:scale-110">
+                                <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} text-lg"></i>
+                            </div>
+                            <h3 class="text-xs font-medium text-ink-700 group-hover:text-brand-600 transition line-clamp-1">{{ $cat->name }}</h3>
+                        </a>
+                        @endforeach
+                    </div>
+                </section>
+
+                <!-- TRENDING NOW - LARGE GRID -->
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-line fire">
+                            <h2 class="text-lg font-bold text-ink-800 font-display">🔥 Trending Now</h2>
+                        </div>
+                        <a href="{{ route('marketplace.index') }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+                        @foreach($newArrivals as $index => $product)
+                        <div class="product-card shadow-sm border border-ink-100">
+                            <div class="relative aspect-square overflow-hidden bg-ink-50">
+                                <a href="{{ route('marketplace.show', $product) }}">
+                                    @if($product->images->first())
+                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
+                                    @else
+                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-ink-300 text-3xl"></i></div>
+                                    @endif
+                                </a>
+                                <div class="absolute top-2 left-2 flex flex-col gap-1">
+                                    @if($index < 3)
+                                    <span class="badge-hot text-white text-xs px-2 py-0.5 rounded-full font-bold"><i class="fas fa-fire mr-1"></i>HOT</span>
+                                    @endif
+                                    @if($product->origin == 'imported')
+                                    <span class="badge-imported text-white text-xs px-2 py-0.5 rounded-full font-medium"><i class="fas fa-plane mr-1"></i>Import</span>
+                                    @else
+                                    <span class="badge-local text-white text-xs px-2 py-0.5 rounded-full font-medium"><i class="fas fa-map-pin mr-1"></i>Local</span>
+                                    @endif
+                                </div>
+                                <div class="product-actions absolute top-2 right-2">
+                                    <button data-quick-wishlist data-listing-id="{{ $product->id }}" class="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center hover:bg-coral-50 transition">
+                                        <i class="far fa-heart text-ink-500 hover:text-coral-500 text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-3">
+                                <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
+                                <a href="{{ route('marketplace.show', $product) }}">
+                                    <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">{{ $product->title }}</h3>
+                                </a>
+                                <div class="flex items-center gap-1 mb-2">
+                                    @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= rand(3,5) ? 'star-filled' : 'star-empty' }}"></i>@endfor
+                                    <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
+                                </div>
+                                <div class="flex items-center justify-between">
+                                    <span class="text-base font-bold text-brand-600"> UGX {{ number_format($product->price) }}</span>
+                                    @if($product->stock > 0)
+                                    <button data-quick-cart data-listing-id="{{ $product->id }}" class="quick-add w-8 h-8 btn-primary rounded-lg flex items-center justify-center">
+                                        <i class="fas fa-shopping-cart text-xs"></i>
+                                    </button>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </section>
+                
+                <!-- JUST ARRIVED -->
+                @if(isset($recentProducts) && $recentProducts->count())
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="section-line purple">
+                            <h2 class="text-lg font-bold text-ink-800 font-display">🆕 Just Arrived</h2>
+                        </div>
+                        <a href="{{ route('marketplace.index', ['sort' => 'newest']) }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+                        @foreach($recentProducts->take(6) as $product)
+                        <div class="product-card shadow-sm border border-ink-100">
+                            <div class="relative aspect-square overflow-hidden bg-ink-50">
+                                <a href="{{ route('marketplace.show', $product) }}">
+                                    @if($product->images->first())
+                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
+                                    @endif
+                                </a>
+                                <span class="absolute top-2 left-2 badge-new text-white text-xs px-2 py-0.5 rounded-full font-medium">NEW</span>
+                            </div>
+                            <div class="p-3">
+                                <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 h-10">{{ $product->title }}</h3>
+                                <span class="text-base font-bold text-brand-600">UGX {{ number_format($product->price) }}</span>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
+                
+                <!-- TRUST BADGES -->
+                <section>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="trust-badge bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-ink-100">
+                            <div class="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-shield-alt text-emerald-500 text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-ink-800 text-sm">Secure Escrow</h4>
+                                <p class="text-xs text-ink-500">Money protected</p>
+                            </div>
+                        </div>
+                        <div class="trust-badge bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-ink-100">
+                            <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-truck text-blue-500 text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-ink-800 text-sm">Fast Delivery</h4>
+                                <p class="text-xs text-ink-500">Nationwide</p>
+                            </div>
+                        </div>
+                        <div class="trust-badge bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-ink-100">
+                            <div class="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-headset text-purple-500 text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-ink-800 text-sm">24/7 Support</h4>
+                                <p class="text-xs text-ink-500">Always here</p>
+                            </div>
+                        </div>
+                        <div class="trust-badge bg-white rounded-xl p-4 flex items-center gap-3 shadow-sm border border-ink-100">
+                            <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-undo text-amber-500 text-lg"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-ink-800 text-sm">Easy Returns</h4>
+                                <p class="text-xs text-ink-500">30-day policy</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            
+            <!-- Right Sidebar - SMALLER -->
+            <aside class="hidden xl:block w-44 flex-shrink-0">
+                <div class="sticky top-32 space-y-4">
+                    <!-- New User Promo -->
+                    <div class="promo-gradient rounded-xl p-4 text-white text-center">
+                        <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <i class="fas fa-gift text-lg"></i>
+                        </div>
+                        <h4 class="font-bold text-sm mb-1">New User?</h4>
+                        <p class="text-white/80 text-xs mb-3">10% off first order</p>
+                        <a href="{{ route('register') }}" class="block bg-white text-brand-600 py-2 rounded-lg font-bold text-xs hover:bg-ink-100 transition">
+                            Sign Up
+                        </a>
+                    </div>
+                    
+                    <!-- Top Selling -->
+                    <div class="bg-white rounded-xl p-4 shadow-sm border border-ink-100">
+                        <h4 class="font-bold text-ink-800 mb-3 flex items-center gap-1 text-sm">
+                            <i class="fas fa-trophy text-gold-500"></i>Top Selling
+                        </h4>
+                        <div class="space-y-3">
+                            @foreach(($topSelling ?? $newArrivals)->take(4) as $i => $product)
+                            <a href="{{ route('marketplace.show', $product) }}" class="flex items-center gap-2 group">
+                                <span class="w-5 h-5 rounded flex items-center justify-center text-xs font-bold 
+                                    {{ $i == 0 ? 'bg-gold-100 text-gold-600' : 'bg-ink-100 text-ink-500' }}">
+                                    {{ $i + 1 }}
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-xs text-ink-600 line-clamp-1 group-hover:text-brand-600">{{ $product->title }}</p>
+                                    <p class="text-xs font-bold text-brand-600">${{ number_format($product->price) }}</p>
+                                </div>
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+</main>
+
+<!-- FOOTER -->
+<footer class="bg-ink-900 text-white pt-10 pb-6">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
+            <div class="col-span-2 md:col-span-1">
+                <div class="flex items-center gap-2 mb-4">
+                    <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-store text-white text-sm"></i>
+                    </div>
+                    <span class="text-lg font-bold font-display">{{ config('app.name') }}</span>
+                </div>
+                <p class="text-ink-400 text-xs mb-4 leading-relaxed">Your trusted marketplace with escrow protection.</p>
+                <div class="flex gap-2">
+                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-brand-600 transition text-sm"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-sm"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-sm"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+            
+            <div>
+                <h5 class="font-bold mb-3 text-sm">Company</h5>
+                <ul class="space-y-2 text-xs">
+                    <li><a href="{{ route('site.about') }}" class="text-ink-400 hover:text-white transition">About Us</a></li>
+                    <li><a href="{{ route('site.howItWorks') }}" class="text-ink-400 hover:text-white transition">How It Works</a></li>
+                    <li><a href="{{ route('site.vendorBenefits') }}" class="text-ink-400 hover:text-white transition">Vendor Benefits</a></li>
+                    <li><a href="{{ route('site.contact') }}" class="text-ink-400 hover:text-white transition">Contact Us</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h5 class="font-bold mb-3 text-sm">Support</h5>
+                <ul class="space-y-2 text-xs">
+                    <li><a href="{{ route('site.faq') }}" class="text-ink-400 hover:text-white transition">FAQ</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Help Center</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Shipping Info</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Returns & Refunds</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h5 class="font-bold mb-3 text-sm">Legal</h5>
+                <ul class="space-y-2 text-xs">
+                    <li><a href="{{ route('site.terms') }}" class="text-ink-400 hover:text-white transition">Terms & Conditions</a></li>
+                    <li><a href="{{ route('site.privacy') }}" class="text-ink-400 hover:text-white transition">Privacy Policy</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Cookie Policy</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Dispute Resolution</a></li>
+                </ul>
+            </div>
+            
+            <div>
+                <h5 class="font-bold mb-3 text-sm">For Vendors</h5>
+                <ul class="space-y-2 text-xs">
+                    <li><a href="{{ route('vendor.onboard.create') }}" class="text-ink-400 hover:text-white transition">Sell on Platform</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Vendor Dashboard</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Seller Resources</a></li>
+                    <li><a href="#" class="text-ink-400 hover:text-white transition">Commission Rates</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="border-t border-ink-800 pt-4">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-3">
+                <p class="text-ink-500 text-xs">© {{ date('Y') }} {{ config('app.name') }}. All rights reserved.</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-ink-500 text-xs">We accept:</span>
+                    <div class="flex gap-1">
+                        <div class="w-8 h-5 bg-ink-800 rounded flex items-center justify-center"><i class="fab fa-cc-visa text-ink-400 text-sm"></i></div>
+                        <div class="w-8 h-5 bg-ink-800 rounded flex items-center justify-center"><i class="fab fa-cc-mastercard text-ink-400 text-sm"></i></div>
+                        <div class="w-8 h-5 bg-ink-800 rounded flex items-center justify-center"><i class="fas fa-mobile-alt text-ink-400 text-xs"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-ink-900/80 backdrop-blur-sm" onclick="closeAuthModal()"></div>
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 relative z-10 shadow-2xl">
+        <button onclick="closeAuthModal()" class="absolute top-3 right-3 w-8 h-8 bg-ink-100 rounded-full flex items-center justify-center text-ink-400 hover:text-ink-600 transition">
+            <i class="fas fa-times text-sm"></i>
+        </button>
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-lock text-brand-600 text-xl"></i>
+            </div>
+            <h3 class="text-xl font-bold text-ink-800 mb-1 font-display">Sign In Required</h3>
+            <p class="text-ink-500 text-sm">Please sign in to continue</p>
+        </div>
+        <div class="space-y-3">
+            <a href="{{ route('login') }}" class="block w-full btn-primary py-3 rounded-lg font-bold text-center">
+                <i class="fas fa-sign-in-alt mr-2"></i>Sign In
+            </a>
+            <a href="{{ route('register') }}" class="block w-full border-2 border-brand-600 text-brand-600 py-3 rounded-lg font-bold text-center hover:bg-brand-50 transition">
+                <i class="fas fa-user-plus mr-2"></i>Create Account
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- MOBILE MENU -->
+<div id="mobileMenu" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-ink-900/80 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
+    <div class="absolute left-0 top-0 h-full w-72 bg-white shadow-2xl overflow-y-auto">
+        <div class="p-4 border-b border-ink-100 flex items-center justify-between">
+            <span class="text-lg font-bold text-ink-800 font-display">Menu</span>
+            <button onclick="toggleMobileMenu()" class="w-8 h-8 bg-ink-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-times text-ink-500 text-sm"></i>
+            </button>
+        </div>
+        <nav class="p-4 space-y-2">
+            <a href="{{ route('marketplace.index') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-fire w-5 text-gold-500"></i>Deals
+            </a>
+            <a href="{{ route('marketplace.index', ['origin' => 'imported']) }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-plane w-5 text-cyan-500"></i>Imported
+            </a>
+            <a href="{{ route('marketplace.index', ['origin' => 'local']) }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-map-marker-alt w-5 text-mint-500"></i>Local
+            </a>
+            <a href="{{ route('vendor.onboard.create') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-store w-5 text-pink-500"></i>Sell
+            </a>
+            <div class="border-t border-gray-200 pt-2 mt-2"></div>
+            <a href="{{ route('site.howItWorks') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-question-circle w-5 text-yellow-500"></i>How It Works
+            </a>
+            <a href="{{ route('site.vendorBenefits') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-star w-5 text-gold-500"></i>Vendor Benefits
+            </a>
+            <a href="{{ route('site.faq') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-comments w-5 text-green-500"></i>FAQ
+            </a>
+            <a href="{{ route('site.about') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-info-circle w-5 text-blue-500"></i>About Us
+            </a>
+            <a href="{{ route('site.contact') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-envelope w-5 text-purple-500"></i>Contact
+            </a>
+        </nav>
+        <div class="p-4 border-t border-ink-100">
+            <h4 class="font-bold text-ink-800 mb-2 text-sm">Categories</h4>
+            @foreach($categories->take(8) as $cat)
+            <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="block py-1.5 text-sm text-ink-500 hover:text-brand-600 transition">
+                {{ $cat->name }}
+            </a>
+            @endforeach
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+<!-- SCRIPTS -->
+<script>
+const isAuthenticated = @json(auth()->check());
+const csrfToken = '{{ csrf_token() }}';
+
+
+function initCategoryNavigation() {
+    // Setup hover for sidebar categories
+    const sidebarItems = document.querySelectorAll('.cat-sidebar-item');
+    
+    sidebarItems.forEach(item => {
+        const link = item.querySelector('a');
+        const submenu = item.querySelector('.cat-submenu');
+        
+        if (submenu) {
+            let hideTimeout;
+            let showTimeout;
+            
+            // Show submenu on hover with a slight delay
+            item.addEventListener('mouseenter', function() {
+                clearTimeout(hideTimeout);
+                showTimeout = setTimeout(() => {
+                    this.classList.add('hover-active');
+                    if (submenu) {
+                        submenu.style.display = 'block';
+                        submenu.style.animation = 'fadeIn 0.2s ease forwards';
+                        // Force z-index to ensure it's on top
+                        submenu.style.zIndex = '9999';
+                    }
+                }, 100);
+            });
+            
+            item.addEventListener('mouseleave', function(e) {
+                clearTimeout(showTimeout);
+                // Check if mouse is moving to submenu
+                const relatedTarget = e.relatedTarget || e.toElement;
+                if (relatedTarget && !submenu.contains(relatedTarget)) {
+                    hideTimeout = setTimeout(() => {
+                        this.classList.remove('hover-active');
+                        submenu.style.animation = 'fadeOut 0.2s ease forwards';
+                        setTimeout(() => {
+                            if (!this.matches(':hover') && !submenu.matches(':hover')) {
+                                submenu.style.display = 'none';
+                            }
+                        }, 200);
+                    }, 200);
+                }
+            });
+            
+            // Keep submenu open when hovering over it
+            submenu.addEventListener('mouseenter', function() {
+                clearTimeout(hideTimeout);
+                item.classList.add('hover-active');
+                this.style.display = 'block';
+                this.style.animation = 'fadeIn 0.2s ease forwards';
+                this.style.zIndex = '9999';
+            });
+            
+            submenu.addEventListener('mouseleave', function(e) {
+                const relatedTarget = e.relatedTarget || e.toElement;
+                if (relatedTarget && !item.contains(relatedTarget)) {
+                    hideTimeout = setTimeout(() => {
+                        item.classList.remove('hover-active');
+                        this.style.animation = 'fadeOut 0.2s ease forwards';
+                        setTimeout(() => {
+                            if (!item.matches(':hover') && !this.matches(':hover')) {
+                                this.style.display = 'none';
+                            }
+                        }, 200);
+                    }, 200);
+                }
+            });
         }
         
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+        // Handle click on category links
+        if (link) {
+            link.addEventListener('click', function(e) {
+                const hasSubmenu = item.querySelector('.cat-submenu');
+                if (hasSubmenu && window.innerWidth <= 1024) {
+                    e.preventDefault();
+                    hasSubmenu.style.display = hasSubmenu.style.display === 'block' ? 'none' : 'block';
+                }
+            });
         }
-    </style>
+    });
+}
+
+function setupSearchForm() {
+    // Setup desktop search
+    const desktopSearchForm = document.querySelector('#searchForm');
+    const desktopSearchInput = desktopSearchForm?.querySelector('input[name="search"]');
+    
+    // Setup mobile search
+    const mobileSearchForm = document.querySelector('.md\\:hidden form');
+    const mobileSearchInput = mobileSearchForm?.querySelector('input[name="search"]');
+    
+    // Handle desktop search
+    if (desktopSearchForm) {
+        desktopSearchForm.addEventListener('submit', function(e) {
+            const searchTerm = desktopSearchInput.value.trim();
+            if (!searchTerm) {
+                e.preventDefault();
+                desktopSearchInput.focus();
+                showToast('Please enter a search term', 'info');
+            }
+        });
+        
+        // Add keyboard shortcut for search
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                desktopSearchInput.focus();
+            }
+        });
+        
+        // Add search hint
+        desktopSearchInput.addEventListener('focus', function() {
+            this.setAttribute('title', 'Press Ctrl+K to focus search');
+        });
+    }
+    
+    // Handle mobile search
+    if (mobileSearchForm) {
+        mobileSearchForm.addEventListener('submit', function(e) {
+            const searchTerm = mobileSearchInput.value.trim();
+            if (!searchTerm) {
+                e.preventDefault();
+                mobileSearchInput.focus();
+                showToast('Please enter a search term', 'info');
+            }
+        });
+    }
+}
+
+function quickAddToCart(id, btn) {
+    if (!isAuthenticated) { showAuthModal(); return; }
+    const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>'; btn.disabled = true;
+    try {
+        const res = fetch(`/buyer/cart/add/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ quantity: 1 }) });
+        const data = res.json();
+        if (data.success) { btn.innerHTML = '<i class="fas fa-check text-xs"></i>'; showToast('Added to cart!', 'success'); if (data.cart_count) updateCartCount(data.cart_count); setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500); }
+        else throw new Error(data.message);
+    } catch (e) { btn.innerHTML = orig; btn.disabled = false; showToast(e.message || 'Failed', 'error'); }
+}
+
+function quickAddToWishlist(id, btn) {
+    if (!isAuthenticated) { showAuthModal(); return; }
+    const icon = btn.querySelector('i');
+    try {
+        const res = fetch(`/buyer/wishlist/toggle/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
+        const data = res.json();
+        if (data.success) {
+            if (data.in_wishlist) { icon.classList.remove('far'); icon.classList.add('fas', 'text-coral-500'); }
+            else { icon.classList.remove('fas', 'text-coral-500'); icon.classList.add('far'); }
+            showToast(data.message || 'Updated!', 'success');
+            if (data.wishlist_count !== undefined) updateWishlistCount(data.wishlist_count);
+        }
+    } catch (e) { showToast('Failed', 'error'); }
+}
+
+function updateCartCount(c) { 
+    document.querySelectorAll('.cart-count').forEach(el => { 
+        el.textContent = c; 
+        el.classList.toggle('hidden', c === 0); 
+        if (c > 0) {
+            el.classList.add('animate-pulse');
+            setTimeout(() => el.classList.remove('animate-pulse'), 1000);
+        }
+    }); 
+}
+
+function updateWishlistCount(c) { 
+    document.querySelectorAll('.wishlist-count').forEach(el => { 
+        el.textContent = c; 
+        el.classList.toggle('hidden', c === 0); 
+        if (c > 0) {
+            el.classList.add('animate-pulse');
+            setTimeout(() => el.classList.remove('animate-pulse'), 1000);
+        }
+    }); 
+}
+
+async function loadCartCount() { 
+    try { 
+        const res = await fetch('/cart/count'); 
+        const data = await res.json(); 
+        if (data.cart_count) updateCartCount(data.cart_count); 
+    } catch(e){} 
+}
+
+async function loadWishlistCount() { 
+    try { 
+        const res = await fetch('/wishlist/count'); 
+        const data = await res.json(); 
+        if (data.count) updateWishlistCount(data.count); 
+    } catch(e){} 
+}
+
+function showToast(msg, type = 'info') {
+    const colors = { success: 'bg-emerald-500', error: 'bg-coral-500', info: 'bg-brand-500' };
+    const toast = document.createElement('div');
+    toast.className = `${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm animate-slide-up`;
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i><span>${msg}</span>`;
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+function showAuthModal() { 
+    document.getElementById('authModal').classList.remove('hidden'); 
+    document.body.style.overflow = 'hidden'; 
+}
+
+function closeAuthModal() { 
+    document.getElementById('authModal').classList.add('hidden'); 
+    document.body.style.overflow = ''; 
+}
+
+function toggleMobileMenu() { 
+    const m = document.getElementById('mobileMenu'); 
+    m.classList.toggle('hidden'); 
+    document.body.style.overflow = m.classList.contains('hidden') ? '' : 'hidden'; 
+}
+
+document.addEventListener('keydown', e => { 
+    if (e.key === 'Escape') { 
+        closeAuthModal(); 
+        const m = document.getElementById('mobileMenu'); 
+        if (!m.classList.contains('hidden')) toggleMobileMenu(); 
+    } 
+});
+
+
+</script>
+
+<!-- Chatbot Configuration -->
+<script>
+    // Set marketplace information for chatbot
+    window.marketplaceName = "{{ config('app.name') }}";
+    window.marketplaceDomain = "{{ parse_url(config('app.url'), PHP_URL_HOST) }}";
+    window.vendorRegistrationUrl = "{{ route('vendor.onboard.create') }}";
+</script>
+
+<!-- Load enhanced chatbot -->
+<script src="{{ asset('js/chatbot-enhanced.js') }}"></script>
+
+<!-- Chatbot Styles (keep minimal styles) -->
+<style>
+    #chatWindow {
+        animation: slideUp 0.3s ease-out;
+    }
+
+    #chatMessages {
+        scrollbar-width: thin;
+        scrollbar-color: #6366f1 #f1f5f9;
+    }
+
+    #chatMessages::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    #chatMessages::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 2px;
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb {
+        background: #6366f1;
+        border-radius: 2px;
+    }
+
+    .quick-question {
+        transition: all 0.2s ease;
+    }
+
+    .quick-question:hover {
+        transform: translateY(-1px);
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
 </body>
 </html>

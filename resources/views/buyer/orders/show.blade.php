@@ -11,15 +11,56 @@
     </div>
 
     @if(session('success'))
-    <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
-        <p class="text-green-700">{{ session('success') }}</p>
+    <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6 rounded-r-lg">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle text-green-400 mr-3"></i>
+            <p class="text-green-700">{{ session('success') }}</p>
+        </div>
     </div>
     @endif
 
     @if(session('error'))
-    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
-        <p class="text-red-700">{{ session('error') }}</p>
+    <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6 rounded-r-lg">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle text-red-400 mr-3"></i>
+            <p class="text-red-700">{{ session('error') }}</p>
+        </div>
     </div>
+    @endif
+
+    <!-- Review Prompt (Show if order is delivered and has items not yet reviewed) -->
+    @if($order->status == 'delivered')
+        @php
+            $unreviewedItems = $order->items->filter(function($item) {
+                return !\App\Models\Review::where('user_id', auth()->id())
+                    ->where('order_item_id', $item->id)
+                    ->exists();
+            });
+        @endphp
+        
+        @if($unreviewedItems->count() > 0)
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-6 mb-6">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-star text-amber-500 text-2xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">Share Your Experience!</h3>
+                    <p class="text-gray-600 mb-4">Help other buyers by reviewing the products you received.</p>
+                    
+                    <div class="flex flex-wrap gap-3">
+                        @foreach($unreviewedItems as $item)
+                        <a href="{{ route('buyer.reviews.create', ['order_item_id' => $item->id]) }}" 
+                           class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-amber-300 rounded-lg text-amber-700 font-medium hover:bg-amber-50 transition">
+                            <i class="fas fa-pen"></i>
+                            Review "{{ Str::limit($item->title, 25) }}"
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
     @endif
 
     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
@@ -79,6 +120,11 @@
                 
                 <div class="space-y-4">
                     @foreach($order->items as $item)
+                    @php
+                        $hasReview = \App\Models\Review::where('user_id', auth()->id())
+                            ->where('order_item_id', $item->id)
+                            ->exists();
+                    @endphp
                     <div class="flex items-start border-b pb-4">
                         @if($item->listing && $item->listing->images->first())
                         <div class="w-20 h-20 flex-shrink-0 mr-4">
@@ -86,12 +132,32 @@
                                  alt="{{ $item->title }}" 
                                  class="w-full h-full object-cover rounded-lg">
                         </div>
+                        @else
+                        <div class="w-20 h-20 flex-shrink-0 mr-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-image text-gray-300"></i>
+                        </div>
                         @endif
                         
                         <div class="flex-1">
                             <h3 class="font-semibold text-gray-800">{{ $item->title }}</h3>
                             <p class="text-sm text-gray-600">Qty: {{ $item->quantity }}</p>
                             <p class="text-sm text-gray-600">Price: ${{ number_format($item->unit_price, 2) }}</p>
+                            
+                            <!-- Review Status -->
+                            @if($order->status == 'delivered')
+                                @if($hasReview)
+                                <span class="inline-flex items-center gap-1 mt-2 text-sm text-green-600">
+                                    <i class="fas fa-check-circle"></i>
+                                    Reviewed
+                                </span>
+                                @else
+                                <a href="{{ route('buyer.reviews.create', ['order_item_id' => $item->id]) }}" 
+                                   class="inline-flex items-center gap-1 mt-2 text-sm text-primary hover:underline">
+                                    <i class="fas fa-star"></i>
+                                    Write Review
+                                </a>
+                                @endif
+                            @endif
                         </div>
                         
                         <div class="text-right">
@@ -151,6 +217,22 @@
                     @endif
                 </div>
             </div>
+            
+            <!-- Vendor Info -->
+            @if($order->vendorProfile)
+            <div class="bg-white rounded-xl shadow-sm p-6 mt-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Vendor</h2>
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 bg-gradient-to-br from-primary to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                        {{ strtoupper(substr($order->vendorProfile->business_name ?? 'V', 0, 1)) }}
+                    </div>
+                    <div>
+                        <p class="font-medium text-gray-800">{{ $order->vendorProfile->business_name ?? 'Vendor' }}</p>
+                        <p class="text-sm text-gray-500">{{ ucfirst($order->vendorProfile->vendor_type ?? 'Vendor') }}</p>
+                    </div>
+                </div>
+            </div>
+            @endif
         </div>
     </div>
 </div>

@@ -122,4 +122,43 @@ public function getPendingBalanceAttribute()
 {
     return $this->balanceRecord->pending_balance ?? 0;
 }
+
+/**
+ * Get reviews for this vendor's products
+ */
+public function reviews()
+{
+    return $this->hasMany(\App\Models\Review::class);
+}
+
+/**
+ * Get vendor's average rating
+ */
+public function getAverageRatingAttribute()
+{
+    return $this->reviews()->where('status', 'approved')->avg('rating') ?? 0;
+}
+/**
+ * Get vendor's total review count
+ */
+public function getTotalReviewsAttribute()
+{
+    return $this->reviews()->where('status', 'approved')->count();
+}
+
+/**
+ * Get positive review percentage (4+ stars)
+ */
+public function getPositiveRatingPercentageAttribute()
+{
+    $total = $this->reviews()->where('status', 'approved')->count();
+    if ($total === 0) return 0;
+    
+    $positive = $this->reviews()
+        ->where('status', 'approved')
+        ->where('rating', '>=', 4)
+        ->count();
+    
+    return round(($positive / $total) * 100);
+}
 }

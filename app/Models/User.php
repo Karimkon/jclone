@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\BuyerWallet;
 
 class User extends Authenticatable
 {
@@ -86,4 +87,51 @@ public function walletTransactions()
 {
     return $this->hasMany(\App\Models\WalletTransaction::class);
 }
+
+/**
+ * Get user's reviews
+ */
+public function reviews()
+{
+    return $this->hasMany(\App\Models\Review::class);
+}
+
+/**
+ * Get user's review votes
+ */
+public function reviewVotes()
+{
+    return $this->hasMany(\App\Models\ReviewVote::class);
+}
+
+    
+    /**
+     * Get total wallet balance
+     */
+    public function getWalletBalance()
+    {
+        return $this->buyerWallet()->first()->balance ?? 0.00;
+    }
+    
+    /**
+     * Get available balance (excluding held funds)
+     */
+    public function getAvailableBalance()
+    {
+        $wallet = $this->buyerWallet()->first();
+        if (!$wallet) {
+            return 0.00;
+        }
+        
+        return $wallet->balance - $wallet->held_balance;
+    }
+    
+    /**
+     * Check if user has enough balance
+     */
+    public function hasSufficientBalance($amount)
+    {
+        return $this->getAvailableBalance() >= $amount;
+    }
+
 }

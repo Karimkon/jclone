@@ -10,21 +10,24 @@ use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-    /**
-     * Display all categories (public)
-     */
-    public function index()
-    {
-        $categories = Category::where('is_active', true)
-            ->whereNull('parent_id')
-            ->with(['children' => function($query) {
-                $query->where('is_active', true)->orderBy('order');
-            }])
-            ->orderBy('order')
-            ->get();
-        
-        return view('categories.index', compact('categories'));
-    }
+   /**
+ * Display all categories (public)
+ */
+public function index()
+{
+    $categories = Category::where('is_active', true)
+        ->whereNull('parent_id')
+        ->with(['children' => function($query) {
+            $query->where('is_active', true)
+                ->orderBy('order')
+                ->withCount('listings');
+        }])
+        ->withCount('listings') // Add this to get listing counts
+        ->orderBy('order')
+        ->get();
+    
+    return view('categories.index', compact('categories'));
+}
 
     /**
      * Display category with listings (public)

@@ -11,40 +11,50 @@ use Illuminate\Support\Facades\Auth;
 
 class BuyerDashboardController extends Controller
 {
-    public function index()
-    {
-        $user = Auth::user();
-        
-        $stats = [
-            'total_orders' => $user->orders()->count(),
-            'pending_orders' => $user->orders()->where('status', 'pending')->count(),
-            'active_orders' => $user->orders()->whereIn('status', ['paid', 'processing', 'shipped'])->count(),
-            'delivered_orders' => $user->orders()->where('status', 'delivered')->count(),
-            'wishlist_items' => $user->wishlists()->count(),
-            'wallet_balance' => $user->getWalletBalance(),
-            'available_balance' => $user->getAvailableBalance(),
-        ];
-        
-        $recentOrders = $user->orders()
-            ->with(['vendorProfile.user', 'items.listing'])
-            ->orderBy('created_at', 'desc')
-            ->take(5)
-            ->get();
-        
-        $wishlistItems = $user->wishlists()
-            ->with('listing.images', 'listing.vendor')
-            ->take(5)
-            ->get();
-        
-        $walletTransactions = $user->walletTransactions()
-            ->orderBy('created_at', 'desc')
-            ->take(10)
-            ->get();
-        
-        return view('buyer.dashboard', compact(
-            'stats', 'recentOrders', 'wishlistItems', 'walletTransactions'
-        ));
+   public function index()
+{
+    $user = Auth::user();
+    
+    // Get wallet or create default
+    $wallet = $user->buyerWallet;
+    if (!$wallet) {
+        $wallet = BuyerWallet::create([
+            'user_id' => $user->id,
+            'balance' => 0.00,
+            'held_balance' => 0.00,
+        ]);
     }
+    
+    $stats = [
+        'total_orders' => $user->orders()->count(),
+        'pending_orders' => $user->orders()->where('status', 'pending')->count(),
+        'active_orders' => $user->orders()->whereIn('status', ['paid', 'processing', 'shipped'])->count(),
+        'delivered_orders' => $user->orders()->where('status', 'delivered')->count(),
+        'wishlist_items' => $user->wishlists()->count(),
+        'wallet_balance' => $wallet->balance,
+        'available_balance' => $wallet->balance - $wallet->held_balance,
+    ];
+    
+    $recentOrders = $user->orders()
+        ->with(['vendorProfile.user', 'items.listing'])
+        ->orderBy('created_at', 'desc')
+        ->take(5)
+        ->get();
+    
+    $wishlistItems = $user->wishlists()
+        ->with('listing.images', 'listing.vendor')
+        ->take(5)
+        ->get();
+    
+    $walletTransactions = $user->walletTransactions()
+        ->orderBy('created_at', 'desc')
+        ->take(10)
+        ->get();
+    
+    return view('buyer.dashboard', compact(
+        'stats', 'recentOrders', 'wishlistItems', 'walletTransactions'
+    ));
+}
     
     public function profile()
     {

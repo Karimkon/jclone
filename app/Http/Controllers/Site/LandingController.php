@@ -13,59 +13,88 @@ class LandingController extends Controller
     /**
      * Display homepage
      */
-    public function index()
-{
-    // Get categories WITH listings count
-    $categories = Category::withCount(['listings' => function($query) {
-            $query->where('is_active', true);
-        }])
-        ->where('is_active', true)
-        ->whereNull('parent_id')
-        ->orderBy('order')
-        ->take(12)
-        ->get();
-    
-    // Get flash sales (active promotions)
-    $flashSales = Promotion::with(['listing.images', 'listing.vendor'])
-        ->where('type', 'flash_sale')
-        ->where('starts_at', '<=', now())
-        ->where('ends_at', '>=', now())
-        ->orderBy('created_at', 'desc')
-        ->take(4)
-        ->get();
-    
-    // Get new arrivals (recent imported products)
-    $newArrivals = Listing::with(['images', 'vendor'])
-        ->where('is_active', true)
-        ->where('origin', 'imported')
-        ->orderBy('created_at', 'desc')
-        ->take(8)
-        ->get();
-    
-    // Get featured local products
-    $localProducts = Listing::with(['images', 'vendor'])
-        ->where('is_active', true)
-        ->where('origin', 'local')
-        ->orderBy('created_at', 'desc')
-        ->take(8)
-        ->get();
-    
-    // Get top categories with product count (for top section if needed)
-    $topCategories = Category::withCount('listings')
-        ->where('is_active', true)
-        ->whereNull('parent_id')
-        ->orderBy('listings_count', 'desc')
-        ->take(6)
-        ->get();
-    
-    return view('welcome', compact(
-        'categories',
-        'flashSales',
-        'newArrivals',
-        'localProducts',
-        'topCategories'
-    ));
-}
+  public function index()
+    {
+        // Get categories with children and listing counts
+        $categories = Category::where('is_active', true)
+            ->whereNull('parent_id')
+            ->withCount('listings')
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->withCount('listings')
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true)->withCount('listings');
+                    }]);
+            }, 'listings' => function($query) {
+                $query->where('is_active', true)
+                    ->with('images')
+                    ->take(4);
+            }])
+            ->orderBy('name')
+            ->get();
+
+        // Featured products (you can add a 'is_featured' column later)
+        $featuredProducts = Listing::where('is_active', true)
+            ->with(['images', 'category', 'vendor'])
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        // Trending/New Arrivals
+        $newArrivals = Listing::where('is_active', true)
+            ->with(['images', 'category', 'vendor'])
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        // Recently added products
+        $recentProducts = Listing::where('is_active', true)
+            ->with(['images', 'category'])
+            ->orderBy('created_at', 'desc')
+            ->take(12)
+            ->get();
+
+        // Flash deals (products with potential discounts - you can add discount column later)
+        $flashDeals = Listing::where('is_active', true)
+            ->with(['images', 'category'])
+            ->where('stock', '>', 0)
+            ->inRandomOrder()
+            ->take(10)
+            ->get();
+
+        // Top selling (you can track this with order count later)
+        $topSelling = Listing::where('is_active', true)
+            ->with(['images', 'category'])
+            ->where('stock', '>', 0)
+            ->inRandomOrder()
+            ->take(5)
+            ->get();
+
+        // Imported products
+        $importedProducts = Listing::where('is_active', true)
+            ->where('origin', 'imported')
+            ->with(['images', 'category'])
+            ->take(8)
+            ->get();
+
+        // Local products
+        $localProducts = Listing::where('is_active', true)
+            ->where('origin', 'local')
+            ->with(['images', 'category'])
+            ->take(8)
+            ->get();
+
+        return view('welcome', compact(
+            'categories',
+            'featuredProducts',
+            'newArrivals',
+            'recentProducts',
+            'flashDeals',
+            'topSelling',
+            'importedProducts',
+            'localProducts'
+        ));
+    }
 
     /**
      * Display about page
@@ -166,50 +195,50 @@ class LandingController extends Controller
     /**
      * Display vendor benefits page
      */
-    public function vendorBenefits()
-    {
-        $benefits = [
-            [
-                'icon' => 'fas fa-users',
-                'title' => 'Large Customer Base',
-                'description' => 'Access thousands of active buyers on our platform.'
-            ],
-            [
-                'icon' => 'fas fa-shield-alt',
-                'title' => 'Escrow Protection',
-                'description' => 'Secure payments with our escrow system.'
-            ],
-            [
-                'icon' => 'fas fa-plane',
-                'title' => 'Import Assistance',
-                'description' => 'We handle shipping and customs for imports.'
-            ],
-            [
-                'icon' => 'fas fa-chart-line',
-                'title' => 'Sales Analytics',
-                'description' => 'Detailed insights into your sales performance.'
-            ],
-            [
-                'icon' => 'fas fa-truck',
-                'title' => 'Logistics Support',
-                'description' => 'Warehousing and delivery services available.'
-            ],
-            [
-                'icon' => 'fas fa-headset',
-                'title' => '24/7 Support',
-                'description' => 'Dedicated support team for vendors.'
-            ],
-        ];
+public function vendorBenefits()
+{
+    $benefits = [
+        [
+            'icon' => 'fas fa-users',
+            'title' => 'Large Customer Base',
+            'description' => 'Access thousands of active buyers on our platform.'
+        ],
+        [
+            'icon' => 'fas fa-shield-alt',
+            'title' => 'Escrow Protection',
+            'description' => 'Secure payments with our escrow system.'
+        ],
+        [
+            'icon' => 'fas fa-plane',
+            'title' => 'Import Assistance',
+            'description' => 'We handle shipping and customs for imports.'
+        ],
+        [
+            'icon' => 'fas fa-chart-line',
+            'title' => 'Sales Analytics',
+            'description' => 'Detailed insights into your sales performance.'
+        ],
+        [
+            'icon' => 'fas fa-truck',
+            'title' => 'Logistics Support',
+            'description' => 'Warehousing and delivery services available.'
+        ],
+        [
+            'icon' => 'fas fa-headset',
+            'title' => '24/7 Support',
+            'description' => 'Dedicated support team for vendors.'
+        ],
+    ];
 
-        $stats = [
-            ['value' => '10,000+', 'label' => 'Active Buyers'],
-            ['value' => '95%', 'label' => 'Secure Transactions'],
-            ['value' => '24h', 'label' => 'Average Support Response'],
-            ['value' => '15%', 'label' => 'Average Commission'],
-        ];
+    $stats = [
+        ['value' => '10,000+', 'label' => 'Active Buyers'],
+        ['value' => '95%', 'label' => 'Secure Transactions'],
+        ['value' => '24h', 'label' => 'Average Support Response'],
+        ['value' => '15%', 'label' => 'Average Commission'],
+    ];
 
-        return view('site.vendor-benefits', compact('benefits', 'stats'));
-    }
+    return view('site.vendor-benefits', compact('benefits', 'stats'));
+}
 
     /**
      * Display how it works page

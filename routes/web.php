@@ -24,6 +24,8 @@ use App\Http\Controllers\Logistics\ShipmentController;
 use App\Http\Controllers\Vendor\VendorOrderController;
 use App\Http\Controllers\Vendor\PromotionController;
 use App\Http\Controllers\Finance\EscrowController;
+use App\Http\Controllers\Buyer\ReviewController;
+use App\Http\Controllers\Vendor\VendorReviewController;
 
 // ====================
 // PUBLIC ROUTES
@@ -76,6 +78,16 @@ Route::post('/logout', function (Request $request) {
     $request->session()->regenerateToken();
     return redirect('/');
 })->name('logout');
+
+// Static Pages
+Route::get('/about', [LandingController::class, 'about'])->name('site.about');
+Route::get('/contact', [LandingController::class, 'contact'])->name('site.contact');
+Route::post('/contact', [LandingController::class, 'submitContact'])->name('site.contact.submit');
+Route::get('/faq', [LandingController::class, 'faq'])->name('site.faq');
+Route::get('/terms', [LandingController::class, 'terms'])->name('site.terms');
+Route::get('/privacy', [LandingController::class, 'privacy'])->name('site.privacy');
+Route::get('/vendor-benefits', [LandingController::class, 'vendorBenefits'])->name('site.vendorBenefits');
+Route::get('/how-it-works', [LandingController::class, 'howItWorks'])->name('site.howItWorks');
 
 // ====================
 // VENDOR ONBOARDING ROUTES (Public view and submission, status requires auth)
@@ -150,7 +162,21 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/analytics', function () {
             return view('vendor.analytics.index');
         })->name('analytics');
+
+         // View and Respond to Reviews
+    Route::get('/reviews', [VendorReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/reviews/{review}', [VendorReviewController::class, 'show'])->name('reviews.show');
+    Route::post('/reviews/{review}/respond', [VendorReviewController::class, 'respond'])->name('reviews.respond');
+    Route::put('/reviews/{review}/respond', [VendorReviewController::class, 'updateResponse'])->name('reviews.update-response');
+    Route::delete('/reviews/{review}/respond', [VendorReviewController::class, 'deleteResponse'])->name('reviews.delete-response');
+
+
     });
+
+    // ==========================================
+// PUBLIC API ROUTES (for AJAX)
+// ==========================================
+Route::get('/api/listings/{listing}/reviews', [ReviewController::class, 'getListingReviews'])->name('api.listings.reviews');
 
     // ====================
 // ADMIN ROUTES
@@ -312,6 +338,17 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
             Route::post('/{dispute}/add-evidence', [\App\Http\Controllers\Buyer\DisputeController::class, 'addEvidence'])->name('add-evidence');
             Route::post('/{dispute}/accept-resolution', [\App\Http\Controllers\Buyer\DisputeController::class, 'acceptResolution'])->name('accept-resolution');
         });
+
+        // Review Management
+    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+    Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
+    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+    Route::get('/reviews/{review}/edit', [ReviewController::class, 'edit'])->name('reviews.edit');
+    Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+    
+    // Review Voting
+    Route::post('/reviews/{review}/vote', [ReviewController::class, 'vote'])->name('reviews.vote');
     });
 });
 
@@ -352,6 +389,7 @@ Route::get('/wishlist/count', function() {
     }
     return response()->json(['authenticated' => false, 'count' => 0]);
 })->name('wishlist.count');
+
 
 // ====================
 // DEBUG ROUTES (Development only)
