@@ -254,6 +254,28 @@
             </div>
             @endif
 
+            <!-- Add this section to your edit form -->
+<div class="mb-6">
+    <label class="block text-sm font-medium text-gray-700 mb-2">
+        Arrange Images (Drag to reorder)
+    </label>
+    <div id="imageSortable" class="space-y-2">
+        @foreach($listing->images()->orderBy('order')->get() as $image)
+        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg cursor-move border border-gray-200" data-image-id="{{ $image->id }}">
+            <i class="fas fa-grip-vertical text-gray-400"></i>
+            <img src="{{ asset('storage/' . $image->path) }}" class="w-16 h-16 object-cover rounded">
+            <div class="flex-1">
+                <p class="text-sm text-gray-600">Image {{ $image->order + 1 }}</p>
+            </div>
+            <button type="button" onclick="removeImage('{{ $image->id }}')" class="text-red-500 hover:text-red-700">
+                <i class="fas fa-trash"></i>
+            </button>
+            <input type="hidden" name="image_order[{{ $image->id }}]" value="{{ $image->order }}">
+        </div>
+        @endforeach
+    </div>
+</div>
+
             <!-- New Images -->
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">
@@ -319,6 +341,9 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+
 <script>
     // Preview new images
     function previewNewImages(input) {
@@ -373,5 +398,33 @@
         
         return true;
     });
+
+    const sortable = new Sortable(document.getElementById('imageSortable'), {
+    animation: 150,
+    handle: '.fa-grip-vertical',
+    onEnd: function() {
+        // Update order values
+        document.querySelectorAll('#imageSortable > div').forEach((div, index) => {
+            const hiddenInput = div.querySelector('input[name^="image_order"]');
+            if (hiddenInput) {
+                hiddenInput.value = index;
+            }
+        });
+    }
+});
+
+function removeImage(imageId) {
+    if (confirm('Are you sure you want to remove this image?')) {
+        // Add to delete array
+        const deleteInput = document.createElement('input');
+        deleteInput.type = 'hidden';
+        deleteInput.name = 'delete_images[]';
+        deleteInput.value = imageId;
+        document.getElementById('listingForm').appendChild(deleteInput);
+        
+        // Remove from UI
+        document.querySelector(`[data-image-id="${imageId}"]`).remove();
+    }
+}
 </script>
 @endsection

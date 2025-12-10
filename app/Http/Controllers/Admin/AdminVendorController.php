@@ -365,6 +365,30 @@ class AdminVendorController extends Controller
             return back()->with('error', 'Failed to update score.');
         }
     }
+
+    /**
+ * View document securely
+ */
+public function viewDocument($id)
+{
+    $document = VendorDocument::findOrFail($id);
+    
+    // Check if admin can view
+    if (!auth()->user()->role === 'admin') {
+        abort(403);
+    }
+    
+    $path = storage_path('app/' . $document->path);
+    
+    if (!file_exists($path)) {
+        abort(404);
+    }
+    
+    return response()->file($path, [
+        'Content-Type' => $document->mime,
+        'Content-Disposition' => 'inline; filename="' . basename($path) . '"'
+    ]);
+}
     
     /**
      * Toggle vendor active status

@@ -175,7 +175,7 @@
                                 <a href="{{ route('buyer.orders.index') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="fas fa-shopping-bag mr-2"></i>My Orders
                                 </a>
-                                <a href="{{ route('buyer.profile.edit') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
+                                <a href="{{ route('buyer.profile') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
                                     <i class="fas fa-user-edit mr-2"></i>Profile
                                 </a>
                                 <div class="border-t">

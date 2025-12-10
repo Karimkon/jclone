@@ -11,6 +11,9 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- Select2 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    
     <style>
         .vendor-sidebar {
             width: 220px;
@@ -45,6 +48,29 @@
             .vendor-content {
                 margin-left: 0;
             }
+        }
+        
+        /* Simple Select2 styling */
+        .select2-container--default .select2-selection--single {
+            height: 50px !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 48px !important;
+            padding-left: 16px !important;
+        }
+        
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 48px !important;
+            right: 10px !important;
+        }
+        
+        .select2-dropdown {
+            border: 1px solid #d1d5db !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
         }
     </style>
     
@@ -153,6 +179,11 @@
         <!-- Page Content -->
         @yield('content')
     </div>
+    
+    <!-- jQuery (required for Select2) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Select2 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
     
     @stack('scripts')
 </body>

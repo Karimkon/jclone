@@ -94,6 +94,16 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Show user details
+     */
+    public function show(User $user)
+    {
+        $user->load(['vendorProfile', 'vendorProfile.listings', 'disputes']);
+        
+        return view('admin.users.show', compact('user'));
+    }
+
+    /**
      * Show user edit form
      */
     public function edit(User $user)
@@ -157,6 +167,21 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Verify user email
+     */
+      public function verifyEmail(User $user)
+    {
+        try {
+            $user->update(['email_verified_at' => now()]);
+            
+            return back()->with('success', 'Email verified successfully.');
+            
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to verify email.');
+        }
+    }
+
+    /**
      * Delete user
      */
     public function destroy(User $user)
@@ -179,15 +204,5 @@ class AdminUserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('success', 'User deleted successfully.');
-    }
-
-    /**
-     * View user details
-     */
-    public function show(User $user)
-    {
-        $user->load(['vendorProfile', 'vendorProfile.listings', 'disputes']);
-        
-        return view('admin.users.show', compact('user'));
     }
 }

@@ -500,11 +500,11 @@
                     <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-5 mb-6">
                         <div class="flex items-end gap-4">
                             <span class="text-4xl font-bold text-primary">
-                                ${{ number_format($listing->price, 2) }}
+                                UGX {{ number_format($listing->price, 2) }}
                             </span>
                             @php $originalPrice = $listing->price * 1.25; @endphp
                             <span class="text-lg text-gray-400 line-through mb-1">
-                                ${{ number_format($originalPrice, 2) }}
+                                UGX {{ number_format($originalPrice, 2) }}
                             </span>
                             <span class="px-2 py-1 bg-red-500 text-white text-sm font-bold rounded-lg mb-1">
                                 -20% OFF
@@ -1124,7 +1124,7 @@
                                     <i class="fas fa-star text-xs {{ $i <= round($relatedRating) ? 'text-yellow-400' : 'text-gray-200' }}"></i>
                                     @endfor
                                 </div>
-                                <p class="font-bold text-primary">${{ number_format($relatedItem->price, 2) }}</p>
+                                <p class="font-bold text-primary">UGX {{ number_format($relatedItem->price, 2) }}</p>
                             </div>
                         </a>
                         @endforeach

@@ -186,6 +186,8 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
     
     // User management
     Route::resource('users', AdminUserController::class);
+     Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
     
     // Vendor vetting
     Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
@@ -231,6 +233,24 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
         Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
         Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
         Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
+    });
+
+    // In Documents Routes
+    Route::prefix('documents')->name('documents.')->group(function () {
+        Route::get('/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('view');
+        Route::post('/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('verify');
+        Route::post('/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('reject');
+    });
+
+      // Withdrawal Management
+    Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
+        Route::get('/pending', [\App\Http\Controllers\Admin\WithdrawalController::class, 'pending'])->name('pending');
+        Route::get('/', [\App\Http\Controllers\Admin\WithdrawalController::class, 'index'])->name('index');
+        Route::get('/{withdrawal}', [\App\Http\Controllers\Admin\WithdrawalController::class, 'show'])->name('show');
+        Route::post('/{withdrawal}/approve', [\App\Http\Controllers\Admin\WithdrawalController::class, 'approve'])->name('approve');
+        Route::post('/{withdrawal}/reject', [\App\Http\Controllers\Admin\WithdrawalController::class, 'reject'])->name('reject');
+        Route::post('/{withdrawal}/process', [\App\Http\Controllers\Admin\WithdrawalController::class, 'process'])->name('process');
+        Route::post('/{withdrawal}/complete', [\App\Http\Controllers\Admin\WithdrawalController::class, 'complete'])->name('complete');
     });
 });
     

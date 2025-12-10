@@ -125,6 +125,7 @@ class ListingController extends Controller
     /**
      * Show create listing form
      */
+   // In your controller (ListingController@create)
     public function create()
     {
         $vendor = Auth::user()->vendorProfile;
@@ -132,7 +133,18 @@ class ListingController extends Controller
             return redirect()->route('vendor.onboard.create');
         }
         
-        $categories = Category::where('is_active', true)->get();
+        // Get categories with hierarchy
+        $categories = Category::where('is_active', true)
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true);
+                    }])
+                    ->orderBy('order');
+            }])
+            ->whereNull('parent_id')
+            ->orderBy('order')
+            ->get();
         
         return view('vendor.listings.create', compact('categories'));
     }
@@ -321,6 +333,14 @@ class ListingController extends Controller
                     ]);
                 }
             }
+
+             if ($request->has('image_order')) {
+            foreach ($request->image_order as $imageId => $order) {
+                \App\Models\ListingImage::where('id', $imageId)
+                    ->where('listing_id', $listing->id)
+                    ->update(['order' => $order]);
+            }
+        }
 
             // Delete images if requested
             if ($request->has('delete_images')) {
