@@ -482,14 +482,18 @@
                                     @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= 4 ? 'star-filled' : 'star-empty' }}"></i>@endfor
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
-                                <div class="flex items-center justify-between">
-                                    <span class="text-base font-bold text-brand-600">UGX {{ number_format($product->price) }}</span>
-                                    @if($product->stock > 0)
-                                    <button data-quick-cart data-listing-id="{{ $product->id }}" class="quick-add w-8 h-8 btn-primary rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-shopping-cart text-xs"></i>
-                                    </button>
-                                    @endif
-                                </div>
+                            <div class="flex items-center justify-between mt-2">
+    <div class="flex items-baseline">
+        <span class="text-xs text-ink-500 mr-1">UGX</span>
+        <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
+    </div>
+    @if($product->stock > 0)
+    <button data-quick-cart data-listing-id="{{ $product->id }}" 
+            class="quick-add w-7 h-7 btn-primary rounded-lg flex items-center justify-center ml-2 flex-shrink-0">
+        <i class="fas fa-shopping-cart text-xs"></i>
+    </button>
+    @endif
+</div>
                             </div>
                         </div>
                         @endforeach
@@ -569,13 +573,16 @@
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
                                 <div class="flex items-center justify-between">
-                                    <span class="text-base font-bold text-brand-600"> UGX {{ number_format($product->price) }}</span>
-                                    @if($product->stock > 0)
-                                    <button data-quick-cart data-listing-id="{{ $product->id }}" class="quick-add w-8 h-8 btn-primary rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-shopping-cart text-xs"></i>
-                                    </button>
-                                    @endif
-                                </div>
+    <div class="flex items-baseline gap-1">
+        <span class="text-xs text-ink-500">UGX</span>
+        <span class="text-base font-bold text-brand-600">{{ number_format($product->price) }}</span>
+    </div>
+    @if($product->stock > 0)
+    <button data-quick-cart data-listing-id="{{ $product->id }}" class="quick-add w-8 h-8 btn-primary rounded-lg flex items-center justify-center">
+        <i class="fas fa-shopping-cart text-xs"></i>
+    </button>
+    @endif
+</div>
                             </div>
                         </div>
                         @endforeach
@@ -602,10 +609,13 @@
                                 </a>
                                 <span class="absolute top-2 left-2 badge-new text-white text-xs px-2 py-0.5 rounded-full font-medium">NEW</span>
                             </div>
-                            <div class="p-3">
-                                <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 h-10">{{ $product->title }}</h3>
-                                <span class="text-base font-bold text-brand-600">UGX {{ number_format($product->price) }}</span>
-                            </div>
+                           <div class="p-3">
+    <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 h-10">{{ $product->title }}</h3>
+    <div class="flex items-baseline mt-2">
+        <span class="text-xs text-ink-500 mr-1">UGX</span>
+        <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
+    </div>
+</div>
                         </div>
                         @endforeach
                     </div>

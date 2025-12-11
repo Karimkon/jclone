@@ -103,7 +103,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-gray-800">Phone Support</h4>
-                                    <p class="text-gray-600">+256 700 000 000</p>
+                                    <p class="text-gray-600">+256 782 971 912</p>
                                     <p class="text-sm text-gray-500">Mon-Fri: 8:00 AM - 6:00 PM EAT</p>
                                 </div>
                             </div>
@@ -114,7 +114,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-gray-800">Email</h4>
-                                    <p class="text-gray-600">support@yourmarketplace.com</p>
+                                    <p class="text-gray-600">bebamartglobal@gmail.com</p>
                                     <p class="text-sm text-gray-500">Response within 24 hours</p>
                                 </div>
                             </div>

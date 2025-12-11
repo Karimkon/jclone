@@ -122,7 +122,7 @@ class ProfessionalChatbot {
                                 <button id="clearChat" class="text-xs text-ink-500 hover:text-ink-700 transition flex items-center gap-1">
                                     <i class="fas fa-eraser text-xs"></i> Clear
                                 </button>
-                                <a href="https://wa.me/256707208954?text=Hello%20${encodeURIComponent(window.marketplaceName || 'Marketplace')}%20Support" 
+                                <a href="https://wa.me/256782971912?text=Hello%20${encodeURIComponent(window.marketplaceName || 'Marketplace')}%20Support" 
                                    target="_blank"
                                    class="text-xs bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1.5 rounded-lg hover:shadow-md transition flex items-center gap-2">
                                     <i class="fab fa-whatsapp"></i>
@@ -215,7 +215,7 @@ class ProfessionalChatbot {
                                     <i class="fas fa-phone text-brand-500"></i>
                                     <span class="text-sm font-medium">Call Now</span>
                                 </a>
-                                <a href="https://wa.me/256707208954" target="_blank" class="flex items-center gap-2 p-3 bg-white border border-ink-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition">
+                                <a href="https://wa.me/256782971912" target="_blank" class="flex items-center gap-2 p-3 bg-white border border-ink-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition">
                                     <i class="fab fa-whatsapp text-green-500"></i>
                                     <span class="text-sm font-medium">WhatsApp</span>
                                 </a>
@@ -260,7 +260,7 @@ class ProfessionalChatbot {
                                 </div>
                                 <h4 class="font-bold text-ink-800 mb-1">WhatsApp</h4>
                                 <p class="text-sm text-ink-600 mb-2">Instant messaging</p>
-                                <a href="https://wa.me/256707208954" target="_blank" class="text-green-600 font-medium text-sm hover:underline">Chat Now</a>
+                                <a href="https://wa.me/256782971912" target="_blank" class="text-green-600 font-medium text-sm hover:underline">Chat Now</a>
                             </div>
                             
                             <div class="p-4 bg-white border border-ink-200 rounded-xl hover:border-blue-300 hover:shadow-md transition">
@@ -295,7 +295,7 @@ class ProfessionalChatbot {
                         </div>
                         
                         <div class="flex gap-3">
-                            <a href="https://wa.me/256707208954" target="_blank" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium text-center hover:shadow-lg transition flex items-center justify-center gap-2">
+                            <a href="https://wa.me/256782971912" target="_blank" class="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 rounded-xl font-medium text-center hover:shadow-lg transition flex items-center justify-center gap-2">
                                 <i class="fab fa-whatsapp"></i> WhatsApp Now
                             </a>
                             <a href="tel:+256707208954" class="flex-1 bg-white border border-brand-500 text-brand-600 py-3 rounded-xl font-medium text-center hover:bg-brand-50 transition flex items-center justify-center gap-2">
