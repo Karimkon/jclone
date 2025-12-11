@@ -26,6 +26,9 @@ use App\Http\Controllers\Vendor\PromotionController;
 use App\Http\Controllers\Finance\EscrowController;
 use App\Http\Controllers\Buyer\ReviewController;
 use App\Http\Controllers\Vendor\VendorReviewController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Payment\CheckoutPaymentController;
+use App\Http\Controllers\Payment\FlutterwaveWebhookController;
 
 // ====================
 // PUBLIC ROUTES
@@ -88,6 +91,98 @@ Route::get('/terms', [LandingController::class, 'terms'])->name('site.terms');
 Route::get('/privacy', [LandingController::class, 'privacy'])->name('site.privacy');
 Route::get('/vendor-benefits', [LandingController::class, 'vendorBenefits'])->name('site.vendorBenefits');
 Route::get('/how-it-works', [LandingController::class, 'howItWorks'])->name('site.howItWorks');
+
+
+// ====================
+// CHAT ROUTES (require authentication)
+// ====================
+Route::middleware(['auth'])->prefix('chat')->name('chat.')->group(function () {
+    // Conversations list
+    Route::get('/', [ChatController::class, 'index'])->name('index');
+    
+    // Start new conversation (from product page)
+    Route::post('/start', [ChatController::class, 'startConversation'])->name('start');
+    
+    // IMPORTANT: Put specific routes BEFORE the {conversation} wildcard
+    // Get unread count (for header badge) - MOVED BEFORE {conversation}
+    Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
+    
+    // View specific conversation
+    Route::get('/{conversation}', [ChatController::class, 'show'])->name('show');
+    
+    // Send message in conversation
+    Route::post('/{conversation}/send', [ChatController::class, 'sendMessage'])->name('send');
+    
+    // Get new messages (for polling)
+    Route::get('/{conversation}/new-messages', [ChatController::class, 'getNewMessages'])->name('new-messages');
+    
+    // Archive conversation
+    Route::post('/{conversation}/archive', [ChatController::class, 'archive'])->name('archive');
+    
+    // Delete message
+    Route::delete('/message/{message}', [ChatController::class, 'deleteMessage'])->name('delete-message');
+});
+
+
+// ====================
+// PAYMENT ROUTES (Buyer Checkout)
+// ====================
+Route::middleware(['auth'])->prefix('payment')->name('payment.')->group(function () {
+    // Show payment options for an order
+    Route::get('/order/{order}', [CheckoutPaymentController::class, 'showPaymentOptions'])
+        ->name('options');
+    
+    // Initialize mobile money payment (PesaPal)
+    Route::post('/order/{order}/mobile-money', [CheckoutPaymentController::class, 'initializePesapalPayment'])
+        ->name('mobile-money.initiate');
+    
+    // Initialize card payment (Flutterwave)
+    Route::post('/order/{order}/card', [CheckoutPaymentController::class, 'initializeFlutterwavePayment'])
+        ->name('card.initiate');
+    
+    // Retry failed payment
+    Route::get('/order/{order}/retry', [CheckoutPaymentController::class, 'retryPayment'])
+        ->name('retry');
+    
+    // Check payment status (for AJAX polling)
+    Route::get('/order/{order}/status', [CheckoutPaymentController::class, 'checkPaymentStatus'])
+        ->name('status.check');
+});
+
+// ====================
+// PAYMENT CALLBACKS (No auth - external redirects)
+// ====================
+Route::prefix('payment')->name('payment.')->group(function () {
+    // Flutterwave callback (user redirect after payment)
+    Route::get('/flutterwave/callback', [CheckoutPaymentController::class, 'flutterwaveCallback'])
+        ->name('flutterwave.callback');
+    
+    // PesaPal callback (user redirect after payment)
+    Route::get('/pesapal/callback', [CheckoutPaymentController::class, 'pesapalCallback'])
+        ->name('pesapal.callback');
+    
+    // PesaPal IPN (Instant Payment Notification)
+    Route::post('/pesapal/ipn', [CheckoutPaymentController::class, 'pesapalIPN'])
+        ->name('pesapal.ipn');
+});
+
+// ====================
+// BUYER CALLBACK ROUTES (Public - no auth required, but can be used by authenticated users)
+// ====================
+Route::post('/buyer/listings/{listing}/callback', [App\Http\Controllers\Buyer\CallbackRequestController::class, 'store'])
+    ->name('buyer.listings.callback');
+
+// ====================
+// VENDOR CALLBACK ROUTES (Authenticated vendors only)
+// ====================
+Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor')->name('vendor.')->group(function () {
+    // Callback management
+    Route::prefix('callbacks')->name('callbacks.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Vendor\VendorCallbackController::class, 'index'])->name('index');
+        Route::get('/{callback}', [App\Http\Controllers\Vendor\VendorCallbackController::class, 'show'])->name('show');
+        Route::post('/{callback}/status', [App\Http\Controllers\Vendor\VendorCallbackController::class, 'updateStatus'])->name('update-status');
+    });
+});
 
 // ====================
 // VENDOR ONBOARDING ROUTES (Public view and submission, status requires auth)
@@ -163,96 +258,111 @@ Route::middleware(['auth'])->group(function () {
             return view('vendor.analytics.index');
         })->name('analytics');
 
-         // View and Respond to Reviews
-    Route::get('/reviews', [VendorReviewController::class, 'index'])->name('reviews.index');
-    Route::get('/reviews/{review}', [VendorReviewController::class, 'show'])->name('reviews.show');
-    Route::post('/reviews/{review}/respond', [VendorReviewController::class, 'respond'])->name('reviews.respond');
-    Route::put('/reviews/{review}/respond', [VendorReviewController::class, 'updateResponse'])->name('reviews.update-response');
-    Route::delete('/reviews/{review}/respond', [VendorReviewController::class, 'deleteResponse'])->name('reviews.delete-response');
-
-
+        // View and Respond to Reviews
+        Route::get('/reviews', [VendorReviewController::class, 'index'])->name('reviews.index');
+        Route::get('/reviews/{review}', [VendorReviewController::class, 'show'])->name('reviews.show');
+        Route::post('/reviews/{review}/respond', [VendorReviewController::class, 'respond'])->name('reviews.respond');
+        Route::put('/reviews/{review}/respond', [VendorReviewController::class, 'updateResponse'])->name('reviews.update-response');
+        Route::delete('/reviews/{review}/respond', [VendorReviewController::class, 'deleteResponse'])->name('reviews.delete-response');
     });
-
-    // ==========================================
-// PUBLIC API ROUTES (for AJAX)
-// ==========================================
-Route::get('/api/listings/{listing}/reviews', [ReviewController::class, 'getListingReviews'])->name('api.listings.reviews');
 
     // ====================
-// ADMIN ROUTES
-// ====================
-Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    
-    // User management
-    Route::resource('users', AdminUserController::class);
-     Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
-    Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
-    
-    // Vendor vetting
-    Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
-    Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
-    Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
-    Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
-    Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
-    Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
-    Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
+    // PUBLIC API ROUTES (for AJAX)
+    // ====================
+    Route::get('/api/listings/{listing}/reviews', [ReviewController::class, 'getListingReviews'])->name('api.listings.reviews');
 
-    // Document verification
-    Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
-    Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
-    
-    // Category management
-    Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
-    Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
-    Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
-    Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
-    Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
-    Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
-    Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
-    
-    // Orders - ADD THESE ROUTES
-    Route::prefix('orders')->name('orders.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('index');
-        Route::get('/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('show');
-        Route::post('/{order}/status', [\App\Http\Controllers\Admin\AdminOrderController::class, 'updateStatus'])->name('update-status'); // THIS LINE IS MISSING!
-        Route::post('/{order}/refund', [\App\Http\Controllers\Admin\AdminOrderController::class, 'refund'])->name('refund');
-        Route::get('/{order}/invoice', [\App\Http\Controllers\Admin\AdminOrderController::class, 'invoice'])->name('invoice');
-        Route::get('/export', [\App\Http\Controllers\Admin\AdminOrderController::class, 'export'])->name('export');
+    // ====================
+    // ADMIN ROUTES
+    // ====================
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+        
+        // User management
+        Route::resource('users', AdminUserController::class);
+        Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
+        
+        // Vendor vetting
+        Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
+        Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
+        Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
+        Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
+        Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
+        Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
+        Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
+
+        // Document verification
+        Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
+        Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
+        
+        // Category management
+        Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
+        Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
+        Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
+        Route::get('/categories/{category}/edit', [CategoryController::class, 'edit'])->name('categories.edit');
+        Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
+        Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
+        Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
+        
+        // Orders
+        Route::prefix('orders')->name('orders.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('index');
+            Route::get('/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('show');
+            Route::post('/{order}/status', [\App\Http\Controllers\Admin\AdminOrderController::class, 'updateStatus'])->name('update-status');
+            Route::post('/{order}/refund', [\App\Http\Controllers\Admin\AdminOrderController::class, 'refund'])->name('refund');
+            Route::get('/{order}/invoice', [\App\Http\Controllers\Admin\AdminOrderController::class, 'invoice'])->name('invoice');
+            Route::get('/export', [\App\Http\Controllers\Admin\AdminOrderController::class, 'export'])->name('export');
+        });
+        
+        // Disputes
+        Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
+        Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
+        
+        // Reports
+        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
+
+        // Escrow management
+        Route::prefix('escrows')->name('escrows.')->group(function () {
+            Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
+            Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
+            Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
+        });
+
+        // Document Routes
+        Route::prefix('documents')->name('documents.')->group(function () {
+            Route::get('/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('view');
+            Route::post('/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('verify');
+            Route::post('/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('reject');
+        });
+
+        // Withdrawal Management
+        Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
+            Route::get('/pending', [\App\Http\Controllers\Admin\WithdrawalController::class, 'pending'])->name('pending');
+            Route::get('/', [\App\Http\Controllers\Admin\WithdrawalController::class, 'index'])->name('index');
+            Route::get('/{withdrawal}', [\App\Http\Controllers\Admin\WithdrawalController::class, 'show'])->name('show');
+            Route::post('/{withdrawal}/approve', [\App\Http\Controllers\Admin\WithdrawalController::class, 'approve'])->name('approve');
+            Route::post('/{withdrawal}/reject', [\App\Http\Controllers\Admin\WithdrawalController::class, 'reject'])->name('reject');
+            Route::post('/{withdrawal}/process', [\App\Http\Controllers\Admin\WithdrawalController::class, 'process'])->name('process');
+            Route::post('/{withdrawal}/complete', [\App\Http\Controllers\Admin\WithdrawalController::class, 'complete'])->name('complete');
+        });
+
+      // Admin Product Management Routes :
+    Route::prefix('listings')->name('listings.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminListingController::class, 'index'])->name('index');
+        Route::get('/create', [\App\Http\Controllers\Admin\AdminListingController::class, 'create'])->name('create');
+        Route::post('/', [\App\Http\Controllers\Admin\AdminListingController::class, 'store'])->name('store');
+        Route::get('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'show'])->name('show');
+        Route::get('/{listing}/edit', [\App\Http\Controllers\Admin\AdminListingController::class, 'edit'])->name('edit');
+        Route::put('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'update'])->name('update');
+        Route::delete('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'destroy'])->name('destroy');
+        Route::post('/{listing}/toggle-status', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleStatus'])->name('toggle-status');
+        Route::post('/{listing}/feature', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleFeatured'])->name('toggle-featured');
+        Route::post('/bulk-actions', [\App\Http\Controllers\Admin\AdminListingController::class, 'bulkActions'])->name('bulk-actions');
+        Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'exportCSV'])->name('export.csv');
+        Route::post('/import/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'importCSV'])->name('import.csv');
     });
     
-    // Disputes
-    Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
-    Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
-    
-    // Reports
-    Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
-
-    // Escrow management
-    Route::prefix('escrows')->name('escrows.')->group(function () {
-        Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
-        Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
-        Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
     });
-
-    // In Documents Routes
-    Route::prefix('documents')->name('documents.')->group(function () {
-        Route::get('/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('view');
-        Route::post('/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('verify');
-        Route::post('/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('reject');
-    });
-
-      // Withdrawal Management
-    Route::prefix('withdrawals')->name('withdrawals.')->group(function () {
-        Route::get('/pending', [\App\Http\Controllers\Admin\WithdrawalController::class, 'pending'])->name('pending');
-        Route::get('/', [\App\Http\Controllers\Admin\WithdrawalController::class, 'index'])->name('index');
-        Route::get('/{withdrawal}', [\App\Http\Controllers\Admin\WithdrawalController::class, 'show'])->name('show');
-        Route::post('/{withdrawal}/approve', [\App\Http\Controllers\Admin\WithdrawalController::class, 'approve'])->name('approve');
-        Route::post('/{withdrawal}/reject', [\App\Http\Controllers\Admin\WithdrawalController::class, 'reject'])->name('reject');
-        Route::post('/{withdrawal}/process', [\App\Http\Controllers\Admin\WithdrawalController::class, 'process'])->name('process');
-        Route::post('/{withdrawal}/complete', [\App\Http\Controllers\Admin\WithdrawalController::class, 'complete'])->name('complete');
-    });
-});
     
     // ====================
     // LOGISTICS ROUTES
@@ -321,6 +431,7 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
             Route::post('/withdraw', [\App\Http\Controllers\Buyer\WalletController::class, 'withdraw'])->name('withdraw');
             Route::get('/transactions', [\App\Http\Controllers\Buyer\WalletController::class, 'transactions'])->name('transactions');
             Route::get('/balance', [\App\Http\Controllers\Buyer\WalletController::class, 'getBalance'])->name('balance');
+            Route::get('/transactions/export', [\App\Http\Controllers\Buyer\WalletController::class, 'exportTransactions'])->name('transactions.export');
         });
         
         // Cart (PROTECTED - requires authentication)
@@ -345,6 +456,7 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
             Route::get('/checkout', [\App\Http\Controllers\Buyer\OrderController::class, 'checkout'])->name('checkout');
             Route::post('/place-order', [\App\Http\Controllers\Buyer\OrderController::class, 'placeOrder'])->name('place-order');
             Route::get('/{order}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->name('show');
+             Route::get('/{order}/payment', [\App\Http\Controllers\Buyer\OrderController::class, 'payment'])->name('payment'); 
             Route::post('/{order}/cancel', [\App\Http\Controllers\Buyer\OrderController::class, 'cancelOrder'])->name('cancel');
             Route::post('/{order}/confirm-delivery', [\App\Http\Controllers\Buyer\OrderController::class, 'confirmDelivery'])->name('confirm-delivery');
         });
@@ -360,15 +472,15 @@ Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(functi
         });
 
         // Review Management
-    Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
-    Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
-    Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
-    Route::get('/reviews/{review}/edit', [ReviewController::class, 'edit'])->name('reviews.edit');
-    Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
-    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
-    
-    // Review Voting
-    Route::post('/reviews/{review}/vote', [ReviewController::class, 'vote'])->name('reviews.vote');
+        Route::get('/reviews', [ReviewController::class, 'index'])->name('reviews.index');
+        Route::get('/reviews/create', [ReviewController::class, 'create'])->name('reviews.create');
+        Route::post('/reviews', [ReviewController::class, 'store'])->name('reviews.store');
+        Route::get('/reviews/{review}/edit', [ReviewController::class, 'edit'])->name('reviews.edit');
+        Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
+        Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
+        
+        // Review Voting
+        Route::post('/reviews/{review}/vote', [ReviewController::class, 'vote'])->name('reviews.vote');
     });
 });
 
@@ -380,10 +492,18 @@ Route::prefix('api')->name('api.')->group(function () {
 });
 
 // ====================
-// PAYMENT WEBHOOKS (Must be public)
+// WEBHOOKS (No CSRF protection - server-to-server)
+// These are defined separately and excluded from CSRF in VerifyCsrfToken middleware
 // ====================
-Route::post('/webhooks/flutterwave', [\App\Http\Controllers\Payment\FlutterwaveWebhookController::class, 'handle'])->name('webhooks.flutterwave');
-Route::post('/webhooks/pesapal', [\App\Http\Controllers\Payment\PesaPalWebhookController::class, 'handle'])->name('webhooks.pesapal');
+Route::prefix('webhooks')->name('webhooks.')->group(function () {
+
+    // PesaPal IPN (Instant Payment Notification)
+    Route::match(['get', 'post'], '/pesapal/ipn', [CheckoutPaymentController::class, 'pesapalIPN'])
+        ->name('pesapal.ipn');
+    // Flutterwave webhook
+    Route::post('/flutterwave', [FlutterwaveWebhookController::class, 'webhook'])->name('flutterwave');
+    
+});
 
 // ====================
 // PUBLIC AJAX ROUTES (for cart/wishlist counts)

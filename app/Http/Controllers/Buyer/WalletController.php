@@ -65,6 +65,28 @@ class WalletController extends Controller
             return back()->with('error', 'Deposit failed: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Get current wallet balance (AJAX)
+     */
+    public function getBalance(Request $request)
+    {
+        $wallet = BuyerWallet::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['balance' => 0]
+        );
+        
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'balance' => $wallet->balance,
+                'formatted_balance' => number_format($wallet->balance, 2),
+            ]);
+        }
+        
+        // For non-AJAX requests, redirect to wallet page
+        return redirect()->route('buyer.wallet.index');
+    }
     
     public function withdraw(Request $request)
     {
@@ -115,14 +137,87 @@ class WalletController extends Controller
         }
     }
     
-    public function transactions()
-    {
-        $transactions = Auth::user()->walletTransactions()
-            ->orderBy('created_at', 'desc')
-            ->paginate(50);
-        
-        return view('buyer.wallet.transactions', compact('transactions'));
+   public function transactions(Request $request)
+{
+    $query = Auth::user()->walletTransactions()
+        ->orderBy('created_at', 'desc');
+    
+    // Apply filters
+    if ($request->filled('type')) {
+        $query->where('type', $request->type);
     }
+    
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+    
+    if ($request->filled('from_date')) {
+        $query->whereDate('created_at', '>=', $request->from_date);
+    }
+    
+    if ($request->filled('to_date')) {
+        $query->whereDate('created_at', '<=', $request->to_date);
+    }
+    
+    $transactions = $query->paginate(50);
+    
+    return view('buyer.wallet.transactions', compact('transactions'));
+}
+
+public function exportTransactions(Request $request)
+{
+    $query = Auth::user()->walletTransactions()
+        ->orderBy('created_at', 'desc');
+    
+     if ($request->filled('type')) {
+        $query->where('type', $request->type);
+    }
+    
+    if ($request->filled('status')) {
+        $query->where('status', $request->status);
+    }
+    
+    if ($request->filled('from_date')) {
+        $query->whereDate('created_at', '>=', $request->from_date);
+    }
+    
+    if ($request->filled('to_date')) {
+        $query->whereDate('created_at', '<=', $request->to_date);
+    }
+    
+    $transactions = $query->get();
+    
+    $filename = 'wallet-transactions-' . date('Y-m-d') . '.csv';
+    
+    $headers = [
+        'Content-Type' => 'text/csv',
+        'Content-Disposition' => "attachment; filename=\"$filename\"",
+    ];
+    
+    $callback = function() use ($transactions) {
+        $file = fopen('php://output', 'w');
+        
+        // Add CSV headers
+        fputcsv($file, ['Date', 'Type', 'Description', 'Amount', 'Balance After', 'Status', 'Reference']);
+        
+        // Add data rows
+        foreach ($transactions as $transaction) {
+            fputcsv($file, [
+                $transaction->created_at->format('Y-m-d H:i:s'),
+                $transaction->type,
+                $transaction->description,
+                $transaction->amount,
+                $transaction->balance_after,
+                $transaction->status,
+                $transaction->reference
+            ]);
+        }
+        
+        fclose($file);
+    };
+    
+    return response()->stream($callback, 200, $headers);
+}
     
     private function createWallet($user)
     {

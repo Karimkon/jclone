@@ -2,180 +2,231 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Escrow;
 use App\Models\Order;
-use Illuminate\Support\Facades\DB;
+use App\Models\Escrow;
+use App\Services\EscrowService;
+use Illuminate\Http\Request;
 
 class EscrowController extends Controller
 {
-    /**
-     * Release escrow funds to vendor (admin action)
-     */
-    public function release(Request $request, Escrow $escrow)
+    protected EscrowService $escrowService;
+
+    public function __construct(EscrowService $escrowService)
     {
-        // Only admin can release escrow
-        if (!auth()->user()->hasRole('admin')) {
-            abort(403);
-        }
-
-        $request->validate([
-            'notes' => 'nullable|string|max:500',
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $order = $escrow->order;
-            
-            if (!$order || !$order->vendorProfile) {
-                throw new \Exception('Order or vendor not found');
-            }
-
-            $vendor = $order->vendorProfile;
-            $balance = $vendor->balanceRecord;
-            
-            // Calculate commission (8%)
-            $commission = $escrow->amount * 0.08;
-            $netAmount = $escrow->amount - $commission;
-            
-            // Release from escrow to vendor balance
-            $balance->releasePending($escrow->amount, $order->id, $commission);
-            
-            // Update escrow status
-            $escrow->update([
-                'status' => 'released',
-                'released_at' => now(),
-                'released_by' => auth()->id(),
-                'meta' => array_merge($escrow->meta ?? [], [
-                    'release_notes' => $request->notes,
-                    'commission' => $commission,
-                    'net_amount' => $netAmount,
-                ])
-            ]);
-            
-            // Update order status
-            $order->update(['status' => 'completed']);
-
-            // Log admin action
-            \App\Models\AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'escrow_released',
-                'model' => 'Escrow',
-                'model_id' => $escrow->id,
-                'new_values' => [
-                    'status' => 'released',
-                    'amount' => $escrow->amount,
-                    'commission' => $commission,
-                    'vendor_received' => $netAmount,
-                ],
-                'ip' => $request->ip(),
-            ]);
-
-            // Notify vendor
-            \App\Models\NotificationQueue::create([
-                'user_id' => $vendor->user_id,
-                'type' => 'email',
-                'title' => 'Escrow Funds Released',
-                'message' => "Escrow funds of \${$escrow->amount} for order #{$order->order_number} have been released to your balance. Commission: \${$commission}, Net: \${$netAmount}",
-                'meta' => [
-                    'order_id' => $order->id,
-                    'amount' => $escrow->amount,
-                    'commission' => $commission,
-                    'net_amount' => $netAmount,
-                ],
-                'status' => 'pending',
-            ]);
-
-            DB::commit();
-
-            return back()->with('success', "Escrow released successfully. Vendor received \${$netAmount}.");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to release escrow: ' . $e->getMessage());
-        }
+        $this->escrowService = $escrowService;
     }
 
     /**
-     * Refund escrow funds to buyer (admin action)
+     * Buyer confirms receipt of order (releases funds to vendor)
      */
-    public function refund(Request $request, Escrow $escrow)
+    public function confirmReceipt(Request $request, Order $order)
     {
-        // Only admin can refund escrow
-        if (!auth()->user()->hasRole('admin')) {
+        // Ensure buyer owns this order
+        if ($order->buyer_id !== auth()->id()) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
             abort(403);
         }
 
+        // Check order status
+        if (!in_array($order->status, ['paid', 'shipped', 'delivered'])) {
+            $message = 'Order must be paid and delivered before confirming receipt.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 400);
+            }
+            return back()->with('error', $message);
+        }
+
+        // Check escrow exists and is held
+        $escrow = $order->escrow;
+        if (!$escrow || $escrow->status !== 'held') {
+            $message = 'No funds to release for this order.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 400);
+            }
+            return back()->with('error', $message);
+        }
+
+        // Release funds
+        $success = $this->escrowService->releaseFunds($escrow, 'buyer_confirmed');
+
+        if ($success) {
+            $message = 'Order confirmed! Funds have been released to the vendor.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+            return redirect()->route('buyer.orders.show', $order)->with('success', $message);
+        }
+
+        $message = 'Failed to process confirmation. Please try again.';
+        if ($request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => $message], 500);
+        }
+        return back()->with('error', $message);
+    }
+
+    /**
+     * Buyer requests refund (opens dispute)
+     */
+    public function requestRefund(Request $request, Order $order)
+    {
         $request->validate([
             'reason' => 'required|string|max:1000',
+            'evidence' => 'nullable|array',
+            'evidence.*' => 'image|max:2048',
         ]);
 
-        DB::beginTransaction();
-        try {
-            $order = $escrow->order;
-            
-            // Update escrow status
-            $escrow->update([
-                'status' => 'refunded',
-                'refunded_at' => now(),
-                'refunded_by' => auth()->id(),
-                'meta' => array_merge($escrow->meta ?? [], [
-                    'refund_reason' => $request->reason,
-                ])
-            ]);
-            
-            // Update order status
-            $order->update(['status' => 'refunded']);
-
-            // Log admin action
-            \App\Models\AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'escrow_refunded',
-                'model' => 'Escrow',
-                'model_id' => $escrow->id,
-                'new_values' => [
-                    'status' => 'refunded',
-                    'reason' => $request->reason,
-                ],
-                'ip' => $request->ip(),
-            ]);
-
-            // Notify buyer
-            \App\Models\NotificationQueue::create([
-                'user_id' => $order->buyer_id,
-                'type' => 'email',
-                'title' => 'Order Refunded',
-                'message' => "Your order #{$order->order_number} has been refunded. Reason: {$request->reason}",
-                'meta' => [
-                    'order_id' => $order->id,
-                    'amount' => $escrow->amount,
-                    'reason' => $request->reason,
-                ],
-                'status' => 'pending',
-            ]);
-
-            DB::commit();
-
-            return back()->with('success', 'Escrow refunded successfully.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Failed to refund escrow: ' . $e->getMessage());
+        // Ensure buyer owns this order
+        if ($order->buyer_id !== auth()->id()) {
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+            }
+            abort(403);
         }
+
+        // Check escrow status
+        $escrow = $order->escrow;
+        if (!$escrow || $escrow->status !== 'held') {
+            $message = 'No refundable funds for this order.';
+            if ($request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $message], 400);
+            }
+            return back()->with('error', $message);
+        }
+
+        // Create dispute
+        $dispute = \App\Models\Dispute::create([
+            'order_id' => $order->id,
+            'raised_by' => auth()->id(),
+            'type' => 'refund_request',
+            'reason' => $request->reason,
+            'status' => 'open',
+            'meta' => [
+                'escrow_amount' => $escrow->amount,
+                'created_at' => now()->toDateTimeString(),
+            ]
+        ]);
+
+        // Handle evidence uploads
+        if ($request->hasFile('evidence')) {
+            $paths = [];
+            foreach ($request->file('evidence') as $file) {
+                $paths[] = $file->store('disputes/' . $dispute->id, 'public');
+            }
+            $dispute->update([
+                'meta' => array_merge($dispute->meta, ['evidence_paths' => $paths])
+            ]);
+        }
+
+        // Extend escrow hold while dispute is open
+        $this->escrowService->extendHold($escrow, 14, 'dispute_opened');
+
+        // Notify vendor
+        \App\Models\NotificationQueue::create([
+            'user_id' => $order->vendorProfile->user_id,
+            'type' => 'dispute_opened',
+            'title' => 'Refund Request Received',
+            'message' => "A refund has been requested for Order #{$order->order_number}. Please review.",
+            'meta' => [
+                'order_id' => $order->id,
+                'dispute_id' => $dispute->id,
+            ],
+            'status' => 'pending',
+        ]);
+
+        $message = 'Refund request submitted. Our team will review it shortly.';
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => $message, 'dispute_id' => $dispute->id]);
+        }
+        return redirect()->route('buyer.disputes.show', $dispute)->with('success', $message);
     }
 
     /**
-     * Get pending escrows for admin
+     * Get escrow status for an order (AJAX)
      */
-    public function pending()
+    public function getStatus(Order $order)
     {
-        $pendingEscrows = Escrow::with(['order.vendor.user', 'order.buyer'])
-            ->where('status', 'held')
-            ->where('release_at', '<=', now()) // Ready for release
-            ->orderBy('release_at')
-            ->paginate(20);
+        // Ensure user is part of this order
+        $userId = auth()->id();
+        $isVendor = $order->vendorProfile && $order->vendorProfile->user_id === $userId;
+        $isBuyer = $order->buyer_id === $userId;
 
-        return view('admin.escrows.pending', compact('pendingEscrows'));
+        if (!$isBuyer && !$isVendor) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $summary = $this->escrowService->getEscrowSummary($order);
+
+        return response()->json([
+            'success' => true,
+            'escrow' => $summary,
+            'is_buyer' => $isBuyer,
+            'is_vendor' => $isVendor,
+        ]);
+    }
+
+    // ============================================
+    // ADMIN ACTIONS
+    // ============================================
+
+    /**
+     * Admin: Force release escrow
+     */
+    public function adminRelease(Request $request, Escrow $escrow)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $success = $this->escrowService->releaseFunds($escrow, 'admin_release: ' . $request->reason);
+
+        if ($success) {
+            return back()->with('success', 'Escrow funds released successfully.');
+        }
+
+        return back()->with('error', 'Failed to release escrow funds.');
+    }
+
+    /**
+     * Admin: Force refund escrow
+     */
+    public function adminRefund(Request $request, Escrow $escrow)
+    {
+        $request->validate([
+            'reason' => 'required|string|max:500',
+            'amount' => 'nullable|numeric|min:0|max:' . $escrow->amount,
+        ]);
+
+        $success = $this->escrowService->refundToBuyer(
+            $escrow,
+            'admin_refund: ' . $request->reason,
+            $request->amount
+        );
+
+        if ($success) {
+            return back()->with('success', 'Refund processed successfully.');
+        }
+
+        return back()->with('error', 'Failed to process refund.');
+    }
+
+    /**
+     * Admin: Extend escrow hold
+     */
+    public function adminExtend(Request $request, Escrow $escrow)
+    {
+        $request->validate([
+            'days' => 'required|integer|min:1|max:30',
+            'reason' => 'required|string|max:500',
+        ]);
+
+        $success = $this->escrowService->extendHold($escrow, $request->days, $request->reason);
+
+        if ($success) {
+            return back()->with('success', "Escrow hold extended by {$request->days} days.");
+        }
+
+        return back()->with('error', 'Failed to extend escrow hold.');
     }
 }

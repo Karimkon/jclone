@@ -430,4 +430,25 @@ class OrderController extends Controller
         if ($totalWeight <= 20) return 25;
         return 50;
     }
+
+    /**
+ * Show payment page for order
+ */
+public function payment($id)
+{
+    $order = Order::findOrFail($id);
+    
+    // Check ownership
+    if ($order->buyer_id !== Auth::id()) {
+        abort(403);
+    }
+
+    // Check if payment is pending
+    if ($order->status !== 'payment_pending') {
+        return redirect()->route('buyer.orders.show', $order)
+            ->with('error', 'This order does not require payment');
+    }
+
+    return view('buyer.orders.payment', compact('order'));
+}
 }

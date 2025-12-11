@@ -35,4 +35,37 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Flutterwave Configuration (Cards & Bank Transfers)
+    |--------------------------------------------------------------------------
+    */
+    'flutterwave' => [
+        'public_key' => env('FLUTTERWAVE_PUBLIC_KEY'),
+        'secret_key' => env('FLUTTERWAVE_SECRET_KEY'),
+        'encryption_key' => env('FLUTTERWAVE_ENCRYPTION_KEY'),
+        'secret_hash' => env('FLUTTERWAVE_SECRET_HASH'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | PesaPal Configuration (Mobile Money)
+    |--------------------------------------------------------------------------
+    |
+    | PesaPal supports MTN Mobile Money and Airtel Money in Uganda.
+    | 
+    | IMPORTANT: 
+    | - Production URL: https://pay.pesapal.com/v3
+    | - Sandbox URL: https://cybqa.pesapal.com/pesapalv3
+    |
+    | Get your credentials from: https://developer.pesapal.com
+    |
+    */
+    'pesapal' => [
+        'base_url' => env('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3'),
+        'consumer_key' => env('PESAPAL_CONSUMER_KEY'),
+        'consumer_secret' => env('PESAPAL_CONSUMER_SECRET'),
+        'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
+    ],
+
 ];

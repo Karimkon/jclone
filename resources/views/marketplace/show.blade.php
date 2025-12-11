@@ -1083,16 +1083,27 @@
                     </div>
                     
                     <!-- Vendor Actions -->
-                    <div class="space-y-2">
-                        <button onclick="contactVendor()" class="w-full py-2.5 px-4 border-2 border-primary text-primary rounded-xl font-medium hover:bg-primary hover:text-white transition flex items-center justify-center gap-2">
-                            <i class="fas fa-comment-dots"></i>
-                            Chat with Vendor
-                        </button>
-                        <a href="#" class="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
-                            <i class="fas fa-store"></i>
-                            View Store
-                        </a>
-                    </div>
+                   <div class="space-y-2">
+                <!-- Request Callback Button - NEW -->
+                <button onclick="openCallbackModal()" 
+                        class="w-full py-2.5 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fas fa-phone-alt"></i>
+                    Request Callback
+                </button>
+
+                <button onclick="openChatModal()" 
+                        class="w-full py-2.5 px-4 border-2 border-primary text-primary rounded-xl font-medium hover:bg-primary hover:text-white transition flex items-center justify-center gap-2">
+                    <i class="fas fa-comment-dots"></i>
+                    Chat with Vendor
+                </button>
+                
+                <a href="#" 
+                class="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                    <i class="fas fa-store"></i>
+                    View Store
+                </a>
+            </div>
+
                 </div>
                 
                 <!-- Related Products -->
@@ -1190,12 +1201,181 @@
     </div>
 </div>
 
+<!-- Request Callback Modal -->
+<div id="callbackModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCallbackModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 relative animate-scale-in">
+            <button onclick="closeCallbackModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-phone text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Request a Callback</h3>
+                <p class="text-gray-500">Share your details and the vendor will call you back</p>
+            </div>
+            
+            <form id="callbackForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" 
+                           name="name" 
+                           id="callback_name"
+                           value="{{ auth()->check() ? auth()->user()->name : '' }}"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" 
+                           placeholder="Enter your full name"
+                           required>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <select class="px-3 py-3 border border-gray-300 rounded-lg bg-gray-50">
+                            <option>+256</option>
+                            <option>+254</option>
+                            <option>+255</option>
+                        </select>
+                        <input type="tel" 
+                               name="phone" 
+                               id="callback_phone"
+                               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" 
+                               placeholder="700 000 000"
+                               required>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">We'll use this number to contact you</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Message (Optional)
+                    </label>
+                    <textarea name="message" 
+                              id="callback_message"
+                              rows="3" 
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none" 
+                              placeholder="Any specific questions or best time to call?"></textarea>
+                </div>
+                
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <div class="flex items-start gap-3">
+                        <i class="fas fa-info-circle text-blue-600 mt-0.5"></i>
+                        <div class="text-sm text-blue-800">
+                            <p class="font-medium mb-1">What happens next?</p>
+                            <ul class="space-y-1 text-xs">
+                                <li>• Vendor receives your callback request</li>
+                                <li>• They'll call you at the provided number</li>
+                                <li>• Average response time: 30 minutes</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-2">
+                    <button type="button" 
+                            onclick="closeCallbackModal()" 
+                            class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" 
+                            id="submitCallbackBtn"
+                            class="flex-1 py-3 px-4 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fas fa-phone"></i>
+                        Request Callback
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes scale-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scale-in {
+    animation: scale-in 0.3s ease forwards;
+}
+</style>
+
+@include('components.chat-modal', ['listing' => $listing])
+
 @endsection
 
 @push('scripts')
 <script>
 const isAuthenticated = @json(auth()->check());
 const csrfToken = '{{ csrf_token() }}';
+const listingId = {{ $listing->id }};
+
+function openCallbackModal() {
+    document.getElementById('callbackModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeCallbackModal() {
+    document.getElementById('callbackModal').classList.add('hidden');
+    document.body.style.overflow = '';
+    document.getElementById('callbackForm').reset();
+}
+
+// Handle form submission
+document.getElementById('callbackForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('submitCallbackBtn');
+    const originalHtml = btn.innerHTML;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+    
+    const formData = {
+        name: document.getElementById('callback_name').value,
+        phone: document.getElementById('callback_phone').value,
+        message: document.getElementById('callback_message').value,
+    };
+    
+    try {
+        const response = await fetch(`/buyer/listings/${listingId}/callback`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            closeCallbackModal();
+            showToast('Callback request sent successfully! The vendor will contact you soon.', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to send callback request');
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to send callback request', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeCallbackModal();
+    }
+});
 
 // Quantity Controls
 document.addEventListener('DOMContentLoaded', function() {
@@ -1489,14 +1669,6 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Other Functions
-function contactVendor() {
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    showToast('Chat feature coming soon!', 'info');
-}
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {

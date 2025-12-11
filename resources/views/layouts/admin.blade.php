@@ -243,6 +243,11 @@
                         <i class="fas fa-tags w-5 mr-3 text-center"></i>
                         <span class="text-sm font-medium">Categories</span>
                     </a>
+                     <a href="{{ route('admin.listings.index') }}" 
+                    class="sidebar-item flex items-center px-3 py-2.5 rounded-lg {{ request()->routeIs('admin.listings.*') ? 'active' : 'text-gray-700 hover:text-primary-600' }}">
+                        <i class="fas fa-box w-5 mr-3 text-center"></i>
+                        <span class="text-sm font-medium">Products</span>
+                    </a>
                     <a href="{{ route('admin.orders.index') }}" 
                        class="sidebar-item flex items-center px-3 py-2.5 rounded-lg {{ request()->routeIs('admin.orders.*') ? 'active' : 'text-gray-700 hover:text-primary-600' }}">
                         <i class="fas fa-shopping-bag w-5 mr-3 text-center"></i>

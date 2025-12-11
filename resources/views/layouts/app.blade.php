@@ -50,6 +50,51 @@
                     @endauth
                 </div>
 
+                @auth
+<a href="{{ route('chat.index') }}" class="relative p-2 text-gray-600 hover:text-primary transition" title="Messages">
+    <i class="fas fa-comment-dots text-xl"></i>
+    <span id="chatBadge" class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full hidden items-center justify-center">
+        0
+    </span>
+</a>
+
+<script>
+// Update chat badge on page load and periodically
+document.addEventListener('DOMContentLoaded', function() {
+    updateChatBadge();
+    // Update every 30 seconds
+    setInterval(updateChatBadge, 30000);
+});
+
+async function updateChatBadge() {
+    try {
+        const response = await fetch('/chat/api/unread-count', {
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const badge = document.getElementById('chatBadge');
+            if (data.unread_count > 0) {
+                badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+        }
+    } catch (error) {
+        console.error('Failed to update chat badge:', error);
+    }
+}
+</script>
+@endauth
+
+
                 <!-- Mobile Menu Button -->
                 <button class="md:hidden" id="mobileMenuButton">
                     <i class="fas fa-bars text-xl"></i>

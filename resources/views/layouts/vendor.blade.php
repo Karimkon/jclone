@@ -98,12 +98,37 @@
             <a href="{{ route('vendor.orders.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/orders*') ? 'bg-indigo-800' : '' }}">
                 <i class="fas fa-shopping-cart mr-3"></i> Orders
             </a>
+
+            <!-- NEW: Callbacks Link -->
+<a href="{{ route('vendor.callbacks.index') }}" 
+   class="relative block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/callbacks*') ? 'bg-indigo-800' : '' }}">
+    <i class="fas fa-phone-alt mr-3"></i> Callback Requests
+    @php
+        $pendingCallbacks = \App\Models\CallbackRequest::where('vendor_profile_id', auth()->user()->vendorProfile->id ?? 0)
+            ->where('status', 'pending')
+            ->count();
+    @endphp
+    @if($pendingCallbacks > 0)
+    <span class="absolute right-4 top-1/2 -translate-y-1/2 min-w-[20px] h-5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1">
+        {{ $pendingCallbacks > 9 ? '9+' : $pendingCallbacks }}
+    </span>
+    @endif
+</a>
+            
+            <!-- Messages Link - Properly Styled -->
+            <a href="{{ route('chat.index') }}" class="relative block py-3 px-6 hover:bg-indigo-700 {{ request()->is('chat*') ? 'bg-indigo-800' : '' }}">
+                <i class="fas fa-comments mr-3"></i> Messages
+                <span id="chatBadge" class="absolute right-4 top-1/2 -translate-y-1/2 min-w-[20px] h-5 bg-red-500 text-white text-xs font-bold rounded-full hidden items-center justify-center px-1">
+                    0
+                </span>
+            </a>
             
             <a href="{{ route('vendor.profile.show') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/profile*') ? 'bg-indigo-800' : '' }}">
                 <i class="fas fa-user-circle mr-3"></i> Profile
             </a>
             
-            <a href="{{ route('vendor.imports.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/imports*') ? 'bg-indigo-800' : '' }}">                <i class="fas fa-plane mr-3"></i> Import Goods
+            <a href="{{ route('vendor.imports.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/imports*') ? 'bg-indigo-800' : '' }}">
+                <i class="fas fa-plane mr-3"></i> Import Goods
             </a>
             
             <a href="{{ route('vendor.promotions.index') }}" class="block py-3 px-6 hover:bg-indigo-700 {{ request()->is('vendor/promotions*') ? 'bg-indigo-800' : '' }}">
@@ -128,11 +153,9 @@
         
         <div class="absolute bottom-0 w-full p-6">
             <div class="bg-indigo-800 p-4 rounded-lg">
-                <p class="text-sm opacity-75">Vendor Status</p>
                 <div class="flex items-center justify-between mt-2">
-                    <span class="font-medium">{{ ucfirst(str_replace('_', ' ', $vendor->vetting_status)) }}</span>
                     <span class="{{ $statusColor }} text-white text-xs px-2 py-1 rounded-full">
-                        {{ ucfirst($vendor->vetting_status) }}
+                        Account {{ ucfirst($vendor->vetting_status) }}
                     </span>
                 </div>
             </div>
@@ -184,6 +207,38 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <!-- Select2 JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    
+    <!-- Chat Badge Script -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        updateChatBadge();
+        setInterval(updateChatBadge, 30000);
+    });
+
+    async function updateChatBadge() {
+        try {
+            const response = await fetch('/chat/api/unread-count', {
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const badge = document.getElementById('chatBadge');
+                if (data.unread_count > 0) {
+                    badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                    badge.classList.remove('hidden');
+                    badge.classList.add('flex');
+                } else {
+                    badge.classList.add('hidden');
+                    badge.classList.remove('flex');
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update chat badge:', error);
+        }
+    }
+    </script>
     
     @stack('scripts')
 </body>

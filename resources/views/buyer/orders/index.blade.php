@@ -60,58 +60,72 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200">
-                    @foreach($orders as $order)
-                    <tr class="hover:bg-gray-50 transition">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-primary">
-                                {{ $order->order_number }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {{ $order->created_at->format('M d, Y') }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="flex items-center">
-                                <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-3">
-                                    <i class="fas fa-store text-xs"></i>
-                                </div>
-                                <div class="text-sm text-gray-900">
-                                    {{ $order->vendorProfile->business_name ?? 'Vendor' }}
-                                </div>
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {{ $order->items->count() }} item(s)
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-bold text-gray-900">
-                                ${{ number_format($order->total, 2) }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-3 py-1 rounded-full text-xs font-medium
-                                @if($order->status == 'pending') bg-yellow-100 text-yellow-800
-                                @elseif($order->status == 'confirmed') bg-blue-100 text-blue-800
-                                @elseif($order->status == 'payment_pending') bg-orange-100 text-orange-800
-                                @elseif($order->status == 'shipped') bg-purple-100 text-purple-800
-                                @elseif($order->status == 'delivered') bg-green-100 text-green-800
-                                @elseif($order->status == 'cancelled') bg-red-100 text-red-800
-                                @else bg-gray-100 text-gray-800 @endif">
-                                {{ ucfirst(str_replace('_', ' ', $order->status)) }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="{{ route('buyer.orders.show', $order) }}" 
-                               class="text-primary hover:text-indigo-700">
-                                <i class="fas fa-eye mr-1"></i> View
-                            </a>
-                        </td>
-                    </tr>
-                    @endforeach
+                   @foreach($orders as $order)
+<tr class="hover:bg-gray-50 transition">
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm font-medium text-primary">
+            {{ $order->order_number }}
+        </div>
+        <!-- Add payment button here for pending payments -->
+        @if($order->status === 'payment_pending')
+        <a href="{{ route('buyer.orders.payment', $order) }}" 
+           class="mt-1 inline-block text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-600 transition">
+            <i class="fas fa-credit-card mr-1"></i> Complete Payment
+        </a>
+        @endif
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm text-gray-900">
+            {{ $order->created_at->format('M d, Y') }}
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="flex items-center">
+            <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center mr-3">
+                <i class="fas fa-store text-xs"></i>
+            </div>
+            <div class="text-sm text-gray-900">
+                {{ $order->vendorProfile->business_name ?? 'Vendor' }}
+            </div>
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm text-gray-900">
+            {{ $order->items->count() }} item(s)
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <div class="text-sm font-bold text-gray-900">
+            UGX {{ number_format($order->total, 0) }}
+        </div>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap">
+        <span class="px-3 py-1 rounded-full text-xs font-medium
+            @if($order->status == 'pending') bg-yellow-100 text-yellow-800
+            @elseif($order->status == 'confirmed') bg-blue-100 text-blue-800
+            @elseif($order->status == 'payment_pending') bg-orange-100 text-orange-800
+            @elseif($order->status == 'shipped') bg-purple-100 text-purple-800
+            @elseif($order->status == 'delivered') bg-green-100 text-green-800
+            @elseif($order->status == 'cancelled') bg-red-100 text-red-800
+            @else bg-gray-100 text-gray-800 @endif">
+            {{ ucfirst(str_replace('_', ' ', $order->status)) }}
+        </span>
+    </td>
+    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+        <a href="{{ route('buyer.orders.show', $order) }}" 
+           class="text-primary hover:text-indigo-700 mr-3">
+            <i class="fas fa-eye mr-1"></i> View
+        </a>
+        
+        @if($order->status === 'payment_pending')
+        <a href="{{ route('buyer.orders.payment', $order) }}" 
+           class="text-orange-600 hover:text-orange-800">
+            <i class="fas fa-credit-card mr-1"></i> Pay
+        </a>
+        @endif
+    </td>
+</tr>
+@endforeach
                 </tbody>
             </table>
         </div>

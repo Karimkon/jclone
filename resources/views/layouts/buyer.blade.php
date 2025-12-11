@@ -111,6 +111,16 @@
                         <span>My Orders</span>
                     </a>
                     
+                    <!-- Messages Link - Properly Styled -->
+                    <a href="{{ route('chat.index') }}" 
+                       class="nav-item flex items-center px-4 py-3 rounded-lg {{ request()->is('chat*') ? 'active' : '' }}">
+                        <i class="fas fa-comments mr-3"></i>
+                        <span>Messages</span>
+                        <span id="chatBadge" class="ml-auto bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 hidden items-center justify-center px-1">
+                            0
+                        </span>
+                    </a>
+                    
                     <a href="{{ route('buyer.wishlist.index') }}" 
                        class="nav-item flex items-center px-4 py-3 rounded-lg {{ request()->routeIs('buyer.wishlist.*') ? 'active' : '' }}">
                         <i class="fas fa-heart mr-3"></i>
@@ -269,7 +279,36 @@
                     item.classList.add('active');
                 }
             });
+            
+            // Update chat badge
+            updateChatBadge();
+            setInterval(updateChatBadge, 30000);
         });
+        
+        // Chat badge update function
+        async function updateChatBadge() {
+            try {
+                const response = await fetch('/chat/api/unread-count', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const badge = document.getElementById('chatBadge');
+                    if (data.unread_count > 0) {
+                        badge.textContent = data.unread_count > 9 ? '9+' : data.unread_count;
+                        badge.classList.remove('hidden');
+                        badge.classList.add('flex');
+                    } else {
+                        badge.classList.add('hidden');
+                        badge.classList.remove('flex');
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to update chat badge:', error);
+            }
+        }
     </script>
     
     @yield('scripts')

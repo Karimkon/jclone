@@ -6,6 +6,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\BuyerWallet;
+use App\Models\Conversation;
+use App\Models\Message;
 
 class User extends Authenticatable
 {
@@ -133,5 +135,75 @@ public function reviewVotes()
     {
         return $this->getAvailableBalance() >= $amount;
     }
+
+    /**
+ * Get all conversations where user is the buyer
+ */
+public function buyerConversations()
+{
+    return $this->hasMany(Conversation::class, 'buyer_id');
+}
+
+/**
+ * Get all conversations where user is the vendor (through vendor profile)
+ */
+public function vendorConversations()
+{
+    return $this->hasManyThrough(
+        Conversation::class,
+        VendorProfile::class,
+        'user_id',           // Foreign key on vendor_profiles table
+        'vendor_profile_id', // Foreign key on conversations table
+        'id',                // Local key on users table
+        'id'                 // Local key on vendor_profiles table
+    );
+}
+
+/**
+ * Get all conversations (as buyer or vendor)
+ */
+public function allConversations()
+{
+    return Conversation::forUser($this->id);
+}
+
+/**
+ * Get all messages sent by this user
+ */
+public function sentMessages()
+{
+    return $this->hasMany(Message::class, 'sender_id');
+}
+
+/**
+ * Get total unread message count
+ */
+public function getUnreadMessageCountAttribute()
+{
+    return Message::whereHas('conversation', function ($query) {
+        $query->forUser($this->id)->active();
+    })
+    ->where('sender_id', '!=', $this->id)
+    ->whereNull('read_at')
+    ->count();
+}
+
+/**
+ * Check if user can start conversation with a vendor
+ */
+public function canMessageVendor(VendorProfile $vendorProfile): bool
+{
+    // Can't message yourself
+    if ($vendorProfile->user_id === $this->id) {
+        return false;
+    }
+    
+    // Vendor must be approved
+    if (!$vendorProfile->isApproved()) {
+        return false;
+    }
+    
+    return true;
+}
 
 }

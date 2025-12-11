@@ -856,6 +856,53 @@
 const isAuthenticated = @json(auth()->check());
 const csrfToken = '{{ csrf_token() }}';
 
+// Track if buttons are already setup to prevent duplicate listeners
+let buttonsSetup = false;
+
+// Function to setup quick action buttons
+function setupQuickActionButtons() {
+    // Prevent duplicate setup
+    if (buttonsSetup) {
+        console.log('Buttons already setup, skipping...');
+        return;
+    }
+    
+    console.log('Setting up quick action buttons...');
+    
+    // Quick Add to Cart buttons
+    document.querySelectorAll('[data-quick-cart]').forEach(btn => {
+        // Remove any existing listeners first
+        btn.replaceWith(btn.cloneNode(true));
+        const newBtn = document.querySelector(`[data-quick-cart][data-listing-id="${btn.getAttribute('data-listing-id')}"]`);
+        
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation(); // Prevent other listeners
+            console.log('Cart button clicked (single event)');
+            const listingId = this.getAttribute('data-listing-id');
+            quickAddToCart(listingId, this);
+        }, { once: false }); // Use capture phase to ensure it fires first
+    });
+    
+    // Quick Add to Wishlist buttons
+    document.querySelectorAll('[data-quick-wishlist]').forEach(btn => {
+        // Remove any existing listeners first
+        btn.replaceWith(btn.cloneNode(true));
+        const newBtn = document.querySelector(`[data-quick-wishlist][data-listing-id="${btn.getAttribute('data-listing-id')}"]`);
+        
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation(); // Prevent other listeners
+            const listingId = this.getAttribute('data-listing-id');
+            quickAddToWishlist(listingId, this);
+        }, { once: false });
+    });
+    
+    buttonsSetup = true;
+    console.log('Quick action buttons setup complete');
+}
 
 function initCategoryNavigation() {
     // Setup hover for sidebar categories
@@ -985,30 +1032,125 @@ function setupSearchForm() {
     }
 }
 
-function quickAddToCart(id, btn) {
-    if (!isAuthenticated) { showAuthModal(); return; }
-    const orig = btn.innerHTML; btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>'; btn.disabled = true;
+// FIXED: Updated quickAddToCart function with debouncing
+let cartProcessing = false;
+async function quickAddToCart(id, btn) {
+    // Prevent multiple clicks
+    if (cartProcessing) {
+        console.log('Cart action already in progress, skipping...');
+        return;
+    }
+    
+    cartProcessing = true;
+    console.log('quickAddToCart called with ID:', id);
+    
+    if (!isAuthenticated) { 
+        console.log('User not authenticated, showing auth modal');
+        showAuthModal(); 
+        cartProcessing = false;
+        return; 
+    }
+    
+    const orig = btn.innerHTML; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>'; 
+    btn.disabled = true;
+    
     try {
-        const res = fetch(`/buyer/cart/add/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }, body: JSON.stringify({ quantity: 1 }) });
-        const data = res.json();
-        if (data.success) { btn.innerHTML = '<i class="fas fa-check text-xs"></i>'; showToast('Added to cart!', 'success'); if (data.cart_count) updateCartCount(data.cart_count); setTimeout(() => { btn.innerHTML = orig; btn.disabled = false; }, 1500); }
-        else throw new Error(data.message);
-    } catch (e) { btn.innerHTML = orig; btn.disabled = false; showToast(e.message || 'Failed', 'error'); }
+        console.log('Sending request to /buyer/cart/add/' + id);
+        const response = await fetch(`/buyer/cart/add/${id}`, {
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': csrfToken, 
+                'Accept': 'application/json' 
+            }, 
+            body: JSON.stringify({ quantity: 1 }) 
+        });
+        
+        console.log('Response status:', response.status);
+        
+        // Check if response is OK
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Try to parse JSON
+        const data = await response.json();
+        console.log('Response data:', data);
+        
+        if (data.success) { 
+            btn.innerHTML = '<i class="fas fa-check text-xs"></i>'; 
+            showToast('Added to cart!', 'success'); 
+            if (data.cart_count) updateCartCount(data.cart_count); 
+            setTimeout(() => { 
+                btn.innerHTML = orig; 
+                btn.disabled = false; 
+                cartProcessing = false;
+            }, 1500); 
+        } else {
+            throw new Error(data.message || 'Failed to add to cart');
+        }
+    } catch (e) { 
+        console.error('Error adding to cart:', e);
+        btn.innerHTML = orig; 
+        btn.disabled = false; 
+        cartProcessing = false;
+        showToast(e.message || 'Failed to add to cart', 'error'); 
+    }
 }
 
-function quickAddToWishlist(id, btn) {
-    if (!isAuthenticated) { showAuthModal(); return; }
+// FIXED: Updated quickAddToWishlist function with debouncing
+let wishlistProcessing = false;
+async function quickAddToWishlist(id, btn) {
+    // Prevent multiple clicks
+    if (wishlistProcessing) {
+        console.log('Wishlist action already in progress, skipping...');
+        return;
+    }
+    
+    wishlistProcessing = true;
+    
+    if (!isAuthenticated) { 
+        showAuthModal(); 
+        wishlistProcessing = false;
+        return; 
+    }
+    
     const icon = btn.querySelector('i');
+    
     try {
-        const res = fetch(`/buyer/wishlist/toggle/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' } });
-        const data = res.json();
+        const response = await fetch(`/buyer/wishlist/toggle/${id}`, { 
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json', 
+                'X-CSRF-TOKEN': csrfToken, 
+                'Accept': 'application/json' 
+            } 
+        });
+        
+        const data = await response.json();
+        
         if (data.success) {
-            if (data.in_wishlist) { icon.classList.remove('far'); icon.classList.add('fas', 'text-coral-500'); }
-            else { icon.classList.remove('fas', 'text-coral-500'); icon.classList.add('far'); }
+            if (data.in_wishlist) { 
+                icon.classList.remove('far'); 
+                icon.classList.add('fas', 'text-coral-500'); 
+            } else { 
+                icon.classList.remove('fas', 'text-coral-500'); 
+                icon.classList.add('far'); 
+            }
             showToast(data.message || 'Updated!', 'success');
             if (data.wishlist_count !== undefined) updateWishlistCount(data.wishlist_count);
+        } else {
+            throw new Error(data.message || 'Failed to update wishlist');
         }
-    } catch (e) { showToast('Failed', 'error'); }
+    } catch (e) { 
+        showToast('Failed to update wishlist', 'error'); 
+    } finally {
+        // Reset processing flag after a short delay
+        setTimeout(() => {
+            wishlistProcessing = false;
+        }, 500);
+    }
 }
 
 function updateCartCount(c) { 
@@ -1051,21 +1193,38 @@ async function loadWishlistCount() {
 
 function showToast(msg, type = 'info') {
     const colors = { success: 'bg-emerald-500', error: 'bg-coral-500', info: 'bg-brand-500' };
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        info: 'fa-info-circle'
+    };
+    
     const toast = document.createElement('div');
     toast.className = `${colors[type]} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm animate-slide-up`;
-    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i><span>${msg}</span>`;
+    toast.innerHTML = `<i class="fas ${icons[type]}"></i><span>${msg}</span>`;
     document.getElementById('toastContainer').appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity 0.3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+    
+    setTimeout(() => { 
+        toast.style.opacity = '0'; 
+        toast.style.transition = 'opacity 0.3s'; 
+        setTimeout(() => toast.remove(), 300); 
+    }, 3000);
 }
 
 function showAuthModal() { 
-    document.getElementById('authModal').classList.remove('hidden'); 
-    document.body.style.overflow = 'hidden'; 
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.remove('hidden'); 
+        document.body.style.overflow = 'hidden'; 
+    }
 }
 
 function closeAuthModal() { 
-    document.getElementById('authModal').classList.add('hidden'); 
-    document.body.style.overflow = ''; 
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.add('hidden'); 
+        document.body.style.overflow = ''; 
+    }
 }
 
 function toggleMobileMenu() { 
@@ -1074,15 +1233,34 @@ function toggleMobileMenu() {
     document.body.style.overflow = m.classList.contains('hidden') ? '' : 'hidden'; 
 }
 
+// Initialize everything when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up quick action buttons...');
+    setupQuickActionButtons();
+    initCategoryNavigation();
+    setupSearchForm();
+    
+    // Load counts
+    loadCartCount();
+    loadWishlistCount();
+    
+    console.log('Quick action buttons setup complete');
+});
+
+// REMOVE THE DELAYED SETUP - This was causing duplicate listeners
+// setTimeout(() => {
+//     console.log('Delayed setup of quick action buttons...');
+//     setupQuickActionButtons();
+// }, 1000);
+
+// Close modals with Escape key
 document.addEventListener('keydown', e => { 
     if (e.key === 'Escape') { 
         closeAuthModal(); 
         const m = document.getElementById('mobileMenu'); 
-        if (!m.classList.contains('hidden')) toggleMobileMenu(); 
+        if (m && !m.classList.contains('hidden')) toggleMobileMenu(); 
     } 
 });
-
-
 </script>
 
 <!-- Chatbot Configuration -->
