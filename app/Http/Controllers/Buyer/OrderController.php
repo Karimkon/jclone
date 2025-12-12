@@ -9,11 +9,13 @@ use App\Models\Cart;
 use App\Models\Listing;
 use App\Models\Escrow;
 use App\Models\BuyerWallet;
+use App\Models\WalletTransaction;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+
 
 class OrderController extends Controller
 {
@@ -33,19 +35,23 @@ class OrderController extends Controller
     /**
      * Display single order - FIXED METHOD
      */
-    public function show($id)
-    {
-        $order = Order::findOrFail($id);
-        
-        // Check ownership
-        if ($order->buyer_id !== Auth::id()) {
-            abort(403);
-        }
-
-        $order->load(['items.listing.images', 'vendorProfile.user', 'payments', 'escrow']);
-
-        return view('buyer.orders.show', compact('order'));
+   public function show($id)
+{
+    $order = Order::findOrFail($id);
+    
+    // Check ownership
+    if ($order->buyer_id !== Auth::id()) {
+        abort(403);
     }
+
+    $order->load(['items.listing.images', 'vendorProfile.user', 'payments', 'escrow']);
+    
+    // Add this line to get wallet balance:
+    $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+    $walletBalance = $wallet ? $wallet->balance : 0;
+
+    return view('buyer.orders.show', compact('order', 'walletBalance'));
+}
 
     /**
      * Display checkout page
@@ -321,7 +327,7 @@ class OrderController extends Controller
 
             $order->update([
                 'status' => 'cancelled',
-                'meta' => array_merge(json_decode($order->meta, true) ?? [], [
+                'meta' => array_merge($order->meta ?? [], [
                     'cancelled_at' => now()->toDateTimeString(),
                     'cancelled_by' => 'buyer',
                     'cancellation_reason' => $request->input('reason', 'Buyer requested cancellation')
@@ -361,7 +367,7 @@ class OrderController extends Controller
             // Update order status
             $order->update([
                 'status' => 'delivered',
-                'meta' => array_merge(json_decode($order->meta, true) ?? [], [
+                'meta' => array_merge($order->meta ?? [], [
                     'delivered_at' => now()->toDateTimeString(),
                     'confirmed_by_buyer' => true
                 ])
@@ -391,7 +397,7 @@ class OrderController extends Controller
                 if ($payment) {
                     $payment->update([
                         'status' => 'completed',
-                        'meta' => array_merge(json_decode($payment->meta, true) ?? [], [
+                        'meta' => array_merge($payment->meta ?? [], [  
                             'paid_at' => now()->toDateTimeString(),
                             'payment_confirmed' => true
                         ])
@@ -412,6 +418,109 @@ class OrderController extends Controller
     }
 
     /**
+     * Pay for order using wallet balance
+     */
+   public function payWithWallet(Request $request, $id)
+{
+    $order = Order::findOrFail($id);
+    
+    // Check ownership
+    if ($order->buyer_id !== Auth::id()) {
+        abort(403);
+    }
+    
+    // Check if order can be paid
+    if (!in_array($order->status, ['pending', 'payment_pending', 'confirmed'])) {
+        return back()->with('error', 'This order cannot be paid. Current status: ' . $order->status);
+    }
+    
+    // Get buyer's wallet
+    $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+    
+    if (!$wallet) {
+        return back()->with('error', 'Wallet not found');
+    }
+    
+    // Check if payment already exists
+    $existingPayment = Payment::where('order_id', $order->id)
+        ->whereIn('status', ['completed', 'processing'])
+        ->first();
+    
+    if ($existingPayment) {
+        return back()->with('error', 'Payment already exists for this order');
+    }
+    
+    // Check balance
+    if ($wallet->balance < $order->total) {
+        $required = $order->total - $wallet->balance;
+        return back()->with('error', 'Insufficient wallet balance. Please deposit UGX ' . number_format($required, 0) . ' more.');
+    }
+    
+    DB::beginTransaction();
+    try {
+        // 1. Create wallet transaction
+        $transaction = WalletTransaction::create([
+            'user_id' => Auth::id(),
+            'type' => 'order_payment',
+            'amount' => -$order->total, // Negative amount for deduction
+            'balance_before' => $wallet->balance,
+            'balance_after' => $wallet->balance - $order->total,
+            'reference' => 'ORD-' . $order->order_number,
+            'description' => 'Payment for Order #' . $order->order_number,
+            'status' => 'completed',
+            'meta' => [
+                'order_id' => $order->id,
+                'order_number' => $order->order_number
+            ]
+        ]);
+        
+        // 2. Deduct from wallet
+        $wallet->decrement('balance', $order->total);
+        
+        // 3. Create payment record
+        $payment = Payment::create([
+            'order_id' => $order->id,
+            'provider' => 'wallet',
+            'provider_payment_id' => 'WALLET-' . $transaction->id,
+            'amount' => $order->total,
+            'status' => 'completed'
+        ]);
+        
+        // 4. Update order status
+        $order->update([
+            'status' => 'paid'
+        ]);
+        
+        // 5. Create escrow record
+        $escrow = Escrow::create([
+            'order_id' => $order->id,
+            'amount' => $order->total - ($order->platform_commission ?? 0),
+            'status' => 'held', // ← THIS MUST BE 'held' (not 'holding' or 'hold')
+            'release_at' => now()->addDays(7),
+            'meta' => [
+                'buyer_id' => Auth::id(),
+                'vendor_id' => $order->vendor_profile_id,
+                'order_total' => $order->total,
+                'commission' => $order->platform_commission ?? 0,
+                'created_at' => now()->toDateTimeString()
+            ]
+        ]);
+        
+        DB::commit();
+        
+        return redirect()->route('buyer.orders.show', $order->id)
+            ->with('success', 'Payment successful! Order #' . $order->order_number . ' has been confirmed.');
+            
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        \Log::error('Wallet payment failed: ' . $e->getMessage());
+        
+        return back()->with('error', 'Payment failed: ' . $e->getMessage());
+    }
+}
+    
+    /**
      * Calculate shipping cost
      */
     private function calculateShipping($items)
@@ -431,7 +540,8 @@ class OrderController extends Controller
         return 50;
     }
 
-    /**
+
+/**
  * Show payment page for order
  */
 public function payment($id)
@@ -449,6 +559,10 @@ public function payment($id)
             ->with('error', 'This order does not require payment');
     }
 
-    return view('buyer.orders.payment', compact('order'));
+    // Get wallet balance
+    $wallet = BuyerWallet::where('user_id', Auth::id())->first();
+    $walletBalance = $wallet ? $wallet->balance : 0;
+
+    return view('buyer.orders.payment', compact('order', 'walletBalance'));
 }
 }

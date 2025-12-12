@@ -5,8 +5,11 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\VendorProfile;
+use App\Models\NotificationQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VendorOrderController extends Controller
 {
@@ -91,56 +94,139 @@ class VendorOrderController extends Controller
     /**
      * Update order status (vendor side)
      */
-    public function updateStatus(Request $request, Order $order)
+     public function updateStatus(Request $request, $id)
     {
-        // Verify ownership
-        if ($order->vendor_profile_id !== Auth::user()->vendorProfile->id) {
-            abort(403);
+        $order = Order::where('id', $id)
+            ->where('vendor_profile_id', Auth::user()->vendorProfile->id)
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,paid,processing,shipped,delivered,cancelled'
+        ]);
+
+        // Validate status transition
+        $allowedTransitions = [
+            'pending' => ['paid', 'processing', 'cancelled'],
+            'paid' => ['processing', 'cancelled'],
+            'processing' => ['shipped', 'cancelled'],
+            'shipped' => ['delivered'],
+            'delivered' => [],
+            'cancelled' => []
+        ];
+
+        if (!in_array($validated['status'], $allowedTransitions[$order->status] ?? [])) {
+            return back()->with('error', 'Invalid status transition');
         }
 
-        $request->validate([
-            'status' => 'required|in:pending,processing,shipped',
-            'tracking_number' => 'nullable|string|max:100',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        $oldStatus = $order->status;
-        
-        // Update order
-        $order->update([
-            'status' => $request->status,
-            'meta' => array_merge($order->meta ?? [], [
-                'vendor_notes' => $request->notes,
-                'tracking_number' => $request->tracking_number,
+        DB::beginTransaction();
+        try {
+            // Handle meta data
+            $currentMeta = $order->meta ?? [];
+            if (!is_array($currentMeta)) {
+                $currentMeta = json_decode($currentMeta, true) ?? [];
+            }
+            
+            // Prepare updated meta
+            $updatedMeta = array_merge($currentMeta, [
                 'status_updated_at' => now()->toDateTimeString(),
-            ])
-        ]);
+                'updated_by' => 'vendor'
+            ]);
+            
+            // Update the order
+            $order->update([
+                'status' => $validated['status'],
+                'meta' => json_encode($updatedMeta)
+            ]);
 
-        // Log status change
-        \App\Models\AuditLog::create([
-            'user_id' => Auth::id(),
-            'action' => 'order_status_updated_vendor',
-            'model' => 'Order',
-            'model_id' => $order->id,
-            'old_values' => ['status' => $oldStatus],
-            'new_values' => [
-                'status' => $request->status,
-                'tracking_number' => $request->tracking_number,
-            ],
-            'ip' => $request->ip(),
-        ]);
+            // If marking as delivered
+            if ($validated['status'] === 'delivered') {
+                // Add delivery info to meta
+                $deliveryMeta = $order->meta ?? [];
+                if (!is_array($deliveryMeta)) {
+                    $deliveryMeta = json_decode($deliveryMeta, true) ?? [];
+                }
+                
+                $finalMeta = array_merge($deliveryMeta, [
+                    'delivered_at' => now()->toDateTimeString(),
+                    'delivery_confirmed_by_vendor' => true,
+                    'auto_confirmed' => true
+                ]);
+                
+                $order->update([
+                    'meta' => json_encode($finalMeta)
+                ]);
+                
+                // Update escrow if exists
+                if ($order->escrow && $order->escrow->status === 'held') {
+                    $escrowMeta = $order->escrow->meta ?? [];
+                    if (!is_array($escrowMeta)) {
+                        $escrowMeta = json_decode($escrowMeta, true) ?? [];
+                    }
+                    
+                    $order->escrow->update([
+                        'status' => 'released',
+                        'released_at' => now(),
+                        'meta' => json_encode(array_merge($escrowMeta, [
+                            'released_by_system' => true,
+                            'release_reason' => 'order_delivered_by_vendor'
+                        ]))
+                    ]);
+                    
+                    Log::info('Escrow released for order ' . $order->id);
+                }
+                
+                // Send notification to buyer
+                try {
+                    NotificationQueue::create([
+                        'user_id' => $order->buyer_id,
+                        'type' => 'order_delivered',
+                        'title' => 'Order Delivered',
+                        'message' => "Your order {$order->order_number} has been marked as delivered by the vendor.",
+                        'meta' => ['order_id' => $order->id],
+                        'status' => 'pending',
+                    ]);
+                    
+                    Log::info('Delivery notification created for order ' . $order->id);
+                } catch (\Exception $e) {
+                    Log::warning('Notification error: ' . $e->getMessage());
+                    // Don't fail the whole transaction if notification fails
+                }
+            }
 
-        // Notify buyer
-        \App\Models\NotificationQueue::create([
-            'user_id' => $order->buyer_id,
-            'type' => 'order_update',
-            'title' => 'Order Status Updated',
-            'message' => "Your order {$order->order_number} status changed to " . ucfirst($request->status),
-            'meta' => ['order_id' => $order->id, 'status' => $request->status],
-            'status' => 'pending',
-        ]);
+            // If marking as cancelled, restore stock
+            if ($validated['status'] === 'cancelled') {
+                foreach ($order->items as $item) {
+                    if ($item->listing) {
+                        $item->listing->increment('stock', $item->quantity);
+                    }
+                }
+                
+                // Send cancellation notification
+                try {
+                    NotificationQueue::create([
+                        'user_id' => $order->buyer_id,
+                        'type' => 'order_cancelled',
+                        'title' => 'Order Cancelled',
+                        'message' => "Your order {$order->order_number} has been cancelled by the vendor.",
+                        'meta' => ['order_id' => $order->id],
+                        'status' => 'pending',
+                    ]);
+                } catch (\Exception $e) {
+                    Log::warning('Cancellation notification error: ' . $e->getMessage());
+                }
+            }
 
-        return back()->with('success', 'Order status updated successfully.');
+            DB::commit();
+
+            return back()->with('success', 'Order status updated to ' . $validated['status']);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Update order status error: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return back()->with('error', 'Failed to update status: ' . $e->getMessage());
+        }
     }
 
     /**

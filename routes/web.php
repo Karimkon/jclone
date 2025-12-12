@@ -457,6 +457,7 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/place-order', [\App\Http\Controllers\Buyer\OrderController::class, 'placeOrder'])->name('place-order');
             Route::get('/{order}', [\App\Http\Controllers\Buyer\OrderController::class, 'show'])->name('show');
              Route::get('/{order}/payment', [\App\Http\Controllers\Buyer\OrderController::class, 'payment'])->name('payment'); 
+            Route::post('/{order}/pay-with-wallet', [\App\Http\Controllers\Buyer\OrderController::class, 'payWithWallet'])->name('pay-with-wallet');
             Route::post('/{order}/cancel', [\App\Http\Controllers\Buyer\OrderController::class, 'cancelOrder'])->name('cancel');
             Route::post('/{order}/confirm-delivery', [\App\Http\Controllers\Buyer\OrderController::class, 'confirmDelivery'])->name('confirm-delivery');
         });
