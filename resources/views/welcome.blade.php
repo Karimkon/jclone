@@ -335,6 +335,12 @@
                 <a href="{{ route('marketplace.index', ['origin' => 'local']) }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
                     <i class="fas fa-map-marker-alt text-mint-400"></i>Local
                 </a>
+                 <a href="{{ route('jobs.index') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-briefcase text-emerald-400"></i>Jobs
+                </a>
+                <a href="{{ route('services.index') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
+                    <i class="fas fa-tools text-purple-300"></i>Services
+                </a>
                 <a href="{{ route('vendor.onboard.create') }}" class="text-white px-4 py-3 hover:bg-white/10 transition rounded-lg flex items-center gap-2 text-sm font-medium">
                     <i class="fas fa-store text-pink-400"></i>Sell
                 </a>
@@ -734,6 +740,14 @@
                     <li><a href="{{ route('site.contact') }}" class="text-ink-400 hover:text-white transition">Contact Us</a></li>
                 </ul>
             </div>
+
+            <div>
+    <h5 class="font-bold mb-3 text-sm">Jobs & Services</h5>
+    <ul class="space-y-2 text-xs">
+        <li><a href="{{ route('jobs.index') }}" class="text-ink-400 hover:text-white transition">Browse Jobs</a></li>
+        <li><a href="{{ route('services.index') }}" class="text-ink-400 hover:text-white transition">Find Services</a></li>
+    </ul>
+</div>
             
             <div>
                 <h5 class="font-bold mb-3 text-sm">Support</h5>
@@ -826,6 +840,12 @@
             </a>
             <a href="{{ route('marketplace.index', ['origin' => 'local']) }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
                 <i class="fas fa-map-marker-alt w-5 text-mint-500"></i>Local
+            </a>
+              <a href="{{ route('jobs.index') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-briefcase w-5 text-emerald-500"></i>Jobs
+            </a>
+            <a href="{{ route('services.index') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
+                <i class="fas fa-tools w-5 text-purple-500"></i>Services
             </a>
             <a href="{{ route('vendor.onboard.create') }}" class="flex items-center gap-3 py-2.5 text-ink-600 hover:text-brand-600 transition">
                 <i class="fas fa-store w-5 text-pink-500"></i>Sell

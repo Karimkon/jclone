@@ -29,6 +29,10 @@ use App\Http\Controllers\Vendor\VendorReviewController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Payment\CheckoutPaymentController;
 use App\Http\Controllers\Payment\FlutterwaveWebhookController;
+use App\Http\Controllers\Marketplace\JobsServicesController;
+use App\Http\Controllers\Vendor\VendorJobController;
+use App\Http\Controllers\Vendor\VendorServiceController;
+use App\Http\Controllers\Buyer\BuyerJobsServicesController;
 
 // ====================
 // PUBLIC ROUTES
@@ -44,6 +48,95 @@ Route::get('/marketplace/{listing}', [ListingController::class, 'showPublic'])->
 // Categories (public)
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::get('/categories/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
+
+
+// Jobs
+Route::prefix('jobs')->name('jobs.')->group(function () {
+    Route::get('/', [JobsServicesController::class, 'jobs'])->name('index');
+    Route::get('/{slug}', [JobsServicesController::class, 'showJob'])->name('show');
+    Route::post('/{slug}/apply', [JobsServicesController::class, 'applyJob'])->name('apply')->middleware('auth');
+});
+
+// Services
+Route::prefix('services')->name('services.')->group(function () {
+    Route::get('/', [JobsServicesController::class, 'services'])->name('index');
+    Route::get('/{slug}', [JobsServicesController::class, 'showService'])->name('show');
+    Route::post('/{slug}/request', [JobsServicesController::class, 'requestService'])->name('request')->middleware('auth');
+    Route::post('/{slug}/inquiry', [JobsServicesController::class, 'sendInquiry'])->name('inquiry');
+});
+
+// Category
+Route::get('/category/{slug}', [JobsServicesController::class, 'category'])->name('category.show');
+
+// ====================
+// VENDOR ROUTES - Manage Jobs
+// ====================
+Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor/jobs')->name('vendor.jobs.')->group(function () {
+    Route::get('/', [VendorJobController::class, 'index'])->name('index');
+    Route::get('/create', [VendorJobController::class, 'create'])->name('create');
+    Route::post('/', [VendorJobController::class, 'store'])->name('store');
+    Route::get('/{id}', [VendorJobController::class, 'show'])->name('show');
+    Route::get('/{id}/edit', [VendorJobController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [VendorJobController::class, 'update'])->name('update');
+    Route::delete('/{id}', [VendorJobController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/toggle', [VendorJobController::class, 'toggleStatus'])->name('toggle');
+    
+    // Applications
+    Route::get('/{jobId}/applications/{applicationId}', [VendorJobController::class, 'showApplication'])->name('applications.show');
+    Route::post('/{jobId}/applications/{applicationId}/status', [VendorJobController::class, 'updateApplicationStatus'])->name('applications.status');
+    Route::get('/{jobId}/applications/{applicationId}/cv', [VendorJobController::class, 'downloadCV'])->name('applications.cv');
+});
+
+
+// ====================
+// VENDOR ROUTES - Manage Services
+// ====================
+Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor/services')->name('vendor.services.')->group(function () {
+    Route::get('/', [VendorServiceController::class, 'index'])->name('index');
+    Route::get('/create', [VendorServiceController::class, 'create'])->name('create');
+    Route::post('/', [VendorServiceController::class, 'store'])->name('store');
+    Route::get('/{id}/edit', [VendorServiceController::class, 'edit'])->name('edit');
+    Route::put('/{id}', [VendorServiceController::class, 'update'])->name('update');
+    Route::delete('/{id}', [VendorServiceController::class, 'destroy'])->name('destroy');
+    Route::post('/{id}/toggle', [VendorServiceController::class, 'toggleStatus'])->name('toggle');
+    Route::delete('/{id}/image', [VendorServiceController::class, 'deleteImage'])->name('delete-image');
+    
+    // Service Requests
+    Route::get('/requests', [VendorServiceController::class, 'requests'])->name('requests');
+    Route::get('/requests/{id}', [VendorServiceController::class, 'showRequest'])->name('requests.show');
+    Route::post('/requests/{id}/quote', [VendorServiceController::class, 'submitQuote'])->name('requests.quote');
+    Route::post('/requests/{id}/status', [VendorServiceController::class, 'updateRequestStatus'])->name('requests.status');
+    
+    // Inquiries
+    Route::get('/inquiries', [VendorServiceController::class, 'inquiries'])->name('inquiries');
+    Route::post('/inquiries/{id}/status', [VendorServiceController::class, 'updateInquiryStatus'])->name('inquiries.status');
+    
+    // Reviews
+    Route::get('/reviews', [VendorServiceController::class, 'reviews'])->name('reviews');
+    Route::post('/reviews/{id}/respond', [VendorServiceController::class, 'respondToReview'])->name('reviews.respond');
+});
+
+
+// ====================
+// BUYER ROUTES - My Applications & Service Requests
+// ====================
+Route::middleware(['auth'])->prefix('buyer')->name('buyer.')->group(function () {
+    // Job Applications
+    Route::get('/my-applications', [BuyerJobsServicesController::class, 'myApplications'])->name('applications.index');
+    Route::get('/my-applications/{id}', [BuyerJobsServicesController::class, 'showApplication'])->name('applications.show');
+    Route::delete('/my-applications/{id}', [BuyerJobsServicesController::class, 'withdrawApplication'])->name('applications.withdraw');
+    
+    // Service Requests
+    Route::get('/service-requests', [BuyerJobsServicesController::class, 'myServiceRequests'])->name('service-requests.index');
+    Route::get('/service-requests/{id}', [BuyerJobsServicesController::class, 'showServiceRequest'])->name('service-requests.show');
+    Route::post('/service-requests/{id}/accept', [BuyerJobsServicesController::class, 'acceptQuote'])->name('service-requests.accept');
+    Route::post('/service-requests/{id}/cancel', [BuyerJobsServicesController::class, 'cancelServiceRequest'])->name('service-requests.cancel');
+    Route::post('/service-requests/{id}/complete', [BuyerJobsServicesController::class, 'confirmCompletion'])->name('service-requests.complete');
+    
+    // Reviews
+    Route::get('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'showReviewForm'])->name('service-requests.review');
+    Route::post('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'submitReview'])->name('service-requests.review.submit');
+});
 
 // ====================
 // AUTHENTICATION ROUTES
