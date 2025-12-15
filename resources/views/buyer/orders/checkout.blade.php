@@ -131,7 +131,7 @@
                                         <i class="fas fa-wallet text-2xl text-indigo-600 mr-3"></i>
                                         <div>
                                             <p class="font-semibold">Wallet</p>
-                                            <p class="text-sm text-gray-600">Balance: ${{ number_format($wallet->available_balance, 2) }}</p>
+                                            <p class="text-sm text-gray-600">Balance: UGX {{ number_format($wallet->available_balance, 2) }}</p>
                                         </div>
                                     </div>
                                     @if($wallet->available_balance < $cart->total)
@@ -225,7 +225,7 @@
                                 <p class="font-medium text-sm">{{ $item['title'] }}</p>
                                 <p class="text-gray-600 text-xs">Qty: {{ $item['quantity'] }}</p>
                             </div>
-                            <p class="font-semibold">${{ number_format($item['total'], 2) }}</p>
+                            <p class="font-semibold">UGX {{ number_format($item['total'], 2) }}</p>
                         </div>
                         @endforeach
                     </div>
@@ -234,19 +234,19 @@
                     <div class="space-y-2 mb-4 pt-4 border-t">
                         <div class="flex justify-between text-gray-600">
                             <span>Subtotal</span>
-                            <span>${{ number_format($cart->subtotal, 2) }}</span>
+                            <span>UGX{{ number_format($cart->subtotal, 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600">
                             <span>Shipping</span>
-                            <span>${{ number_format($cart->shipping, 2) }}</span>
+                            <span>UGX {{ number_format($cart->shipping, 2) }}</span>
                         </div>
                         <div class="flex justify-between text-gray-600">
                             <span>Tax</span>
-                            <span>${{ number_format($cart->tax, 2) }}</span>
+                            <span>UGX {{ number_format($cart->tax, 2) }}</span>
                         </div>
                         <div class="flex justify-between font-bold text-lg pt-2 border-t">
                             <span>Total</span>
-                            <span class="text-indigo-600">${{ number_format($cart->total, 2) }}</span>
+                            <span class="text-indigo-600">UGX {{ number_format($cart->total, 2) }}</span>
                         </div>
                     </div>
                     

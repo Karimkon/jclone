@@ -122,11 +122,22 @@ class OrderController extends Controller
                 $listing = Listing::with('vendor')->find($item['listing_id']);
                 
                 if (!$listing || !$listing->is_active) {
-                    throw new \Exception('Product "' . $item['title'] . '" is no longer available');
+                    throw new \Exception('Product "' . ($item['title'] ?? $listing?->title ?? '') . '" is no longer available');
                 }
+
+                // Ensure unit_price is present for downstream calculations
+                $item['unit_price'] = $item['unit_price'] ?? ($item['price'] ?? $listing->price);
                 
-                if ($listing->stock < $item['quantity']) {
-                    throw new \Exception('Insufficient stock for "' . $item['title'] . '"');
+                // Stock check: use variant stock when applicable, otherwise listing stock
+                if (!empty($item['variant_id'])) {
+                    $variant = \App\Models\ListingVariant::find($item['variant_id']);
+                    if (!$variant || $variant->stock < $item['quantity']) {
+                        throw new \Exception('Insufficient stock for "' . ($item['title'] ?? $listing->title) . '"');
+                    }
+                } else {
+                    if ($listing->stock < $item['quantity']) {
+                        throw new \Exception('Insufficient stock for "' . ($item['title'] ?? $listing->title) . '"');
+                    }
                 }
                 
                 $vendorId = $listing->vendor_profile_id;
@@ -151,7 +162,9 @@ class OrderController extends Controller
                 // Calculate order totals
                 $subtotal = 0;
                 foreach ($vendorData['items'] as $itemData) {
-                    $subtotal += $itemData['listing']->price * $itemData['cart_item']['quantity'];
+                    $cartItem = $itemData['cart_item'];
+                    $unitPrice = $cartItem['unit_price'] ?? ($cartItem['price'] ?? $itemData['listing']->price);
+                    $subtotal += $unitPrice * ($cartItem['quantity'] ?? 0);
                 }
                 
                 $shipping = $this->calculateShipping($vendorData['items']);
@@ -213,11 +226,12 @@ class OrderController extends Controller
         foreach ($cart->items as $item) {
             $listing = Listing::find($item['listing_id']);
             if ($listing) {
+                $unitPrice = $item['unit_price'] ?? $listing->price;
                 $analyticsService->trackPurchase(
                     $listing->id,
                     $order->id,
                     $item['quantity'],
-                    $item['price'] * $item['quantity']
+                    $unitPrice * $item['quantity']
                 );
             }
         }
@@ -228,21 +242,32 @@ class OrderController extends Controller
                 foreach ($vendorData['items'] as $itemData) {
                     $listing = $itemData['listing'];
                     $cartItem = $itemData['cart_item'];
+                    $unitPrice = $cartItem['unit_price'] ?? ($cartItem['price'] ?? $listing->price);
+                    $lineTotal = $unitPrice * ($cartItem['quantity'] ?? 0);
+                    
+                    // Enrich attributes for vendor visibility
+                    $variant = null;
+                    if (!empty($cartItem['variant_id'])) {
+                        $variant = \App\Models\ListingVariant::find($cartItem['variant_id']);
+                    }
                     
                     OrderItem::create([
                         'order_id' => $order->id,
                         'listing_id' => $listing->id,
                         'title' => $listing->title,
                         'quantity' => $cartItem['quantity'],
-                        'unit_price' => $cartItem['unit_price'],
-                        'line_total' => $cartItem['total'],
+                        'unit_price' => $unitPrice,
+                        'line_total' => $lineTotal,
                         'attributes' => [
                             'sku' => $listing->sku ?? '',
                             'weight_kg' => $listing->weight_kg ?? 0,
                             'origin' => $listing->origin ?? 'local',
                             'variant_id' => $cartItem['variant_id'] ?? null,
-                            'color' => $cartItem['color'] ?? null,
-                            'size' => $cartItem['size'] ?? null,
+                            'variant_sku' => $variant?->sku,
+                            'variant_name' => $variant?->display_name,
+                            'color' => $cartItem['color'] ?? ($variant?->color() ?? null),
+                            'size' => $cartItem['size'] ?? ($variant?->size() ?? null),
+                            'attributes' => $variant?->attributes,
                         ]
                     ]);
 
@@ -407,7 +432,7 @@ class OrderController extends Controller
         }
     }
 
-    public function confirmDelivery($id)
+ public function confirmDelivery($id)
 {
     $order = Order::findOrFail($id);
     
@@ -416,8 +441,17 @@ class OrderController extends Controller
         abort(403);
     }
 
+    // Check if order can be confirmed (must be shipped)
     if ($order->status !== 'shipped') {
         return back()->with('error', 'Order must be shipped before confirming delivery');
+    }
+
+    // Check if this is a COD order
+    $meta = $order->meta ?? [];
+    $isCOD = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+    
+    if (!$isCOD) {
+        return back()->with('error', 'This order is not cash on delivery');
     }
 
     DB::beginTransaction();
@@ -431,18 +465,20 @@ class OrderController extends Controller
             $deliveryTimeDays = $order->created_at->diffInDays(now());
         }
         
-        // Calculate delivery score (100 = best, 0 = worst)
+        // Calculate delivery score
         $deliveryScore = $this->calculateDeliveryScore($deliveryTimeDays);
         
-        // Use the new method with delivery metrics
+        // Update order status using the new method
+        $order->updateStatusWithTimestamps('delivered');
+        
+        // Add COD confirmation details
         $order->update([
-            'status' => 'delivered',
-            'delivered_at' => now(),
             'delivery_time_days' => $deliveryTimeDays,
             'delivery_score' => $deliveryScore,
-            'meta' => array_merge($order->meta ?? [], [
+            'meta' => array_merge($meta, [
                 'confirmed_by_buyer' => true,
                 'buyer_confirmed_at' => now()->toDateTimeString(),
+                'payment_confirmed' => true,
                 'delivery_metrics' => [
                     'delivery_time_days' => $deliveryTimeDays,
                     'delivery_score' => $deliveryScore,
@@ -451,50 +487,66 @@ class OrderController extends Controller
             ])
         ]);
         
-        // Also update vendor performance
+        // Update vendor performance
         $this->updateVendorPerformance($order);
 
-        // Release escrow to vendor
-        if ($order->escrow && $order->escrow->status === 'held') {
+        // Handle COD payment
+        $payment = $order->payments()->where('provider', 'cash')->first();
+        if ($payment) {
+            $payment->update([
+                'status' => 'completed',
+                'meta' => array_merge($payment->meta ?? [], [
+                    'paid_at' => now()->toDateTimeString(),
+                    'payment_confirmed_by_buyer' => true,
+                    'payment_confirmation_time' => now()->toDateTimeString()
+                ])
+            ]);
+            
+            // Create platform commission transaction
+            $platformWallet = BuyerWallet::firstOrCreate(
+                ['user_id' => 1], // Assuming user ID 1 is platform admin
+                ['balance' => 0]
+            );
+            
+            $platformWallet->increment('balance', $order->platform_commission);
+            
+            // Create vendor wallet transaction
             $vendorWallet = BuyerWallet::firstOrCreate(
                 ['user_id' => $order->vendorProfile->user_id],
                 ['balance' => 0]
             );
-
-            $amountToVendor = $order->total - $order->platform_commission;
             
+            $amountToVendor = $order->total - $order->platform_commission;
             $vendorWallet->increment('balance', $amountToVendor);
             
-            $order->escrow->update([
-                'status' => 'released',
-                'released_at' => now()
+            // Log transactions
+            WalletTransaction::create([
+                'user_id' => $order->vendorProfile->user_id,
+                'type' => 'vendor_payout',
+                'amount' => $amountToVendor,
+                'balance_before' => $vendorWallet->balance - $amountToVendor,
+                'balance_after' => $vendorWallet->balance,
+                'reference' => 'COD-' . $order->order_number,
+                'description' => 'Cash on Delivery payment received for Order #' . $order->order_number,
+                'status' => 'completed',
+                'meta' => [
+                    'order_id' => $order->id,
+                    'order_number' => $order->order_number,
+                    'is_cod' => true
+                ]
             ]);
-        }
-
-        // Handle COD payment if applicable
-        $meta = $order->meta ?? [];
-        if (isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery') {
-            $payment = $order->payments()->where('status', 'pending')->first();
-            if ($payment) {
-                $payment->update([
-                    'status' => 'completed',
-                    'meta' => array_merge($payment->meta ?? [], [  
-                        'paid_at' => now()->toDateTimeString(),
-                        'payment_confirmed' => true
-                    ])
-                ]);
-            }
         }
 
         DB::commit();
 
-        return back()->with('success', 'Delivery confirmed! Thank you for your purchase.');
+        return back()->with('success', 'Delivery confirmed and payment recorded! Thank you for your purchase.');
 
     } catch (\Exception $e) {
         DB::rollBack();
         \Log::error('Confirm delivery error: ' . $e->getMessage());
+        \Log::error($e->getTraceAsString());
         
-        return back()->with('error', 'Failed to confirm delivery');
+        return back()->with('error', 'Failed to confirm delivery: ' . $e->getMessage());
     }
 }
 

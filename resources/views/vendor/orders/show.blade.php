@@ -83,13 +83,37 @@
                                 @endif
                                 <div>
                                     <div class="font-medium text-sm text-gray-900">{{ $item->listing->title }}</div>
-                                    <div class="text-xs text-gray-500">SKU: {{ $item->listing->sku }}</div>
+                                    <div class="text-xs text-gray-500">SKU: {{ $item->attributes['variant_sku'] ?? $item->listing->sku }}</div>
                                     <div class="text-xs text-gray-500">Qty: {{ $item->quantity }}</div>
+                                    @php
+                                        $attr = $item->attributes ?? [];
+                                        $hasVariantAttrs = !empty($attr['variant_name']) || !empty($attr['color']) || !empty($attr['size']) || !empty($attr['attributes']);
+                                    @endphp
+                                    @if($hasVariantAttrs)
+                                        <div class="mt-1 text-xs text-gray-600 space-y-1">
+                                            @if(!empty($attr['variant_name']))
+                                                <div><span class="font-medium text-gray-700">Variant:</span> {{ $attr['variant_name'] }}</div>
+                                            @endif
+                                            @if(!empty($attr['color']))
+                                                <div><span class="font-medium text-gray-700">Color:</span> {{ $attr['color'] }}</div>
+                                            @endif
+                                            @if(!empty($attr['size']))
+                                                <div><span class="font-medium text-gray-700">Size:</span> {{ $attr['size'] }}</div>
+                                            @endif
+                                            @if(!empty($attr['attributes']) && is_array($attr['attributes']))
+                                                @foreach($attr['attributes'] as $key => $val)
+                                                    @if(!in_array($key, ['color','size']))
+                                                        <div><span class="font-medium text-gray-700">{{ ucfirst($key) }}:</span> {{ $val }}</div>
+                                                    @endif
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-medium text-gray-900">${{ number_format($item->line_total, 2) }}</div>
-                                <div class="text-xs text-gray-500">${{ number_format($item->unit_price, 2) }} each</div>
+                                <div class="font-medium text-gray-900">UGX {{ number_format($item->line_total, 2) }}</div>
+                                <div class="text-xs text-gray-500">UGX {{ number_format($item->unit_price, 2) }} each</div>
                             </div>
                         </div>
                         @endforeach
@@ -195,7 +219,7 @@
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Taxes</span>
-                            <span>${{ number_format($order->taxes, 2) }}</span>
+                            <span>UGX {{ number_format($order->taxes, 2) }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600">Platform Fee</span>
@@ -222,41 +246,58 @@
                         <div class="space-y-3">
                             <!-- Status Options -->
                             <div class="grid grid-cols-2 gap-2">
-                                @php
-                                    $statusOptions = [
-                                        'processing' => ['label' => 'Processing', 'color' => 'bg-purple-100 text-purple-800', 'icon' => 'fa-cog'],
-                                        'shipped' => ['label' => 'Shipped', 'color' => 'bg-indigo-100 text-indigo-800', 'icon' => 'fa-shipping-fast'],
-                                        'delivered' => ['label' => 'Delivered', 'color' => 'bg-green-100 text-green-800', 'icon' => 'fa-check-circle'],
-                                        'cancelled' => ['label' => 'Cancel', 'color' => 'bg-red-100 text-red-800', 'icon' => 'fa-times'],
-                                    ];
-                                    
-                                    // Determine next possible statuses
-                                    $currentStatus = $order->status;
-                                    $nextStatuses = [];
-                                    
-                                    if ($currentStatus === 'processing') {
-                                        $nextStatuses = ['shipped', 'cancelled'];
-                                    } elseif ($currentStatus === 'shipped') {
-                                        $nextStatuses = ['delivered'];
-                                    } elseif ($currentStatus === 'delivered') {
-                                        $nextStatuses = [];
-                                    } else {
-                                        $nextStatuses = ['processing', 'shipped', 'delivered', 'cancelled'];
-                                    }
-                                @endphp
-                                
-                                @foreach($statusOptions as $status => $option)
-                                    @if(in_array($status, $nextStatuses) || $status === $currentStatus)
-                                    <button type="button" 
-                                            onclick="setStatus('{{ $status }}')"
-                                            class="status-btn flex items-center justify-center p-3 rounded-lg border {{ $status === $currentStatus ? 'border-primary bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}"
-                                            data-status="{{ $status }}">
-                                        <i class="fas {{ $option['icon'] }} mr-2 {{ $status === $currentStatus ? 'text-primary' : 'text-gray-500' }}"></i>
-                                        <span class="font-medium">{{ $option['label'] }}</span>
-                                    </button>
-                                    @endif
-                                @endforeach
-                            </div>
+    @php
+        $statusOptions = [
+            'processing' => ['label' => 'Processing', 'color' => 'bg-purple-100 text-purple-800', 'icon' => 'fa-cog'],
+            'shipped' => ['label' => 'Shipped', 'color' => 'bg-indigo-100 text-indigo-800', 'icon' => 'fa-shipping-fast'],
+            'cancelled' => ['label' => 'Cancel', 'color' => 'bg-red-100 text-red-800', 'icon' => 'fa-times'],
+        ];
+        
+        // Remove 'delivered' option for COD orders
+        $meta = $order->meta ?? [];
+        if (($meta['payment_method'] ?? null) !== 'cash_on_delivery') {
+            $statusOptions['delivered'] = ['label' => 'Delivered', 'color' => 'bg-green-100 text-green-800', 'icon' => 'fa-check-circle'];
+        }
+        
+        // Determine next possible statuses
+        $currentStatus = $order->status;
+        $nextStatuses = [];
+        
+        if ($currentStatus === 'processing') {
+            $nextStatuses = ['shipped', 'cancelled'];
+        } elseif ($currentStatus === 'shipped') {
+            $nextStatuses = $meta['payment_method'] === 'cash_on_delivery' ? [] : ['delivered'];
+        } elseif ($currentStatus === 'delivered') {
+            $nextStatuses = [];
+        } else {
+            $nextStatuses = ['processing', 'shipped'];
+            if (($meta['payment_method'] ?? null) !== 'cash_on_delivery') {
+                $nextStatuses[] = 'delivered';
+            }
+            $nextStatuses[] = 'cancelled';
+        }
+    @endphp
+    
+    @foreach($statusOptions as $status => $option)
+        @if(in_array($status, $nextStatuses) || $status === $currentStatus)
+        <button type="button" 
+                onclick="setStatus('{{ $status }}')"
+                class="status-btn flex items-center justify-center p-3 rounded-lg border {{ $status === $currentStatus ? 'border-primary bg-blue-50' : 'border-gray-200 hover:bg-gray-50' }}"
+                data-status="{{ $status }}">
+            <i class="fas {{ $option['icon'] }} mr-2 {{ $status === $currentStatus ? 'text-primary' : 'text-gray-500' }}"></i>
+            <span class="font-medium">{{ $option['label'] }}</span>
+        </button>
+        @endif
+    @endforeach
+</div>
+
+<!-- Add COD notice if applicable -->
+@if(isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery')
+<div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+    <i class="fas fa-info-circle mr-1"></i>
+    <strong>Cash on Delivery:</strong> The buyer must confirm delivery to complete this order.
+</div>
+@endif
                             
                             <!-- Hidden Status Input -->
                             <input type="hidden" name="status" id="selectedStatus" value="{{ $order->status }}">

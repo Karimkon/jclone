@@ -109,46 +109,52 @@ class VendorOrderController extends Controller
      * Update order status with timestamp tracking - SIMPLIFIED VERSION
      */
     public function updateStatus(Request $request, $id)
-    {
-        $order = Order::where('id', $id)
-            ->where('vendor_profile_id', Auth::user()->vendorProfile->id)
-            ->firstOrFail();
+{
+    $order = Order::where('id', $id)
+        ->where('vendor_profile_id', Auth::user()->vendorProfile->id)
+        ->firstOrFail();
 
-        $validated = $request->validate([
-            'status' => 'required|in:pending,paid,processing,shipped,delivered,cancelled'
-        ]);
+    $validated = $request->validate([
+        'status' => 'required|in:pending,processing,shipped,cancelled' // Remove 'delivered'
+    ]);
 
-        DB::beginTransaction();
-        try {
-            // Use the new Order model method
-            $order->updateStatusWithTimestamps($validated['status']);
-
-            // Create notification for buyer
-            if (in_array($validated['status'], ['processing', 'shipped', 'delivered'])) {
-                NotificationQueue::create([
-                    'user_id' => $order->buyer_id,
-                    'type' => 'order_status_update',
-                    'title' => 'Order Status Update',
-                    'message' => "Your order {$order->order_number} has been marked as " . strtoupper($validated['status']),
-                    'meta' => [
-                        'order_id' => $order->id,
-                        'new_status' => $validated['status'],
-                        'order_number' => $order->order_number,
-                    ],
-                    'status' => 'pending',
-                ]);
-            }
-
-            DB::commit();
-
-            return back()->with('success', 'Order status updated successfully!');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Order status update failed: ' . $e->getMessage());
-            return back()->with('error', 'Failed to update status: ' . $e->getMessage());
+    DB::beginTransaction();
+    try {
+        // For COD orders, prevent marking as delivered
+        $meta = $order->meta ?? [];
+        if ($validated['status'] === 'delivered' && ($meta['payment_method'] ?? null) === 'cash_on_delivery') {
+            return back()->with('error', 'For cash on delivery orders, delivery must be confirmed by the buyer after receiving the package.');
         }
+
+        // Use the new Order model method
+        $order->updateStatusWithTimestamps($validated['status']);
+
+        // Create notification for buyer
+        if (in_array($validated['status'], ['processing', 'shipped'])) {
+            NotificationQueue::create([
+                'user_id' => $order->buyer_id,
+                'type' => 'order_status_update',
+                'title' => 'Order Status Update',
+                'message' => "Your order {$order->order_number} has been marked as " . strtoupper($validated['status']),
+                'meta' => [
+                    'order_id' => $order->id,
+                    'new_status' => $validated['status'],
+                    'order_number' => $order->order_number,
+                ],
+                'status' => 'pending',
+            ]);
+        }
+
+        DB::commit();
+
+        return back()->with('success', 'Order status updated successfully!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Order status update failed: ' . $e->getMessage());
+        return back()->with('error', 'Failed to update status: ' . $e->getMessage());
     }
+}
     
     /**
      * Show vendor performance stats

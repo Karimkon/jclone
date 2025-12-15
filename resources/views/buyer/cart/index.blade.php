@@ -25,7 +25,7 @@
             <div class="bg-white rounded-lg shadow overflow-hidden">
                 <div class="p-6 border-b bg-gray-50">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold">Cart Items ({{ count($cart->items) }})</h2>
+                        <h2 class="text-xl font-bold">Cart Items ({{ $cart->item_count }})</h2>
                         <form action="{{ route('buyer.cart.clear') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear your cart?')">
                             @csrf
                             @method('POST')
@@ -37,90 +37,145 @@
                 </div>
                 
                 <div class="divide-y">
-                    @foreach($cart->items as $item)
-                    <div class="p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}">
-                        <div class="flex space-x-4">
-                            <!-- Product Image -->
-                            <div class="w-24 h-24 flex-shrink-0">
-                                @if($item['image'])
-                                <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}" 
-                                     class="w-full h-full object-cover rounded-lg">
-                                @else
-                                <div class="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-                                    <i class="fas fa-image text-gray-400 text-2xl"></i>
-                                </div>
-                                @endif
+                  @foreach($cart->getEnrichedItems() as $item)
+@php
+    // Properly extract variation data from the cart item structure
+    $variant = $item['variant'] ?? null;
+    $color = $item['color'] ?? null;
+    $size = $item['size'] ?? null;
+    $variantId = $item['variant_id'] ?? null;
+    
+    // Create unique item key
+    $itemKey = $item['listing_id'] . '_' . ($variantId ?? 'base') . '_' . ($color ?? '') . '_' . ($size ?? '');
+    
+    // Get correct attributes from variant or direct item
+    $variantAttributes = $variant['attributes'] ?? [];
+    $displayColor = $color ?? $variantAttributes['color'] ?? $variantAttributes['Color'] ?? null;
+    $displaySize = $size ?? $variantAttributes['size'] ?? $variantAttributes['Size'] ?? null;
+    
+    // Add missing variables
+    $stock = $item['stock'] ?? ($variant['stock'] ?? ($item['listing']['stock'] ?? 0));
+    $unitPrice = $item['unit_price'] ?? ($variant['display_price'] ?? ($variant['price'] ?? 0));
+@endphp
+
+<div class="p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}" data-item-key="{{ $itemKey }}">
+    <div class="flex space-x-4">
+        <!-- Product Image -->
+        <div class="w-24 h-24 flex-shrink-0">
+            @if($item['image'])
+            <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}" 
+                 class="w-full h-full object-cover rounded-lg">
+            @elseif(isset($item['listing']['images'][0]))
+            <img src="{{ asset('storage/' . $item['listing']['images'][0]['path']) }}" 
+                 alt="{{ $item['title'] }}" 
+                 class="w-full h-full object-cover rounded-lg">
+            @else
+            <div class="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                <i class="fas fa-image text-gray-400 text-2xl"></i>
+            </div>
+            @endif
+        </div>
+        
+        <!-- Product Details -->
+        <div class="flex-1">
+            <div class="flex justify-between">
+                <div>
+                    <h3 class="font-bold text-lg mb-1">{{ $item['title'] }}</h3>
+                    <p class="text-sm text-gray-600 mb-2">
+                        <i class="fas fa-store mr-1"></i> {{ $item['vendor_name'] ?? ($item['listing']['vendor']['business_name'] ?? 'Vendor') }}
+                    </p>
+                    
+                    <!-- Display Variations if they exist -->
+                    @if($variant || $displayColor || $displaySize)
+                    <div class="mb-2">
+                        <div class="text-sm text-gray-700 space-y-1">
+                            @if($displayColor)
+                            <div class="flex items-center">
+                                <span class="font-medium w-16">Color:</span>
+                                <span class="px-2 py-1 bg-gray-100 rounded text-sm">{{ $displayColor }}</span>
                             </div>
+                            @endif
                             
-                            <!-- Product Details -->
-                            <div class="flex-1">
-                                <div class="flex justify-between">
-                                    <div>
-                                        <h3 class="font-bold text-lg mb-1">{{ $item['title'] }}</h3>
-                                        <p class="text-sm text-gray-600 mb-2">
-                                            <i class="fas fa-store mr-1"></i> {{ $item['vendor_name'] }}
-                                        </p>
-                                        <div class="flex items-center space-x-4 text-sm text-gray-500">
-                                            @if(isset($item['origin']))
-                                            <span class="px-2 py-1 bg-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-100 text-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-800 rounded text-xs">
-                                                <i class="fas fa-{{ $item['origin'] == 'imported' ? 'plane' : 'home' }} mr-1"></i>
-                                                {{ ucfirst($item['origin']) }}
-                                            </span>
-                                            @endif
-                                            @if(isset($item['weight_kg']))
-                                            <span><i class="fas fa-weight-hanging mr-1"></i> {{ $item['weight_kg'] }}kg</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Remove Button -->
-                                    <button onclick="removeFromCart({{ $item['listing_id'] }})" 
-                                            class="text-red-600 hover:text-red-800 h-8">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                                
-                                <!-- Quantity and Price -->
-                                <div class="mt-4 flex items-center justify-between">
-                                    <div class="flex items-center space-x-3">
-                                        <span class="text-sm text-gray-600">Quantity:</span>
-                                        <div class="flex items-center border border-gray-300 rounded-lg">
-                                            <button type="button" 
-                                                    onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] - 1 }})"
-                                                    class="px-3 py-1 hover:bg-gray-100"
-                                                    {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
-                                                <i class="fas fa-minus text-sm"></i>
-                                            </button>
-                                            <input type="number" 
-                                                   id="qty-{{ $item['listing_id'] }}"
-                                                   value="{{ $item['quantity'] }}" 
-                                                   min="1" 
-                                                   max="{{ $item['stock'] ?? 99 }}"
-                                                   class="w-16 text-center border-0 focus:ring-0 py-1"
-                                                   onchange="updateQuantity({{ $item['listing_id'] }}, this.value)">
-                                            <button type="button" 
-                                                    onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] + 1 }})"
-                                                    class="px-3 py-1 hover:bg-gray-100"
-                                                    {{ isset($item['stock']) && $item['quantity'] >= $item['stock'] ? 'disabled' : '' }}>
-                                                <i class="fas fa-plus text-sm"></i>
-                                            </button>
-                                        </div>
-                                        @if(isset($item['stock']))
-                                        <span class="text-xs text-gray-500">({{ $item['stock'] }} available)</span>
-                                        @endif
-                                    </div>
-                                    
-                                    <div class="text-right">
-                                        <div class="text-sm text-gray-600">${{ number_format($item['unit_price'], 2) }} each</div>
-                                        <div class="text-lg font-bold text-primary item-total" id="total-{{ $item['listing_id'] }}">
-                                            ${{ number_format($item['total'], 2) }}
-                                        </div>
-                                    </div>
-                                </div>
+                            @if($displaySize)
+                            <div class="flex items-center">
+                                <span class="font-medium w-16">Size:</span>
+                                <span class="px-2 py-1 bg-gray-100 rounded text-sm">{{ $displaySize }}</span>
                             </div>
+                            @endif
+                            
+                            @if($variant && isset($variant['sku']))
+                            <div class="flex items-center">
+                                <span class="font-medium w-16">SKU:</span>
+                                <span class="text-gray-600 text-sm">{{ $variant['sku'] }}</span>
+                            </div>
+                            @endif
                         </div>
                     </div>
-                    @endforeach
+                    @endif
+                    
+                    <div class="flex items-center space-x-4 text-sm text-gray-500">
+                        @if(isset($item['origin']))
+                        <span class="px-2 py-1 bg-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-100 text-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-800 rounded text-xs">
+                            <i class="fas fa-{{ $item['origin'] == 'imported' ? 'plane' : 'home' }} mr-1"></i>
+                            {{ ucfirst($item['origin']) }}
+                        </span>
+                        @endif
+                        @if(isset($item['weight_kg']))
+                        <span><i class="fas fa-weight-hanging mr-1"></i> {{ $item['weight_kg'] }}kg</span>
+                        @endif
+                    </div>
+                </div>
+                
+                <!-- Remove Button -->
+                <button onclick="removeFromCart({{ $item['listing_id'] }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')" 
+                        class="text-red-600 hover:text-red-800 h-8">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Quantity and Price -->
+            <div class="mt-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="text-sm text-gray-600">Quantity:</span>
+                    <div class="flex items-center border border-gray-300 rounded-lg">
+                        <button type="button" 
+                                onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] - 1 }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
+                                class="px-3 py-1 hover:bg-gray-100"
+                                {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
+                            <i class="fas fa-minus text-sm"></i>
+                        </button>
+                        <input type="number" 
+                               id="qty-{{ $itemKey }}"
+                               value="{{ $item['quantity'] }}" 
+                               min="1" 
+                               max="{{ $stock }}"
+                               class="w-16 text-center border-0 focus:ring-0 py-1"
+                               onchange="updateQuantity({{ $item['listing_id'] }}, this.value, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')">
+                        <button type="button" 
+                                onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] + 1 }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
+                                class="px-3 py-1 hover:bg-gray-100"
+                                {{ $item['quantity'] >= $stock ? 'disabled' : '' }}>
+                            <i class="fas fa-plus text-sm"></i>
+                        </button>
+                    </div>
+                    @if($stock)
+                    <span class="text-xs text-gray-500">({{ $stock }} available)</span>
+                    @endif
+                </div>
+                
+                <div class="text-right">
+                    <div class="text-sm text-gray-600">UGX {{ number_format($unitPrice, 2) }} each</div>
+                    <div class="text-lg font-bold text-primary item-total" id="total-{{ $itemKey }}">
+                        UGX {{ number_format($item['total'] ?? ($unitPrice * $item['quantity']), 2) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endforeach
+                    
+                    
                 </div>
             </div>
         </div>
@@ -133,20 +188,20 @@
                 <div class="space-y-3 mb-6">
                     <div class="flex justify-between text-gray-600">
                         <span>Subtotal</span>
-                        <span id="cart-subtotal">${{ number_format($cart->subtotal, 2) }}</span>
+                        <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 2) }}</span>
                     </div>
                     <div class="flex justify-between text-gray-600">
                         <span>Shipping</span>
-                        <span id="cart-shipping">${{ number_format($cart->shipping, 2) }}</span>
+                        <span id="cart-shipping">UGX {{ number_format($cart->shipping, 2) }}</span>
                     </div>
                     <div class="flex justify-between text-gray-600">
                         <span>Tax (18%)</span>
-                        <span id="cart-tax">${{ number_format($cart->tax, 2) }}</span>
+                        <span id="cart-tax">UGX {{ number_format($cart->tax, 2) }}</span>
                     </div>
                     <div class="pt-3 border-t">
                         <div class="flex justify-between font-bold text-lg">
                             <span>Total</span>
-                            <span class="text-primary" id="cart-total">${{ number_format($cart->total, 2) }}</span>
+                            <span class="text-primary" id="cart-total">UGX {{ number_format($cart->total, 2) }}</span>
                         </div>
                     </div>
                 </div>
@@ -191,13 +246,16 @@
 </div>
 
 <script>
-// Update quantity
-function updateQuantity(listingId, quantity) {
+// Update quantity with variation support
+function updateQuantity(listingId, quantity, variantId = null, color = null, size = null) {
     quantity = parseInt(quantity);
     if (quantity < 1) return;
     
-    const qtyInput = document.getElementById(`qty-${listingId}`);
-    qtyInput.value = quantity;
+    const itemKey = `${listingId}_${variantId || 'base'}_${color || ''}_${size || ''}`;
+    const qtyInput = document.getElementById(`qty-${itemKey}`);
+    if (qtyInput) {
+        qtyInput.value = quantity;
+    }
     
     fetch(`/buyer/cart/update/${listingId}`, {
         method: 'POST',
@@ -206,19 +264,39 @@ function updateQuantity(listingId, quantity) {
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ quantity: quantity })
+        body: JSON.stringify({ 
+            quantity: quantity,
+            variant_id: variantId,
+            color: color,
+            size: size
+        })
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             // Update item total
-            document.getElementById(`total-${listingId}`).textContent = '$' + data.item_total;
+            const itemTotalElement = document.getElementById(`total-${itemKey}`);
+            if (itemTotalElement) {
+                itemTotalElement.textContent = 'UGX ' + data.item_total.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                });
+            }
             
             // Update cart summary
-            document.getElementById('cart-subtotal').textContent = '$' + data.subtotal;
-            document.getElementById('cart-shipping').textContent = '$' + data.shipping;
-            document.getElementById('cart-tax').textContent = '$' + data.tax;
-            document.getElementById('cart-total').textContent = '$' + data.cart_total;
+            updateCartSummary(data);
+            
+            // Update stock availability
+            if (data.stock !== undefined && qtyInput) {
+                const plusButton = qtyInput.nextElementSibling;
+                if (plusButton) {
+                    plusButton.disabled = quantity >= data.stock;
+                }
+                const minusButton = qtyInput.previousElementSibling;
+                if (minusButton) {
+                    minusButton.disabled = quantity <= 1;
+                }
+            }
             
             showToast(data.message, 'success');
         } else {
@@ -231,38 +309,49 @@ function updateQuantity(listingId, quantity) {
     });
 }
 
-// Remove from cart
-function removeFromCart(listingId) {
+// Remove from cart with variation support
+function removeFromCart(listingId, variantId = null, color = null, size = null) {
     if (!confirm('Remove this item from cart?')) return;
+    
+    const data = {
+        variant_id: variantId,
+        color: color,
+        size: size
+    };
     
     fetch(`/buyer/cart/remove/${listingId}`, {
         method: 'DELETE',
         headers: {
+            'Content-Type': 'application/json',
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
-        }
+        },
+        body: JSON.stringify(data)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
             // Remove item from DOM
-            const item = document.querySelector(`.cart-item[data-listing-id="${listingId}"]`);
+            const itemKey = `${listingId}_${variantId || 'base'}_${color || ''}_${size || ''}`;
+            const item = document.querySelector(`.cart-item[data-item-key="${itemKey}"]`);
             if (item) {
                 item.remove();
             }
             
             // Update cart summary
-            if (data.cart_count === 0) {
-                location.reload(); // Reload to show empty cart message
-            } else {
-                document.getElementById('cart-subtotal').textContent = '$' + data.subtotal;
-                document.getElementById('cart-shipping').textContent = '$' + data.shipping;
-                document.getElementById('cart-tax').textContent = '$' + data.tax;
-                document.getElementById('cart-total').textContent = '$' + data.cart_total;
-            }
+            updateCartSummary(data);
             
             // Update cart count in navbar
-            updateCartCount(data.cart_count);
+            if (data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+            }
+            
+            // If cart is now empty, reload page
+            if (data.cart_count === 0) {
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            }
             
             showToast(data.message, 'success');
         } else {
@@ -275,20 +364,69 @@ function removeFromCart(listingId) {
     });
 }
 
+// Update cart summary
+function updateCartSummary(data) {
+    if (data.subtotal !== undefined) {
+        const subtotalElement = document.getElementById('cart-subtotal');
+        if (subtotalElement) {
+            subtotalElement.textContent = 'UGX ' + data.subtotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+    
+    if (data.shipping !== undefined) {
+        const shippingElement = document.getElementById('cart-shipping');
+        if (shippingElement) {
+            shippingElement.textContent = 'UGX ' + data.shipping.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+    
+    if (data.tax !== undefined) {
+        const taxElement = document.getElementById('cart-tax');
+        if (taxElement) {
+            taxElement.textContent = 'UGX ' + data.tax.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+    
+    if (data.cart_total !== undefined) {
+        const totalElement = document.getElementById('cart-total');
+        if (totalElement) {
+            totalElement.textContent = 'UGX ' + data.cart_total.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+    }
+}
+
 // Update cart count in navbar
 function updateCartCount(count) {
     document.querySelectorAll('.cart-count').forEach(element => {
         element.textContent = count;
+        if (count > 0) {
+            element.classList.remove('hidden');
+        } else {
+            element.classList.add('hidden');
+        }
     });
 }
 
 // Show toast notification
 function showToast(message, type = 'info') {
+    // Remove existing toasts
     const existingToasts = document.querySelectorAll('.custom-toast');
     existingToasts.forEach(toast => toast.remove());
     
     const toast = document.createElement('div');
-    toast.className = `custom-toast fixed top-4 right-4 z-50 px-6 py-4 rounded-lg shadow-lg transform transition-all duration-300 translate-x-0`;
+    toast.className = 'custom-toast fixed top-4 right-4 z-50 transform transition-all duration-300';
     
     const typeStyles = {
         success: 'bg-green-500 text-white',
@@ -297,8 +435,6 @@ function showToast(message, type = 'info') {
         info: 'bg-blue-500 text-white'
     };
     
-    toast.className += ` ${typeStyles[type] || typeStyles.info}`;
-    
     const icons = {
         success: 'fa-check-circle',
         error: 'fa-times-circle',
@@ -306,20 +442,21 @@ function showToast(message, type = 'info') {
         info: 'fa-info-circle'
     };
     
+    toast.className += ` ${typeStyles[type] || typeStyles.info} px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slideIn`;
+    
     toast.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas ${icons[type] || icons.info} mr-3"></i>
-            <span>${message}</span>
-            <button class="ml-4 text-white hover:text-gray-200" onclick="this.parentElement.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
+        <i class="fas ${icons[type] || icons.info}"></i>
+        <span class="font-medium">${message}</span>
+        <button class="ml-2 hover:opacity-80" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
     `;
     
     document.body.appendChild(toast);
     
     setTimeout(() => {
         if (toast.parentElement) {
+            toast.style.opacity = '0';
             toast.style.transform = 'translateX(100%)';
             setTimeout(() => {
                 if (toast.parentElement) {
@@ -327,7 +464,77 @@ function showToast(message, type = 'info') {
                 }
             }, 300);
         }
-    }, 5000);
+    }, 4000);
 }
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl + A to select all inputs in the focused quantity field
+    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.type === 'number' && activeElement.id.startsWith('qty-')) {
+            e.preventDefault();
+            activeElement.select();
+        }
+    }
+    
+    // Arrow keys for quantity adjustment
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        const activeElement = document.activeElement;
+        if (activeElement && activeElement.type === 'number' && activeElement.id.startsWith('qty-')) {
+            e.preventDefault();
+            
+            // Find the parent cart item to get variation details
+            const cartItem = activeElement.closest('.cart-item');
+            if (cartItem) {
+                const listingId = cartItem.dataset.listingId;
+                const itemKey = cartItem.dataset.itemKey;
+                const parts = itemKey.split('_');
+                const variantId = parts[1] !== 'base' ? parts[1] : null;
+                const color = parts[2] || null;
+                const size = parts[3] || null;
+                
+                let currentQty = parseInt(activeElement.value);
+                let newQty = e.key === 'ArrowUp' ? currentQty + 1 : currentQty - 1;
+                
+                if (newQty >= 1) {
+                    updateQuantity(listingId, newQty, variantId, color, size);
+                }
+            }
+        }
+    }
+});
+
+// Add some CSS for animations
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    .animate-slideIn {
+        animation: slideIn 0.3s ease-out;
+    }
+    
+    .cart-item {
+        transition: all 0.3s ease;
+    }
+    
+    .cart-item:hover {
+        background-color: #f9fafb;
+    }
+    
+    .custom-toast {
+        min-width: 300px;
+    }
+`;
+document.head.appendChild(style);
 </script>
 @endsection

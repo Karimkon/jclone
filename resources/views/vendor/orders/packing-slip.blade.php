@@ -219,7 +219,7 @@
             <div>{{ Auth::user()->vendorProfile->address ?? 'Your Address' }}</div>
             <div>{{ Auth::user()->vendorProfile->city ?? '' }}, {{ Auth::user()->vendorProfile->country ?? '' }}</div>
             <div class="contact-info">
-                📞 {{ Auth::user()->vendorProfile->phone ?? 'Phone: N/A' }}<br>
+                📞 {{ Auth::user()->phone ?? 'Phone: N/A' }}<br>
                 ✉️ {{ Auth::user()->email }}
             </div>
         </div>
@@ -229,15 +229,70 @@
             <div style="font-weight: bold; color: #10b981; margin-bottom: 10px; font-size: 14px;">
                 👤 SHIP TO
             </div>
-            <div style="font-weight: bold; font-size: 13px;">
-                {{ $order->buyer->name ?? 'Customer' }}
-            </div>
             @php $meta = $order->meta ?? []; @endphp
-            @if(isset($meta['shipping_address']))
-            <div>{{ $meta['shipping_address'] }}</div>
-            <div>{{ $meta['shipping_city'] ?? '' }}, {{ $meta['shipping_country'] ?? '' }}</div>
-            <div>{{ $meta['shipping_postal_code'] ?? '' }}</div>
-            @endif
+           @if(isset($meta['shipping_address']))
+    @php
+        // Check if shipping_address is a string or an array
+        $shippingAddress = $meta['shipping_address'];
+        
+        if (is_array($shippingAddress)) {
+            // It's an array, format it properly
+            $addressParts = [];
+            
+            if (!empty($shippingAddress['recipient_name'])) {
+                $addressParts[] = '<strong>' . e($shippingAddress['recipient_name']) . '</strong>';
+            }
+            
+            if (!empty($shippingAddress['address_line_1'])) {
+                $line = e($shippingAddress['address_line_1']);
+                if (!empty($shippingAddress['address_line_2'])) {
+                    $line .= ', ' . e($shippingAddress['address_line_2']);
+                }
+                $addressParts[] = $line;
+            }
+            
+            if (!empty($shippingAddress['city']) || !empty($shippingAddress['state_region']) || !empty($shippingAddress['postal_code'])) {
+                $locality = [];
+                if (!empty($shippingAddress['city'])) $locality[] = e($shippingAddress['city']);
+                if (!empty($shippingAddress['state_region'])) $locality[] = e($shippingAddress['state_region']);
+                if (!empty($shippingAddress['postal_code'])) $locality[] = e($shippingAddress['postal_code']);
+                if (!empty($locality)) $addressParts[] = implode(', ', $locality);
+            }
+            
+            if (!empty($shippingAddress['country'])) {
+                $addressParts[] = e($shippingAddress['country']);
+            }
+            
+            // Join all parts with line breaks
+            $formattedAddress = implode('<br>', $addressParts);
+        } else {
+            // It's already a string
+            $formattedAddress = e($shippingAddress);
+        }
+    @endphp
+    
+    @if(!empty($formattedAddress))
+    <div>{!! $formattedAddress !!}</div>
+    @endif
+    
+    @if(isset($meta['shipping_city']) || isset($meta['shipping_country']) || isset($meta['shipping_postal_code']))
+    <div>
+        @if(isset($meta['shipping_city']))
+            {{ e($meta['shipping_city']) }}
+            @if(isset($meta['shipping_country']) || isset($meta['shipping_postal_code'])),@endif
+        @endif
+        
+        @if(isset($meta['shipping_country']))
+            {{ e($meta['shipping_country']) }}
+            @if(isset($meta['shipping_postal_code'])),@endif
+        @endif
+        
+        @if(isset($meta['shipping_postal_code']))
+            {{ e($meta['shipping_postal_code']) }}
+        @endif
+    </div>
+    @endif
+@endif
             <div class="contact-info">
                 📞 {{ $order->buyer->phone ?? 'Phone: N/A' }}<br>
                 ✉️ {{ $order->buyer->email ?? 'Email: N/A' }}
@@ -438,16 +493,6 @@
         </div>
     </div>
     
-    <!-- Print Instructions -->
-    <div class="no-print" style="margin-top: 30px; padding: 15px; background: #fffbeb; border-radius: 8px; border: 1px solid #fde68a;">
-        <div style="font-weight: bold; color: #92400e; margin-bottom: 8px;">💡 PRINTING TIPS</div>
-        <div style="font-size: 11px; color: #92400e;">
-            • Print at 100% scale on A4 or Letter paper<br>
-            • Use "Fit to page" option in print settings<br>
-            • For thermal printers, test print first<br>
-            • Consider printing two copies (one for package, one for records)
-        </div>
-    </div>
 
     <script>
         // Add CSS for status badges

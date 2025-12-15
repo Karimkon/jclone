@@ -303,6 +303,21 @@ class Order extends Model
         return $deliveryTime <= 7; // On time if delivered within 7 days of shipping
     }
 
+    // Status:
+public function canBeMarkedAsDelivered()
+{
+    $meta = $this->meta ?? [];
+    $paymentMethod = $meta['payment_method'] ?? null;
+    
+    // For COD orders, only buyer should mark as delivered
+    if ($paymentMethod === 'cash_on_delivery') {
+        return $this->status === 'shipped' && !$this->delivered_at;
+    }
+    
+    // For prepaid orders, vendor can mark as delivered
+    return in_array($this->status, ['shipped', 'processing']) && !$this->delivered_at;
+}
+
     /**
      * Get delivery performance badge
      */

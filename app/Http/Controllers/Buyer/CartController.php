@@ -16,43 +16,72 @@ class CartController extends Controller
      * Display cart
      */
     public function index()
-    {
-        $cart = $this->getOrCreateCart();
-        $cartItems = [];
-        
-        if ($cart && !empty($cart->items)) {
-            // Enrich cart items with current listing data
-            foreach ($cart->items as $item) {
-                $listing = Listing::with('images', 'vendor')->find($item['listing_id']);
-                if ($listing && $listing->is_active && $listing->stock > 0) {
-                    $cartItems[] = [
-                        'listing_id' => $listing->id,
-                        'title' => $listing->title,
-                        'image' => $listing->images->first() ? asset('storage/' . $listing->images->first()->path) : null,
-                        'vendor_name' => $listing->vendor->business_name ?? 'Vendor',
-                        'unit_price' => $listing->price,
-                        'quantity' => $item['quantity'],
-                        'total' => $listing->price * $item['quantity'],
-                        'weight_kg' => $listing->weight_kg,
-                        'origin' => $listing->origin,
-                        'stock' => $listing->stock,
-                    ];
-                }
-            }
+{
+    $cart = $this->getOrCreateCart();
+    $cartItems = [];
+    
+    if ($cart && !empty($cart->items)) {
+        foreach ($cart->items as $itemKey => $item) {
+            $listing = Listing::with('images', 'vendor')->find($item['listing_id']);
             
-            // Update cart items with current data
-            $cart->items = $cartItems;
-            $cart->recalculateTotals();
-            $cart->save();
+            if ($listing && $listing->is_active) {
+                $variant = null;
+                $stock = $listing->stock;
+                $unitPrice = $listing->price;
+                
+                // Load variant if exists
+                if (!empty($item['variant_id'])) {
+                    $variant = ListingVariant::find($item['variant_id']);
+                    if ($variant) {
+                        $stock = $variant->stock;
+                        $unitPrice = $variant->display_price ?? $variant->price;
+                    }
+                }
+                
+                // Check stock (variant or main listing)
+                if ($stock <= 0) {
+                    continue; // Skip out of stock items
+                }
+                
+                $cartItems[] = [
+                    'listing_id' => $listing->id,
+                    'title' => $listing->title,
+                    'image' => $listing->images->first() ? asset('storage/' . $listing->images->first()->path) : null,
+                    'vendor_name' => $listing->vendor->business_name ?? 'Vendor',
+                    'unit_price' => $unitPrice,
+                    'quantity' => $item['quantity'] ?? 1,
+                    'total' => $unitPrice * ($item['quantity'] ?? 1),
+                    'weight_kg' => $listing->weight_kg,
+                    'origin' => $listing->origin,
+                    'stock' => $stock,
+                    'variant_id' => $item['variant_id'] ?? null,
+                    'color' => $item['color'] ?? null,
+                    'size' => $item['size'] ?? null,
+                    'variant' => $variant ? [
+                        'id' => $variant->id,
+                        'sku' => $variant->sku,
+                        'price' => $variant->price,
+                        'display_price' => $variant->display_price ?? $variant->price,
+                        'stock' => $variant->stock,
+                        'attributes' => $variant->attributes ?? []
+                    ] : null
+                ];
+            }
         }
         
-        return view('buyer.cart.index', compact('cart'));
+        // Update cart with current data
+        $cart->items = $cartItems;
+        $cart->recalculateTotals();
+        $cart->save();
     }
+    
+    return view('buyer.cart.index', compact('cart'));
+}
 
     /**
      * Add item to cart
      */
-  public function add(Request $request, $listingId)
+ public function add(Request $request, $listingId)
 {
     // Start with basic validation
     $rules = [
@@ -62,11 +91,13 @@ class CartController extends Controller
     // Load listing early for downstream checks/analytics
     $listing = Listing::findOrFail($listingId);
     
+    // Always accept color and size parameters
+    $rules['color'] = 'nullable|string|max:50';
+    $rules['size'] = 'nullable|string|max:50';
+    
     // Only add variant_id validation if it's present in the request
     if ($request->has('variant_id') && $request->input('variant_id') !== null) {
         $rules['variant_id'] = 'exists:listing_variants,id';
-        $rules['color'] = 'nullable|string|max:50';
-        $rules['size'] = 'nullable|string|max:50';
     }
     
     $validated = $request->validate($rules);
@@ -85,9 +116,12 @@ class CartController extends Controller
         ], 400);
     }
     
-    // Check stock
+    $variant = null;
+    $stockAvailable = true;
+    $variantPrice = $listing->price;
+    
+    // Check variant if provided
     if (isset($validated['variant_id'])) {
-        // Check variant stock
         $variant = \App\Models\ListingVariant::find($validated['variant_id']);
         if (!$variant) {
             return response()->json([
@@ -96,12 +130,15 @@ class CartController extends Controller
             ], 404);
         }
         
+        // Check variant stock
         if ($variant->stock < $validated['quantity']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Selected variant is out of stock'
             ], 400);
         }
+        
+        $variantPrice = $variant->display_price;
     } else {
         // Check main listing stock
         if ($listing->stock < $validated['quantity']) {
@@ -124,13 +161,26 @@ class CartController extends Controller
         ]
     );
     
+    // Get color and size from request or variant attributes
+    $color = $validated['color'] ?? null;
+    $size = $validated['size'] ?? null;
+    
+    // If variant exists, use its attributes if not provided in request
+    if ($variant && empty($color) && isset($variant->attributes['color'])) {
+        $color = $variant->attributes['color'];
+    }
+    
+    if ($variant && empty($size) && isset($variant->attributes['size'])) {
+        $size = $variant->attributes['size'];
+    }
+    
     // Add item to cart using the model method
     $cart->addItem(
         $listing,
         $validated['quantity'],
         $validated['variant_id'] ?? null,
-        $validated['color'] ?? null,
-        $validated['size'] ?? null
+        $color,
+        $size
     );
     
     return response()->json([

@@ -165,6 +165,37 @@
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         html { scroll-behavior: smooth; }
 
+        /* Modal Animations */
+@keyframes scale-in {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.animate-scale-in {
+    animation: scale-in 0.3s ease forwards;
+}
+
+/* Toast Animation */
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast-notification {
+    animation: slideIn 0.3s ease forwards;
+}
+
+/* Option Selection */
+.option-btn {
+    transition: all 0.2s ease;
+}
+
+.option-btn.selected {
+    border-color: #4f46e5 !important;
+    background-color: rgba(79, 70, 229, 0.1) !important;
+    color: #4f46e5;
+}
+
         /* Chatbot Styles */
         
         @keyframes fadeIn {
@@ -821,6 +852,88 @@
     </div>
 </div>
 
+<!-- Options Modal for Product Variations -->
+<div id="optionsModal" class="fixed inset-0 z-[100] hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeOptionsModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 relative animate-scale-in">
+            <button onclick="closeOptionsModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-cogs text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Select Options</h3>
+                <p class="text-gray-500">Please select product options before adding to cart</p>
+            </div>
+            
+            <!-- Options Form -->
+            <div id="optionsForm" class="space-y-6">
+                <!-- Color Selection -->
+                <div id="colorOptionsSection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Color <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalColorOptions">
+                        <!-- Color options will be dynamically added -->
+                    </div>
+                </div>
+                
+                <!-- Size Selection -->
+                <div id="sizeOptionsSection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Size <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalSizeOptions">
+                        <!-- Size options will be dynamically added -->
+                    </div>
+                </div>
+                
+                <!-- Selected Variant Info -->
+                <div id="modalVariantInfo" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-gray-800">Selected Variant</h4>
+                            <div class="text-sm text-gray-600 mt-1 space-y-1">
+                                <p id="modalSelectedColorText"></p>
+                                <p id="modalSelectedSizeText"></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-primary" id="modalVariantPrice"></p>
+                            <p class="text-sm text-gray-600" id="modalVariantStock"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex gap-3">
+                        <button type="button" 
+                                onclick="closeOptionsModal()" 
+                                class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button" 
+                                onclick="confirmModalOptions()"
+                                id="confirmModalOptionsBtn"
+                                disabled
+                                class="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Confirm Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Variation Loader -->
+<div id="variationLoader" class="hidden">
+    <!-- This will be used to load product variations via AJAX -->
+</div>
+
 <!-- MOBILE MENU -->
 <div id="mobileMenu" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-ink-900/80 backdrop-blur-sm" onclick="toggleMobileMenu()"></div>
@@ -1062,6 +1175,7 @@ function setupSearchForm() {
     }
 }
 
+
 // FIXED: Updated quickAddToCart function with debouncing
 let cartProcessing = false;
 async function quickAddToCart(id, btn) {
@@ -1081,51 +1195,368 @@ async function quickAddToCart(id, btn) {
         return; 
     }
     
-    const orig = btn.innerHTML; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>'; 
-    btn.disabled = true;
-    
+    // Check if product has variations
     try {
-        console.log('Sending request to /buyer/cart/add/' + id);
-        const response = await fetch(`/buyer/cart/add/${id}`, {
-            method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json', 
-                'X-CSRF-TOKEN': csrfToken, 
-                'Accept': 'application/json' 
-            }, 
-            body: JSON.stringify({ quantity: 1 }) 
+        console.log('Checking for variations...');
+        const checkResponse = await fetch(`/api/listings/${id}/check-variations`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
         
-        console.log('Response status:', response.status);
+        console.log('Check response status:', checkResponse.status);
         
-        // Check if response is OK
+        if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            console.log('Variation check data:', checkData);
+            
+            if (checkData.has_variations && (checkData.available_colors.length > 0 || checkData.available_sizes.length > 0)) {
+                console.log('Product has variations, showing modal');
+                await showVariationModal(id, btn);
+                cartProcessing = false;
+                return;
+            } else {
+                console.log('Product has no variations (or empty options)');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking variations:', error);
+    }
+    
+    console.log('Adding directly to cart (no variations)');
+    await addToCartSimple(id, btn);
+    cartProcessing = false;
+}
+
+// Add this function after quickAddToCart function (around line 3140)
+async function addToCartSimple(listingId, button) {
+    console.log('Adding to cart (simple):', listingId);
+    
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: 1 })
+        });
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
         }
         
-        // Try to parse JSON
         const data = await response.json();
-        console.log('Response data:', data);
+        console.log('Cart add response:', data);
         
-        if (data.success) { 
-            btn.innerHTML = '<i class="fas fa-check text-xs"></i>'; 
-            showToast('Added to cart!', 'success'); 
-            if (data.cart_count) updateCartCount(data.cart_count); 
-            setTimeout(() => { 
-                btn.innerHTML = orig; 
-                btn.disabled = false; 
-                cartProcessing = false;
-            }, 1500); 
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            button.classList.remove('bg-brand-600', 'hover:bg-brand-700');
+            button.classList.add('bg-green-500', 'hover:bg-green-600');
+            
+            if (data.cart_count) {
+                updateCartCount(data.cart_count);
+            }
+            
+            showToast('Added to cart!', 'success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                button.classList.add('bg-brand-600', 'hover:bg-brand-700');
+                button.disabled = false;
+            }, 1500);
         } else {
             throw new Error(data.message || 'Failed to add to cart');
         }
-    } catch (e) { 
-        console.error('Error adding to cart:', e);
-        btn.innerHTML = orig; 
-        btn.disabled = false; 
-        cartProcessing = false;
-        showToast(e.message || 'Failed to add to cart', 'error'); 
+    } catch (error) {
+        console.error('Cart error:', error);
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        showToast(error.message || 'Failed to add to cart', 'error');
+    }
+}
+
+// Show variation modal
+async function showVariationModal(listingId, button) {
+    console.log('Showing variation modal for listing:', listingId);
+    
+    try {
+       const response = await fetch(`{{ url('/api/listings') }}/${listingId}/variations`, {
+    method: 'GET',
+    headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-TOKEN': csrfToken
+    }
+});
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load variations: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Variations data:', data);
+        
+        // Store the button reference for later
+        window.pendingCartButton = button;
+        window.pendingListingId = listingId;
+        
+        // Populate and show the modal
+        populateVariationModal(data, listingId);
+        
+        const modal = document.getElementById('optionsModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            console.log('Modal shown');
+        }
+        
+    } catch (error) {
+        console.error('Error loading variations:', error);
+        showToast('Failed to load product options', 'error');
+        await addToCartSimple(listingId, button);
+    }
+}
+
+// Populate variation modal with data
+function populateVariationModal(data, listingId) {
+    const { variations, colors, sizes } = data;
+    
+    // Store data globally
+    window.currentVariationData = {
+        listingId: listingId,
+        variations: variations,
+        colors: colors,
+        sizes: sizes,
+        selectedColor: null,
+        selectedSize: null,
+        selectedVariant: null
+    };
+    
+    // Reset modal
+    document.getElementById('colorOptionsSection').classList.add('hidden');
+    document.getElementById('sizeOptionsSection').classList.add('hidden');
+    document.getElementById('modalVariantInfo').classList.add('hidden');
+    document.getElementById('confirmModalOptionsBtn').disabled = true;
+    
+    // Clear options
+    document.getElementById('modalColorOptions').innerHTML = '';
+    document.getElementById('modalSizeOptions').innerHTML = '';
+    
+    // Add color options if available
+    if (colors && colors.length > 0) {
+        document.getElementById('colorOptionsSection').classList.remove('hidden');
+        colors.forEach(color => {
+            const colorBtn = document.createElement('button');
+            colorBtn.type = 'button';
+            colorBtn.className = 'px-4 py-2.5 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700';
+            colorBtn.setAttribute('data-option', 'color');
+            colorBtn.setAttribute('data-value', color);
+            colorBtn.textContent = color;
+            colorBtn.onclick = () => selectModalOption('color', color);
+            document.getElementById('modalColorOptions').appendChild(colorBtn);
+        });
+    }
+    
+    // Add size options if available
+    if (sizes && sizes.length > 0) {
+        document.getElementById('sizeOptionsSection').classList.remove('hidden');
+        sizes.forEach(size => {
+            const sizeBtn = document.createElement('button');
+            sizeBtn.type = 'button';
+            sizeBtn.className = 'px-4 py-2.5 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700';
+            sizeBtn.setAttribute('data-option', 'size');
+            sizeBtn.setAttribute('data-value', size);
+            sizeBtn.textContent = size;
+            sizeBtn.onclick = () => selectModalOption('size', size);
+            document.getElementById('modalSizeOptions').appendChild(sizeBtn);
+        });
+    }
+}
+
+// Select option in modal
+function selectModalOption(type, value) {
+    const data = window.currentVariationData;
+    if (!data) return;
+    
+    // Update selected value
+    data[`selected${type.charAt(0).toUpperCase() + type.slice(1)}`] = value;
+    
+    // Update UI - remove selected class from all buttons of this type
+    document.querySelectorAll(`[data-option="${type}"]`).forEach(btn => {
+        btn.classList.remove('border-primary', 'bg-primary', 'text-white');
+        btn.classList.add('border-gray-200', 'text-gray-700');
+    });
+    
+    // Add selected class to clicked button
+    const clickedBtn = document.querySelector(`[data-option="${type}"][data-value="${value}"]`);
+    if (clickedBtn) {
+        clickedBtn.classList.remove('border-gray-200', 'text-gray-700');
+        clickedBtn.classList.add('border-primary', 'bg-primary', 'text-white');
+    }
+    
+    // Find matching variant
+    findMatchingVariant();
+}
+
+// Find matching variant based on selected options
+function findMatchingVariant() {
+    const data = window.currentVariationData;
+    if (!data) return;
+    
+    const { colors, sizes, selectedColor, selectedSize, variations } = data;
+    
+    // Check if required options are selected
+    if ((colors.length > 0 && !selectedColor) || (sizes.length > 0 && !selectedSize)) {
+        document.getElementById('modalVariantInfo').classList.add('hidden');
+        document.getElementById('confirmModalOptionsBtn').disabled = true;
+        return;
+    }
+    
+    // Find variant that matches selected attributes
+    const matchingVariant = variations.find(variant => {
+        const variantAttrs = variant.attributes || {};
+        
+        let colorMatch = true;
+        let sizeMatch = true;
+        
+        if (selectedColor && variantAttrs.color !== selectedColor) {
+            colorMatch = false;
+        }
+        
+        if (selectedSize && variantAttrs.size !== selectedSize) {
+            sizeMatch = false;
+        }
+        
+        return colorMatch && sizeMatch;
+    });
+    
+    if (matchingVariant) {
+        data.selectedVariant = matchingVariant;
+        updateModalVariantInfo(matchingVariant);
+        document.getElementById('confirmModalOptionsBtn').disabled = false;
+    } else {
+        document.getElementById('modalVariantInfo').classList.add('hidden');
+        document.getElementById('confirmModalOptionsBtn').disabled = true;
+    }
+}
+
+// Update modal variant info
+function updateModalVariantInfo(variant) {
+    const data = window.currentVariationData;
+    if (!data) return;
+    
+    const modalVariantInfo = document.getElementById('modalVariantInfo');
+    modalVariantInfo.classList.remove('hidden');
+    
+    // Update text
+    const colorText = data.selectedColor ? `Color: ${data.selectedColor}` : '';
+    const sizeText = data.selectedSize ? `Size: ${data.selectedSize}` : '';
+    
+    document.getElementById('modalSelectedColorText').textContent = colorText;
+    document.getElementById('modalSelectedSizeText').textContent = sizeText;
+    
+    // Update price and stock
+    document.getElementById('modalVariantPrice').textContent = `UGX ${variant.display_price.toLocaleString()}`;
+    
+    const stockText = variant.stock > 0 
+        ? `${variant.stock} in stock` 
+        : 'Out of stock';
+    document.getElementById('modalVariantStock').textContent = stockText;
+    
+    // Enable/disable confirm button based on stock
+    document.getElementById('confirmModalOptionsBtn').disabled = variant.stock <= 0;
+    
+    if (variant.stock <= 0) {
+        document.getElementById('confirmModalOptionsBtn').innerHTML = 'Out of Stock';
+    } else {
+        document.getElementById('confirmModalOptionsBtn').innerHTML = 'Add to Cart';
+    }
+}
+
+// Close options modal
+function closeOptionsModal() {
+    const modal = document.getElementById('optionsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        
+        // Clear stored data
+        window.currentVariationData = null;
+        window.pendingCartButton = null;
+        window.pendingListingId = null;
+    }
+}
+
+// Confirm modal options and add to cart
+async function confirmModalOptions() {
+    const data = window.currentVariationData;
+    const button = window.pendingCartButton;
+    const listingId = window.pendingListingId;
+    
+    if (!data || !data.selectedVariant || !button) {
+        showToast('Please select all required options', 'error');
+        return;
+    }
+    
+    closeOptionsModal();
+    
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin text-xs"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                quantity: 1,
+                variant_id: data.selectedVariant.id,
+                color: data.selectedColor,
+                size: data.selectedSize
+            })
+        });
+        
+        const cartData = await response.json();
+        
+        if (cartData.success) {
+            button.innerHTML = '<i class="fas fa-check text-xs"></i>';
+            button.classList.remove('bg-brand-600', 'hover:bg-brand-700');
+            button.classList.add('bg-green-500', 'hover:bg-green-600');
+            
+            if (cartData.cart_count) {
+                updateCartCount(cartData.cart_count);
+            }
+            
+            showToast('Added to cart!', 'success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                button.classList.add('bg-brand-600', 'hover:bg-brand-700');
+                button.disabled = false;
+            }, 1500);
+        } else {
+            throw new Error(cartData.message || 'Failed to add to cart');
+        }
+    } catch (error) {
+        console.error('Cart error:', error);
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        showToast(error.message || 'Failed to add to cart', 'error');
     }
 }
 

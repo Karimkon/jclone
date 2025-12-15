@@ -591,6 +591,54 @@ Route::middleware(['auth'])->group(function () {
 // ====================
 Route::prefix('api')->name('api.')->group(function () {
     Route::get('/import-calculate', [ImportController::class, 'calculateApi'])->name('import.calculate');
+    Route::get('/listings/{listing}/check-variations', function($listing) {
+        try {
+            $listing = \App\Models\Listing::findOrFail($listing);
+            
+            return response()->json([
+                'has_variations' => $listing->has_variations ?? false,
+                'available_colors' => $listing->available_colors ?? [],
+                'available_sizes' => $listing->available_sizes ?? [],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Product not found',
+                'has_variations' => false,
+                'available_colors' => [],
+                'available_sizes' => [],
+            ], 200); // Return 200 even if not found to avoid breaking the flow
+        }
+    })->name('listings.check-variations');
+    
+    Route::get('/listings/{listing}/variations', function($listing) {
+        try {
+            $listing = \App\Models\Listing::with('variants')->findOrFail($listing);
+            
+            $variations = $listing->variants->map(function($variant) {
+                return [
+                    'id' => $variant->id,
+                    'sku' => $variant->sku,
+                    'price' => $variant->price,
+                    'display_price' => $variant->display_price ?? $variant->price,
+                    'stock' => $variant->stock,
+                    'attributes' => $variant->attributes ?? [],
+                ];
+            });
+            
+            return response()->json([
+                'variations' => $variations,
+                'colors' => $listing->available_colors ?? [],
+                'sizes' => $listing->available_sizes ?? [],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Product not found',
+                'variations' => [],
+                'colors' => [],
+                'sizes' => [],
+            ], 200);
+        }
+    })->name('listings.variations'); 
 });
 
 // ====================

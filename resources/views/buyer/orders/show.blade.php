@@ -63,6 +63,12 @@
         @endif
     @endif
 
+    @php
+        // Define meta and isCOD at the top so they're available everywhere
+        $meta = $order->meta ?? [];
+        $isCOD = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+    @endphp
+
     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <div>
@@ -75,7 +81,11 @@
                         @elseif($order->status == 'delivered') bg-green-100 text-green-800
                         @elseif($order->status == 'cancelled') bg-red-100 text-red-800
                         @else bg-gray-100 text-gray-800 @endif">
-                        {{ ucfirst($order->status) }}
+                        @if($isCOD && $order->status === 'shipped')
+                            <i class="fas fa-truck mr-1"></i> Shipped - COD
+                        @else
+                            {{ ucfirst($order->status) }}
+                        @endif
                     </span>
                     <span class="text-gray-600">{{ $order->created_at->format('F d, Y') }}</span>
                 </div>
@@ -100,94 +110,191 @@
         @endif
 
         {{-- Add this section after the Order Actions section --}}
-@if(in_array($order->status, ['pending', 'payment_pending']))
-<!-- Wallet Payment Option -->
-<div class="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
-    <div class="flex items-center justify-between mb-4">
-        <div>
-            <h3 class="text-lg font-bold text-gray-800">Pay with Wallet</h3>
-            <p class="text-sm text-gray-600">Use your wallet balance to complete payment</p>
-        </div>
-        <div class="text-right">
-            <p class="text-2xl font-bold text-green-600">UGX {{ number_format($walletBalance ?? 0, 2) }}</p>
-            <p class="text-xs text-gray-500">Available Balance</p>
-        </div>
-    </div>
-    
-    <div class="space-y-4">
-        <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
-            <div>
-                <p class="font-medium text-gray-800">Order Total</p>
-                <p class="text-sm text-gray-600">Including shipping & taxes</p>
-            </div>
-            <p class="text-xl font-bold text-gray-900"> UGX {{ number_format($order->total, 2) }}</p>
-        </div>
-        
-        @if(($walletBalance ?? 0) >= $order->total)
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-2">
-            <div class="flex items-center">
-                <i class="fas fa-check-circle text-green-500 mr-3"></i>
-                <p class="text-green-700">Sufficient balance available</p>
-            </div>
-        </div>
-        
-        <form id="walletPaymentForm">
-            @csrf
-            <button type="button" 
-                    id="payWithWalletBtn"
-                    data-order-id="{{ $order->id }}"
-                    class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center">
-                <i class="fas fa-wallet mr-2"></i>
-                Pay UGX {{ number_format($order->total, 2) }} with Wallet
-            </button>
-        </form>
-        @else
-        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-2">
-            <div class="flex items-start">
-                <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 mt-0.5"></i>
+        @if(in_array($order->status, ['pending', 'payment_pending']))
+        <!-- Wallet Payment Option -->
+        <div class="mt-6 p-6 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-yellow-700 font-medium">Insufficient Balance</p>
-                    <p class="text-sm text-yellow-600">
-                        You need UGX {{ number_format($order->total - ($walletBalance ?? 0), 2) }} more
-                    </p>
+                    <h3 class="text-lg font-bold text-gray-800">Pay with Wallet</h3>
+                    <p class="text-sm text-gray-600">Use your wallet balance to complete payment</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-bold text-green-600">UGX {{ number_format($walletBalance ?? 0, 2) }}</p>
+                    <p class="text-xs text-gray-500">Available Balance</p>
+                </div>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-white rounded-lg border">
+                    <div>
+                        <p class="font-medium text-gray-800">Order Total</p>
+                        <p class="text-sm text-gray-600">Including shipping & taxes</p>
+                    </div>
+                    <p class="text-xl font-bold text-gray-900"> UGX {{ number_format($order->total, 2) }}</p>
+                </div>
+                
+                @if(($walletBalance ?? 0) >= $order->total)
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-2">
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                        <p class="text-green-700">Sufficient balance available</p>
+                    </div>
+                </div>
+                
+                <form id="walletPaymentForm">
+                    @csrf
+                    <button type="button" 
+                            id="payWithWalletBtn"
+                            data-order-id="{{ $order->id }}"
+                            class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center">
+                        <i class="fas fa-wallet mr-2"></i>
+                        Pay UGX {{ number_format($order->total, 2) }} with Wallet
+                    </button>
+                </form>
+                @else
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-2">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 mt-0.5"></i>
+                        <div>
+                            <p class="text-yellow-700 font-medium">Insufficient Balance</p>
+                            <p class="text-sm text-yellow-600">
+                                You need UGX {{ number_format($order->total - ($walletBalance ?? 0), 2) }} more
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-3">
+                    <a href="{{ route('buyer.wallet.index') }}" 
+                       class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center">
+                        <i class="fas fa-plus-circle mr-2"></i>
+                        Add Funds
+                    </a>
+                    <a href="{{ route('buyer.orders.payment', $order) }}" 
+                       class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center justify-center">
+                        <i class="fas fa-credit-card mr-2"></i>
+                        Other Methods
+                    </a>
+                </div>
+                @endif
+                
+                <div id="paymentMessage" class="mt-3 hidden"></div>
+                
+                <p class="text-xs text-gray-500 text-center">
+                    <i class="fas fa-shield-alt mr-1"></i> Secure payment · Instant confirmation
+                </p>
+            </div>
+        </div>
+        @endif
+
+        @php
+// Now use the $isCOD variable that's defined at the top
+$codPayment = $isCOD ? $order->payments->firstWhere('payment_method', 'cash_on_delivery') : null;
+
+// Show confirm delivery button for COD orders that are shipped but not delivered
+// Simplified: just check if it's COD, shipped, and not yet delivered
+$showConfirmDelivery = $isCOD 
+    && $order->status === 'shipped' 
+    && !$order->delivered_at;
+@endphp
+
+        <!-- COD Delivery Confirmation Section -->
+        @if($showConfirmDelivery)
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6 mb-6">
+            <div class="flex items-start gap-4">
+                <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-box-open text-green-600 text-2xl"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-bold text-gray-800 mb-1">Package Received?</h3>
+                    <p class="text-gray-600 mb-3">Confirm that you have received your order and made the cash payment to the delivery person.</p>
+                    
+                    <!-- Important Notice -->
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-3 mt-0.5"></i>
+                            <div>
+                                <p class="text-yellow-700 font-medium">Important Instructions:</p>
+                                <ul class="text-sm text-yellow-600 mt-1 space-y-1">
+                                    <li>✓ Inspect the package before confirming</li>
+                                    <li>✓ Make cash payment to delivery person</li>
+                                    <li>✓ Only confirm after payment is made</li>
+                                    <li>✓ Keep your receipt for reference</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form action="{{ route('buyer.orders.confirm-delivery', $order->id) }}" method="POST">
+                        @csrf
+                        <div class="space-y-3">
+                            <!-- Payment Amount -->
+                            <div class="bg-white border border-gray-200 rounded-lg p-4">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="font-medium text-gray-800">Amount to Pay</p>
+                                        <p class="text-sm text-gray-600">Cash on delivery</p>
+                                    </div>
+                                    <p class="text-2xl font-bold text-green-600">UGX {{ number_format($order->total, 2) }}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Confirm Button -->
+                            <button type="button" 
+                                    onclick="confirmDelivery()"
+                                    class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center justify-center">
+                                <i class="fas fa-check-circle mr-2"></i>
+                                Confirm Delivery & Payment
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        
-        <div class="flex space-x-3">
-            <a href="{{ route('buyer.wallet.index') }}" 
-               class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center">
-                <i class="fas fa-plus-circle mr-2"></i>
-                Add Funds
-            </a>
-            <a href="{{ route('buyer.orders.payment', $order) }}" 
-               class="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition flex items-center justify-center">
-                <i class="fas fa-credit-card mr-2"></i>
-                Other Methods
-            </a>
-        </div>
-        @endif
-        
-        <div id="paymentMessage" class="mt-3 hidden"></div>
-        
-        <p class="text-xs text-gray-500 text-center">
-            <i class="fas fa-shield-alt mr-1"></i> Secure payment · Instant confirmation
-        </p>
-    </div>
-</div>
-@endif
 
-        @if($order->status == 'shipped')
-        <div class="flex space-x-3 mb-6">
-            <form action="{{ route('buyer.orders.confirm-delivery', $order->id) }}" method="POST"
-                  onsubmit="return confirm('Confirm that you have received your order?')">
-                @csrf
-                <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700">
-                    <i class="fas fa-check mr-2"></i> Confirm Delivery
-                </button>
-            </form>
-        </div>
+        <!-- Add this script section -->
+        <script>
+        function confirmDelivery() {
+            Swal.fire({
+                title: 'Confirm Delivery & Payment?',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-3">Please confirm:</p>
+                        <ul class="list-disc pl-4 mb-4 text-sm space-y-1">
+                            <li>You have received the package</li>
+                            <li>You have paid UGX <strong>{{ number_format($order->total, 2) }}</strong> in cash</li>
+                            <li>The items are as described</li>
+                            <li>No damages or missing items</li>
+                        </ul>
+                        <p class="text-sm text-gray-600">This action cannot be undone.</p>
+                    </div>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, I confirm',
+                cancelButtonText: 'Cancel',
+                confirmButtonColor: '#10b981',
+                cancelButtonColor: '#ef4444',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Processing...',
+                        text: 'Please wait while we confirm your delivery',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Submit form
+                    document.querySelector('form[action="{{ route('buyer.orders.confirm-delivery', $order->id) }}"]').submit();
+                }
+            });
+        }
+        </script>
         @endif
+
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -274,80 +381,95 @@
                 </div>
             </div>
 
-           <!-- Shipping Information -->
-<div class="bg-white rounded-xl shadow-sm p-6">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">Shipping Information</h2>
-    
-    @php
-        $meta = $order->meta ?? [];
-        // Get shipping address from meta (it's stored as an array in 'shipping_address' key)
-        $shippingAddress = isset($meta['shipping_address']) ? (array)$meta['shipping_address'] : [];
-    @endphp
-    
-    @if(!empty($shippingAddress))
-    <div class="space-y-2">
-        <p class="font-medium">{{ $shippingAddress['recipient_name'] ?? 'N/A' }}</p>
-        <p class="text-gray-600">{{ $shippingAddress['recipient_phone'] ?? 'N/A' }}</p>
-        <p class="text-gray-600">
-            {{ $shippingAddress['address_line_1'] ?? 'N/A' }}
-            @if(!empty($shippingAddress['address_line_2']))
-            , {{ $shippingAddress['address_line_2'] }}
-            @endif
-        </p>
-        <p class="text-gray-600">
-            {{ $shippingAddress['city'] ?? 'N/A' }}
-            @if(!empty($shippingAddress['state_region']))
-            , {{ $shippingAddress['state_region'] }}
-            @endif
-            @if(!empty($shippingAddress['postal_code']))
-            , {{ $shippingAddress['postal_code'] }}
-            @endif
-        </p>
-        <p class="text-gray-600">{{ $shippingAddress['country'] ?? 'N/A' }}</p>
-        
-        @if(!empty($shippingAddress['delivery_instructions']))
-        <div class="mt-3 pt-3 border-t">
-            <p class="text-sm text-gray-600">Delivery Instructions:</p>
-            <p class="text-sm italic">{{ $shippingAddress['delivery_instructions'] }}</p>
-        </div>
-        @endif
-        
-        @if(isset($meta['payment_method']))
-        <div class="mt-4 pt-4 border-t">
-            <p class="text-gray-600">Payment Method:</p>
-            <p class="font-medium">
+            <!-- Shipping Information -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Shipping Information</h2>
+                
                 @php
-                    $paymentMethod = $meta['payment_method'] ?? 'N/A';
+                    // Get shipping address from meta (it's stored as an array in 'shipping_address' key)
+                    $shippingAddress = isset($meta['shipping_address']) ? (array)$meta['shipping_address'] : [];
                 @endphp
-                @switch($paymentMethod)
-                    @case('cash_on_delivery')
-                        <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Cash on Delivery
-                        @break
-                    @case('wallet')
-                        <i class="fas fa-wallet text-indigo-600 mr-2"></i>Wallet
-                        @break
-                    @case('card')
-                        <i class="fas fa-credit-card text-blue-600 mr-2"></i>Credit/Debit Card
-                        @break
-                    @case('mobile_money')
-                        <i class="fas fa-mobile-alt text-purple-600 mr-2"></i>Mobile Money
-                        @break
-                    @case('bank_transfer')
-                        <i class="fas fa-university text-gray-600 mr-2"></i>Bank Transfer
-                        @break
-                    @default
-                        {{ ucfirst(str_replace('_', ' ', $paymentMethod)) }}
-                @endswitch
-            </p>
-        </div>
-        @endif
-    </div>
-    @else
-    <div class="text-center py-4 text-gray-500">
-        <p>No shipping address available</p>
-    </div>
-    @endif
-</div>
+                
+                @if(!empty($shippingAddress))
+                <div class="space-y-2">
+                    <p class="font-medium">{{ $shippingAddress['recipient_name'] ?? 'N/A' }}</p>
+                    <p class="text-gray-600">{{ $shippingAddress['recipient_phone'] ?? 'N/A' }}</p>
+                    <p class="text-gray-600">
+                        {{ $shippingAddress['address_line_1'] ?? 'N/A' }}
+                        @if(!empty($shippingAddress['address_line_2']))
+                        , {{ $shippingAddress['address_line_2'] }}
+                        @endif
+                    </p>
+                    <p class="text-gray-600">
+                        {{ $shippingAddress['city'] ?? 'N/A' }}
+                        @if(!empty($shippingAddress['state_region']))
+                        , {{ $shippingAddress['state_region'] }}
+                        @endif
+                        @if(!empty($shippingAddress['postal_code']))
+                        , {{ $shippingAddress['postal_code'] }}
+                        @endif
+                    </p>
+                    <p class="text-gray-600">{{ $shippingAddress['country'] ?? 'N/A' }}</p>
+                    
+                    @if(!empty($shippingAddress['delivery_instructions']))
+                    <div class="mt-3 pt-3 border-t">
+                        <p class="text-sm text-gray-600">Delivery Instructions:</p>
+                        <p class="text-sm italic">{{ $shippingAddress['delivery_instructions'] }}</p>
+                    </div>
+                    @endif
+                    
+                    @if(isset($meta['payment_method']))
+                    <div class="mt-4 pt-4 border-t">
+                        <p class="text-gray-600">Payment Method:</p>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                @switch($meta['payment_method'])
+                                    @case('cash_on_delivery')
+                                        <i class="fas fa-money-bill-wave text-green-600 mr-2 text-lg"></i>
+                                        <div>
+                                            <p class="font-medium">Cash on Delivery</p>
+                                            @if($order->status === 'shipped' && !$order->delivered_at)
+                                                <p class="text-sm text-yellow-600">
+                                                    <i class="fas fa-info-circle mr-1"></i>
+                                                    Payment due on delivery
+                                                </p>
+                                            @elseif($order->status === 'delivered' && isset($meta['payment_confirmed']))
+                                                <p class="text-sm text-green-600">
+                                                    <i class="fas fa-check-circle mr-1"></i>
+                                                    Paid on {{ isset($meta['buyer_confirmed_at']) ? \Carbon\Carbon::parse($meta['buyer_confirmed_at'])->format('M d, Y') : 'delivery' }}
+                                                </p>
+                                            @endif
+                                        </div>
+                                        @break
+                                    @case('wallet')
+                                        <i class="fas fa-wallet text-indigo-600 mr-2 text-lg"></i>
+                                        <p class="font-medium">Wallet</p>
+                                        @break
+                                    @case('card')
+                                        <i class="fas fa-credit-card text-blue-600 mr-2 text-lg"></i>
+                                        <p class="font-medium">Credit/Debit Card</p>
+                                        @break
+                                    @default
+                                        {{ ucfirst(str_replace('_', ' ', $meta['payment_method'])) }}
+                                @endswitch
+                            </div>
+                            
+                            @if($meta['payment_method'] === 'cash_on_delivery' && $order->status === 'shipped')
+                            <div class="text-right">
+                                <p class="font-bold text-lg">UGX {{ number_format($order->total, 2) }}</p>
+                                <p class="text-sm text-gray-500">Due on delivery</p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+                </div>
+                @else
+                <div class="text-center py-4 text-gray-500">
+                    <p>No shipping address available</p>
+                </div>
+                @endif
+            </div>
             
             <!-- Vendor Info -->
             @if($order->vendorProfile)

@@ -7,6 +7,7 @@ use App\Models\Listing;
 use App\Models\Category;
 use App\Models\VendorProfile;
 use App\Models\ListingImage;
+use App\Models\ListingVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -290,6 +291,16 @@ public function showPublic(Listing $listing)
             // Images
             'images' => 'required|array|min:1|max:5',
             'images.*' => 'image|mimes:jpg,jpeg,png|max:2048',
+
+            // Variations (optional)
+            'variations' => 'nullable|array',
+            'variations.*.sku' => 'nullable|string',
+            'variations.*.price' => 'required_with:variations|numeric|min:0',
+            'variations.*.sale_price' => 'nullable|numeric|min:0',
+            'variations.*.stock' => 'required_with:variations|integer|min:0',
+            'variations.*.color' => 'nullable|string',
+            'variations.*.size' => 'nullable|string',
+            'variations.*.attributes' => 'nullable|array',
         ]);
 
         // Generate SKU if not provided
@@ -330,6 +341,35 @@ public function showPublic(Listing $listing)
                     'path' => $path,
                     'order' => $index,
                 ]);
+            }
+
+            // Create variants if provided
+            if ($request->has('variations') && is_array($request->variations) && count($request->variations) > 0) {
+                foreach ($request->variations as $variationData) {
+                    // Build attributes array for the variant
+                    $variantAttributes = [];
+                    if (isset($variationData['attributes']) && is_array($variationData['attributes'])) {
+                        $variantAttributes = $variationData['attributes'];
+                    } else {
+                        if (!empty($variationData['color'] ?? null)) {
+                            $variantAttributes['color'] = $variationData['color'];
+                        }
+                        if (!empty($variationData['size'] ?? null)) {
+                            $variantAttributes['size'] = $variationData['size'];
+                        }
+                    }
+
+                    ListingVariant::create([
+                        'listing_id' => $listing->id,
+                        'sku' => $variationData['sku'] ?? null,
+                        'price' => $variationData['price'],
+                        'sale_price' => $variationData['sale_price'] ?? null,
+                        'stock' => $variationData['stock'],
+                        'attributes' => $variantAttributes,
+                        'is_default' => false,
+                        'is_active' => true,
+                    ]);
+                }
             }
 
             DB::commit();
