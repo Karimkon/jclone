@@ -30,6 +30,7 @@ class WishlistController extends Controller
      */
     public function add(Request $request, $listingId)
     {
+        app(\App\Services\ProductAnalyticsService::class)->trackAddToWishlist($listing->id);
         // Check authentication
         if (!Auth::check()) {
             return response()->json([

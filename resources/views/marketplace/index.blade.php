@@ -792,274 +792,227 @@
     </footer>
     
     <!-- JavaScript -->
-    <script>
-        // Price range slider
-        const priceSlider = document.getElementById('priceSlider');
-        const priceValue = document.getElementById('priceValue');
-        const maxPriceInput = document.querySelector('input[name="max_price"]');
-        
-        if (priceSlider && priceValue) {
-            priceSlider.addEventListener('input', function() {
-                const value = this.value;
-                priceValue.textContent = '$' + value;
-                if (maxPriceInput) {
-                    maxPriceInput.value = value;
-                }
-            });
-        }
-        
-        async function quickAddToCart(listingId, button) {
-    const isAuthenticated = @json(auth()->check());
-    
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    
-    const originalContent = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    button.disabled = true;
-    
-    try {
-        const response = await fetch(`/buyer/cart/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ quantity: 1 })
-        });
-        
-        // Check if response is OK
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        // Try to parse JSON
-        const data = await response.json();
-        
-        if (data.success) {
-            button.innerHTML = '<i class="fas fa-check"></i>';
-            button.classList.remove('bg-primary', 'hover:bg-indigo-700');
-            button.classList.add('bg-green-500', 'hover:bg-green-600');
-            
-            // Update cart count
-            if (data.cart_count) {
-                updateCartCount(data.cart_count);
-            }
-            
-            showToast('Added to cart!', 'success');
-            
-            setTimeout(() => {
-                button.innerHTML = originalContent;
-                button.classList.remove('bg-green-500', 'hover:bg-green-600');
-                button.classList.add('bg-primary', 'hover:bg-indigo-700');
-                button.disabled = false;
-            }, 2000);
-        } else {
-            throw new Error(data.message || 'Failed to add to cart');
-        }
-    } catch (error) {
-        console.error('Cart error:', error);
-        button.innerHTML = originalContent;
-        button.disabled = false;
-        
-        // Show appropriate error message
-        if (error.message.includes('HTTP error')) {
-            showToast('Server error. Please try again.', 'error');
-        } else if (error.message.includes('not authenticated')) {
-            showAuthModal();
-        } else {
-            showToast(error.message || 'Failed to add to cart', 'error');
-        }
-    }
-}
 
-// Add this helper function to update cart count
-function updateCartCount(count) {
-    const cartCountElements = document.querySelectorAll('.cart-count');
-    cartCountElements.forEach(element => {
-        element.textContent = count;
-        if (count > 0) {
-            element.classList.remove('hidden');
-            element.classList.add('animate-pulse');
-            setTimeout(() => element.classList.remove('animate-pulse'), 1000);
-        }
-    });
-}
-        
-        // Quick add to wishlist
-        function quickAddToWishlist(listingId, button) {
-            const isAuthenticated = @json(auth()->check());
-            
-            if (!isAuthenticated) {
-                showAuthModal();
-                return;
+<script>
+    // Price range slider
+    const priceSlider = document.getElementById('priceSlider');
+    const priceValue = document.getElementById('priceValue');
+    const maxPriceInput = document.querySelector('input[name="max_price"]');
+    
+    if (priceSlider && priceValue) {
+        priceSlider.addEventListener('input', function() {
+            const value = this.value;
+            priceValue.textContent = 'UGX ' + value.toLocaleString();
+            if (maxPriceInput) {
+                maxPriceInput.value = value;
             }
-            
-            const icon = button.querySelector('i');
-            
-            fetch(`/wishlist/toggle/${listingId}`, {
+        });
+    }
+    
+    async function quickAddToCart(listingId, button) {
+        const isAuthenticated = @json(auth()->check());
+        
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
+        }
+        
+        const originalContent = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        button.disabled = true;
+        
+        try {
+            const response = await fetch(`/buyer/cart/add/${listingId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if (data.in_wishlist) {
-                        icon.classList.remove('far');
-                        icon.classList.add('fas', 'text-red-500');
-                    } else {
-                        icon.classList.remove('fas', 'text-red-500');
-                        icon.classList.add('far');
-                    }
-                    
-                    showToast(data.message || 'Wishlist updated!', 'success');
-                } else {
-                    showToast(data.message || 'Failed to update wishlist', 'error');
-                }
-            })
-            .catch(error => {
-                showToast('Failed to update wishlist', 'error');
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ quantity: 1 })
             });
-        }
-        
-        // Update cart count
-        function updateCartCount(count) {
-            const cartCountElement = document.querySelector('.cart-count');
-            if (cartCountElement) {
-                cartCountElement.textContent = count;
-                if (count > 0) {
-                    cartCountElement.classList.remove('hidden');
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.classList.remove('bg-primary', 'hover:bg-indigo-700');
+                button.classList.add('bg-green-500', 'hover:bg-green-600');
+                
+                // Update cart count
+                if (data.cart_count) {
+                    updateCartCount(data.cart_count);
                 }
-            }
-        }
-        
-        // Show toast
-        function showToast(message, type = 'info') {
-            // Remove existing toasts
-            const existingToasts = document.querySelectorAll('.toast');
-            existingToasts.forEach(toast => toast.remove());
-            
-            const toast = document.createElement('div');
-            toast.className = `toast fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg`;
-            
-            if (type === 'success') {
-                toast.classList.add('bg-green-500', 'text-white');
-            } else if (type === 'error') {
-                toast.classList.add('bg-red-500', 'text-white');
-            } else {
-                toast.classList.add('bg-blue-500', 'text-white');
-            }
-            
-            toast.innerHTML = `
-                <div class="flex items-center">
-                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'} mr-3"></i>
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity 0.3s';
+                
+                showToast('Added to cart!', 'success');
+                
                 setTimeout(() => {
-                    toast.remove();
-                }, 300);
-            }, 3000);
+                    button.innerHTML = originalContent;
+                    button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                    button.classList.add('bg-primary', 'hover:bg-indigo-700');
+                    button.disabled = false;
+                }, 2000);
+            } else {
+                throw new Error(data.message || 'Failed to add to cart');
+            }
+        } catch (error) {
+            console.error('Cart error:', error);
+            button.innerHTML = originalContent;
+            button.disabled = false;
+            showToast(error.message || 'Failed to add to cart', 'error');
+        }
+    }
+    
+    async function quickAddToWishlist(listingId, button) {
+        const isAuthenticated = @json(auth()->check());
+        
+        if (!isAuthenticated) {
+            showAuthModal();
+            return;
         }
         
-        // Show authentication modal with animation
-function showAuthModal() {
-    const modal = document.getElementById('authModal');
-    const modalContent = document.getElementById('authModalContent');
-    
-    if (modal && modalContent) {
-        // Show modal
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        const icon = button.querySelector('i');
+        const originalIconClass = icon.className;
+        icon.className = 'fas fa-spinner fa-spin';
         
-        // Enable body scroll lock
-        document.body.style.overflow = 'hidden';
-        
-        // Trigger animation (small delay for transition to work)
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-            modalContent.classList.add('scale-100', 'opacity-100');
-        }, 10);
-    } else {
-        console.error('Auth modal elements not found!');
-        // Fallback: redirect to login
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        try {
+            const response = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                if (data.in_wishlist) {
+                    icon.className = 'fas fa-heart text-red-500';
+                } else {
+                    icon.className = 'far fa-heart';
+                }
+                showToast(data.message || 'Wishlist updated!', 'success');
+            } else {
+                throw new Error(data.message || 'Failed to update wishlist');
+            }
+        } catch (error) {
+            console.error('Wishlist error:', error);
+            icon.className = originalIconClass;
+            showToast(error.message || 'Failed to update wishlist', 'error');
+        }
     }
-}
-
-// Close authentication modal with animation
-function closeAuthModal() {
-    const modal = document.getElementById('authModal');
-    const modalContent = document.getElementById('authModalContent');
     
-    if (modal && modalContent) {
-        // Start closing animation
-        modalContent.classList.remove('scale-100', 'opacity-100');
-        modalContent.classList.add('scale-95', 'opacity-0');
+    // Update cart count
+    function updateCartCount(count) {
+        const cartCountElements = document.querySelectorAll('.cart-count');
+        cartCountElements.forEach(element => {
+            element.textContent = count;
+            element.classList.remove('hidden');
+            element.classList.add('animate-pulse');
+            setTimeout(() => element.classList.remove('animate-pulse'), 1000);
+        });
+    }
+    
+    // Show toast
+    function showToast(message, type = 'info') {
+        // Remove existing toasts
+        const existingToasts = document.querySelectorAll('.toast');
+        existingToasts.forEach(toast => toast.remove());
         
-        // Wait for animation to complete before hiding
+        const toast = document.createElement('div');
+        toast.className = `toast fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center gap-2`;
+        
+        if (type === 'success') {
+            toast.classList.add('bg-green-500', 'text-white');
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+        } else if (type === 'error') {
+            toast.classList.add('bg-red-500', 'text-white');
+            toast.innerHTML = `<i class="fas fa-times-circle"></i> ${message}`;
+        } else {
+            toast.classList.add('bg-blue-500', 'text-white');
+            toast.innerHTML = `<i class="fas fa-info-circle"></i> ${message}`;
+        }
+        
+        document.body.appendChild(toast);
+        
         setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s';
+            setTimeout(() => {
+                toast.remove();
+            }, 300);
+        }, 3000);
+    }
+    
+    // Auth Modal Functions
+    function showAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    function closeAuthModal() {
+        const modal = document.getElementById('authModal');
+        if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
             document.body.style.overflow = 'auto';
-        }, 300);
+        }
     }
-}
+    
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        // Quick cart buttons
+        document.querySelectorAll('[data-quick-cart]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToCart(listingId, this);
+            });
+        });
         
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-    // Quick cart buttons with better error handling
-    document.querySelectorAll('[data-quick-cart]').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log('Cart button clicked');
-            const listingId = this.getAttribute('data-listing-id');
-            console.log('Listing ID:', listingId);
-            quickAddToCart(listingId, this);
+        // Quick wishlist buttons
+        document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                const listingId = this.getAttribute('data-listing-id');
+                quickAddToWishlist(listingId, this);
+            });
+        });
+        
+        // Close auth modal on background click
+        const authModal = document.getElementById('authModal');
+        if (authModal) {
+            authModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAuthModal();
+                }
+            });
+        }
+        
+        // Close auth modal on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAuthModal();
+            }
         });
     });
-            
-            // Quick wishlist buttons
-            document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const listingId = this.getAttribute('data-listing-id');
-                    quickAddToWishlist(listingId, this);
-                });
-            });
-            
-            // Close auth modal on background click
-            const authModal = document.getElementById('authModal');
-            if (authModal) {
-                authModal.addEventListener('click', function(e) {
-                    if (e.target === this) {
-                        closeAuthModal();
-                    }
-                });
-            }
-        });
-        
-        // Mobile menu toggle
-        document.getElementById('mobileMenuButton')?.addEventListener('click', function() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            if (mobileMenu) {
-                mobileMenu.classList.toggle('hidden');
-            }
-        });
-    </script>
+</script>
     
     <!-- Auth Modal -->
 <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
@@ -1085,5 +1038,698 @@ function closeAuthModal() {
         </div>
     </div>
 </div>
+
+<!-- Options Modal for Product Variations -->
+<div id="optionsModal" class="fixed inset-0 z-[100] hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeOptionsModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 relative animate-scale-in">
+            <button onclick="closeOptionsModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-cogs text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Select Options</h3>
+                <p class="text-gray-500">Please select product options before adding to cart</p>
+            </div>
+            
+            <!-- Options Form -->
+            <div id="optionsForm" class="space-y-6">
+                <!-- Color Selection -->
+                <div id="colorOptionsSection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Color <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalColorOptions">
+                        <!-- Color options will be dynamically added -->
+                    </div>
+                </div>
+                
+                <!-- Size Selection -->
+                <div id="sizeOptionsSection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Size <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalSizeOptions">
+                        <!-- Size options will be dynamically added -->
+                    </div>
+                </div>
+                
+                <!-- Selected Variant Info -->
+                <div id="modalVariantInfo" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-gray-800">Selected Variant</h4>
+                            <div class="text-sm text-gray-600 mt-1 space-y-1">
+                                <p id="modalSelectedColorText"></p>
+                                <p id="modalSelectedSizeText"></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-primary" id="modalVariantPrice"></p>
+                            <p class="text-sm text-gray-600" id="modalVariantStock"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex gap-3">
+                        <button type="button" 
+                                onclick="closeOptionsModal()" 
+                                class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button" 
+                                onclick="confirmModalOptions()"
+                                id="confirmModalOptionsBtn"
+                                disabled
+                                class="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Confirm Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Product Variation Loader -->
+<div id="variationLoader" class="hidden">
+    <!-- This will be used to load product variations via AJAX -->
+</div>
+
+<script>
+// ==========================================
+// MARKETPLACE JAVASCRIPT - COMPLETE VERSION
+// ==========================================
+
+console.log('=== MARKETPLACE LOADED ===');
+console.log('Auth:', {{ auth()->check() ? 'true' : 'false' }});
+
+// Price range slider
+const priceSlider = document.getElementById('priceSlider');
+const priceValue = document.getElementById('priceValue');
+const maxPriceInput = document.querySelector('input[name="max_price"]');
+
+if (priceSlider && priceValue) {
+    priceSlider.addEventListener('input', function() {
+        const value = this.value;
+        priceValue.textContent = 'UGX ' + parseInt(value).toLocaleString();
+        if (maxPriceInput) {
+            maxPriceInput.value = value;
+        }
+    });
+}
+
+// ==========================================
+// CART FUNCTIONS WITH VARIATION SUPPORT
+// ==========================================
+
+async function quickAddToCart(listingId, button) {
+    console.log('=== QuickAddToCart called for listing:', listingId);
+    
+    const isAuthenticated = {{ auth()->check() ? 'true' : 'false' }};
+    
+    if (!isAuthenticated) {
+        console.log('User not authenticated, showing auth modal');
+        showAuthModal();
+        return;
+    }
+    
+    // Check if product has variations
+    try {
+        console.log('Checking for variations...');
+        const checkResponse = await fetch(`/api/listings/${listingId}/check-variations`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        console.log('Check response status:', checkResponse.status);
+        
+        if (checkResponse.ok) {
+            const checkData = await checkResponse.json();
+            console.log('Variation check data:', checkData);
+            
+            if (checkData.has_variations && (checkData.available_colors.length > 0 || checkData.available_sizes.length > 0)) {
+                console.log('Product has variations, showing modal');
+                await showVariationModal(listingId, button);
+                return;
+            } else {
+                console.log('Product has no variations (or empty options)');
+            }
+        }
+    } catch (error) {
+        console.error('Error checking variations:', error);
+    }
+    
+    console.log('Adding directly to cart (no variations)');
+    await addToCartSimple(listingId, button);
+}
+
+async function addToCartSimple(listingId, button) {
+    console.log('Adding to cart (simple):', listingId);
+    
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ quantity: 1 })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Cart add response:', data);
+        
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.classList.remove('bg-primary', 'hover:bg-indigo-700');
+            button.classList.add('bg-green-500', 'hover:bg-green-600');
+            
+            if (data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+            }
+            
+            showToast('Added to cart!', 'success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                button.classList.add('bg-primary', 'hover:bg-indigo-700');
+                button.disabled = false;
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Failed to add to cart');
+        }
+    } catch (error) {
+        console.error('Cart error:', error);
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        showToast(error.message || 'Failed to add to cart', 'error');
+    }
+}
+
+async function showVariationModal(listingId, button) {
+    console.log('Showing variation modal for listing:', listingId);
+    
+    try {
+        const response = await fetch(`/api/listings/${listingId}/variations`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load variations: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Variations data:', data);
+        
+        const modal = createVariationModalHTML(data, listingId, button);
+        document.body.appendChild(modal);
+        
+        setTimeout(() => {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }, 10);
+        
+    } catch (error) {
+        console.error('Error loading variations:', error);
+        showToast('Failed to load product options', 'error');
+        await addToCartSimple(listingId, button);
+    }
+}
+
+function createVariationModalHTML(data, listingId, triggerButton) {
+    const modal = document.createElement('div');
+    modal.id = 'variationModal';
+    modal.className = 'fixed inset-0 z-[100] hidden items-center justify-center p-4';
+    modal.dataset.listingId = listingId;
+    
+    const { variations, colors, sizes } = data;
+    
+    console.log('Creating modal with:', { colors, sizes, variationCount: variations.length });
+    
+    let colorOptionsHTML = '';
+    if (colors && colors.length > 0) {
+        colorOptionsHTML = `
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">
+                    Select Color <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    ${colors.map(color => `
+                        <button type="button" 
+                                onclick="selectVariationOption('${listingId}', 'color', '${color}')"
+                                data-option="color"
+                                data-value="${color}"
+                                class="px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium hover:border-primary transition-all">
+                            ${color}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    let sizeOptionsHTML = '';
+    if (sizes && sizes.length > 0) {
+        sizeOptionsHTML = `
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-3">
+                    Select Size <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-3 gap-2">
+                    ${sizes.map(size => `
+                        <button type="button" 
+                                onclick="selectVariationOption('${listingId}', 'size', '${size}')"
+                                data-option="size"
+                                data-value="${size}"
+                                class="px-4 py-2.5 border-2 border-gray-200 rounded-lg text-sm font-medium hover:border-primary transition-all">
+                            ${size}
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    modal.innerHTML = `
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeVariationModal()"></div>
+        <div class="relative bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl transform transition-all">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-2xl font-bold text-gray-900">Select Options</h3>
+                <button onclick="closeVariationModal()" 
+                        class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition">
+                    <i class="fas fa-times text-lg"></i>
+                </button>
+            </div>
+            
+            <div id="variationOptions">
+                ${colorOptionsHTML}
+                ${sizeOptionsHTML}
+            </div>
+            
+            <div id="selectedVariantInfo" class="hidden mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-gray-800 mb-2">Selected Variant</h4>
+                        <div id="selectedOptionsText" class="text-sm text-gray-600"></div>
+                    </div>
+                    <div class="text-right">
+                        <p id="variantPrice" class="text-xl font-bold text-primary"></p>
+                        <p id="variantStock" class="text-sm text-gray-600 mt-1"></p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button type="button" 
+                        onclick="closeVariationModal()" 
+                        class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                <button type="button" 
+                        onclick="addToCartWithVariation('${listingId}')"
+                        id="addWithVariationBtn"
+                        disabled
+                        class="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-shopping-cart mr-2"></i>Add to Cart
+                </button>
+            </div>
+        </div>
+    `;
+    
+    modal.dataset.variations = JSON.stringify(variations);
+    modal.dataset.triggerButtonId = triggerButton.getAttribute('data-listing-id');
+    
+    return modal;
+}
+
+window.selectVariationOption = function(listingId, optionType, value) {
+    console.log('Selected:', optionType, value);
+    
+    const modal = document.getElementById('variationModal');
+    if (!modal) return;
+    
+    const allButtons = modal.querySelectorAll(`[data-option="${optionType}"]`);
+    allButtons.forEach(btn => {
+        btn.classList.remove('border-primary', 'bg-primary', 'text-white');
+        btn.classList.add('border-gray-200', 'text-gray-700');
+    });
+    
+    const selectedButton = modal.querySelector(`[data-option="${optionType}"][data-value="${value}"]`);
+    if (selectedButton) {
+        selectedButton.classList.remove('border-gray-200', 'text-gray-700');
+        selectedButton.classList.add('border-primary', 'bg-primary', 'text-white');
+    }
+    
+    modal.dataset[`selected${optionType.charAt(0).toUpperCase() + optionType.slice(1)}`] = value;
+    
+    findAndDisplayMatchingVariant(modal);
+};
+
+function findAndDisplayMatchingVariant(modal) {
+    const variations = JSON.parse(modal.dataset.variations || '[]');
+    const selectedColor = modal.dataset.selectedColor;
+    const selectedSize = modal.dataset.selectedSize;
+    
+    console.log('Finding variant for:', { selectedColor, selectedSize });
+    
+    const matchingVariant = variations.find(variant => {
+        const attrs = variant.attributes || {};
+        const colorMatch = !selectedColor || attrs.color === selectedColor;
+        const sizeMatch = !selectedSize || attrs.size === selectedSize;
+        return colorMatch && sizeMatch;
+    });
+    
+    const variantInfo = modal.querySelector('#selectedVariantInfo');
+    const addBtn = modal.querySelector('#addWithVariationBtn');
+    
+    if (matchingVariant) {
+        console.log('Found matching variant:', matchingVariant);
+        
+        variantInfo.classList.remove('hidden');
+        
+        let optionsText = [];
+        if (selectedColor) optionsText.push(`Color: ${selectedColor}`);
+        if (selectedSize) optionsText.push(`Size: ${selectedSize}`);
+        
+        modal.querySelector('#selectedOptionsText').textContent = optionsText.join(' • ');
+        modal.querySelector('#variantPrice').textContent = `UGX ${matchingVariant.display_price.toLocaleString()}`;
+        modal.querySelector('#variantStock').textContent = matchingVariant.stock > 0 
+            ? `${matchingVariant.stock} in stock` 
+            : 'Out of stock';
+        
+        modal.dataset.selectedVariantId = matchingVariant.id;
+        addBtn.disabled = matchingVariant.stock <= 0;
+        
+        if (matchingVariant.stock <= 0) {
+            addBtn.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Out of Stock';
+        } else {
+            addBtn.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i>Add to Cart';
+        }
+    } else {
+        variantInfo.classList.add('hidden');
+        modal.dataset.selectedVariantId = '';
+        addBtn.disabled = true;
+        addBtn.innerHTML = '<i class="fas fa-shopping-cart mr-2"></i>Add to Cart';
+    }
+}
+
+window.addToCartWithVariation = async function(listingId) {
+    console.log('Adding to cart with variation for listing:', listingId);
+    
+    const modal = document.getElementById('variationModal');
+    if (!modal) return;
+    
+    const variantId = modal.dataset.selectedVariantId;
+    const color = modal.dataset.selectedColor || null;
+    const size = modal.dataset.selectedSize || null;
+    
+    if (!variantId) {
+        showToast('Please select all required options', 'error');
+        return;
+    }
+    
+    const buttonId = modal.dataset.triggerButtonId;
+    const button = document.querySelector(`[data-listing-id="${buttonId}"]`);
+    
+    closeVariationModal();
+    
+    if (!button) {
+        console.error('Original button not found');
+        showToast('Added to cart!', 'success');
+        return;
+    }
+    
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+                quantity: 1,
+                variant_id: variantId,
+                color: color,
+                size: size
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Cart response:', data);
+        
+        if (data.success) {
+            button.innerHTML = '<i class="fas fa-check"></i>';
+            button.classList.remove('bg-primary', 'hover:bg-indigo-700');
+            button.classList.add('bg-green-500', 'hover:bg-green-600');
+            
+            if (data.cart_count !== undefined) {
+                updateCartCount(data.cart_count);
+            }
+            
+            showToast('Added to cart!', 'success');
+            
+            setTimeout(() => {
+                button.innerHTML = originalContent;
+                button.classList.remove('bg-green-500', 'hover:bg-green-600');
+                button.classList.add('bg-primary', 'hover:bg-indigo-700');
+                button.disabled = false;
+            }, 2000);
+        } else {
+            throw new Error(data.message || 'Failed to add to cart');
+        }
+    } catch (error) {
+        console.error('Cart error:', error);
+        if (button) {
+            button.innerHTML = originalContent;
+            button.disabled = false;
+        }
+        showToast(error.message || 'Failed to add to cart', 'error');
+    }
+};
+
+window.closeVariationModal = function() {
+    const modal = document.getElementById('variationModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        setTimeout(() => {
+            modal.remove();
+            document.body.style.overflow = 'auto';
+        }, 200);
+    }
+};
+
+// ==========================================
+// WISHLIST FUNCTIONS
+// ==========================================
+
+async function quickAddToWishlist(listingId, button) {
+    const isAuthenticated = {{ auth()->check() ? 'true' : 'false' }};
+    
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    const icon = button.querySelector('i');
+    const originalIconClass = icon.className;
+    icon.className = 'fas fa-spinner fa-spin';
+    
+    try {
+        const response = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.in_wishlist) {
+                icon.className = 'fas fa-heart text-red-500';
+            } else {
+                icon.className = 'far fa-heart text-gray-600';
+            }
+            showToast(data.message || 'Wishlist updated!', 'success');
+        } else {
+            throw new Error(data.message || 'Failed to update wishlist');
+        }
+    } catch (error) {
+        console.error('Wishlist error:', error);
+        icon.className = originalIconClass;
+        showToast(error.message || 'Failed to update wishlist', 'error');
+    }
+}
+
+// ==========================================
+// UTILITY FUNCTIONS
+// ==========================================
+
+function updateCartCount(count) {
+    const cartBadges = document.querySelectorAll('.cart-count, [class*="cart"][class*="badge"]');
+    cartBadges.forEach(badge => {
+        badge.textContent = count;
+        if (count > 0) {
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    });
+}
+
+function showToast(message, type = 'info') {
+    document.querySelectorAll('.toast').forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast fixed top-4 right-4 z-[200] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3';
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        info: 'fa-info-circle'
+    };
+    
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500'
+    };
+    
+    toast.classList.add(colors[type] || colors.info, 'text-white');
+    toast.innerHTML = `
+        <i class="fas ${icons[type] || icons.info} text-xl"></i>
+        <span class="font-medium">${message}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(400px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        
+        const content = modal.querySelector('#authModalContent');
+        if (content) {
+            setTimeout(() => {
+                content.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+            }, 10);
+        }
+    }
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        const content = modal.querySelector('#authModalContent');
+        if (content) {
+            content.style.opacity = '0';
+            content.style.transform = 'scale(0.95)';
+        }
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            document.body.style.overflow = 'auto';
+        }, 200);
+    }
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing cart buttons...');
+    console.log('Cart buttons found:', document.querySelectorAll('[data-quick-cart]').length);
+    
+    document.querySelectorAll('[data-quick-cart]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const listingId = this.getAttribute('data-listing-id');
+            console.log('Cart button clicked for listing:', listingId);
+            quickAddToCart(listingId, this);
+        });
+    });
+    
+    document.querySelectorAll('[data-quick-wishlist]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const listingId = this.getAttribute('data-listing-id');
+            quickAddToWishlist(listingId, this);
+        });
+    });
+    
+    const authModal = document.getElementById('authModal');
+    if (authModal) {
+        authModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAuthModal();
+            }
+        });
+    }
+    
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAuthModal();
+            closeVariationModal();
+        }
+    });
+});
+</script>
 </body>
 </html>

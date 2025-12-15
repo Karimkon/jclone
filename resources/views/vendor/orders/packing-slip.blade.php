@@ -321,10 +321,10 @@
                         <div style="font-weight: bold;">{{ $item->quantity }}</div>
                     </td>
                     <td style="text-align: right;">
-                        ${{ number_format($item->unit_price, 2) }}
+                        UGX {{ number_format($item->unit_price, 2) }}
                     </td>
                     <td style="text-align: right; font-weight: bold;">
-                        ${{ number_format($item->line_total, 2) }}
+                        UGX {{ number_format($item->line_total, 2) }}
                     </td>
                 </tr>
                 @endforeach
@@ -335,29 +335,29 @@
         <table class="totals-table">
             <tr>
                 <td>Subtotal:</td>
-                <td style="text-align: right;">${{ number_format($order->subtotal, 2) }}</td>
+                <td style="text-align: right;">UGX {{ number_format($order->subtotal, 2) }}</td>
             </tr>
             @if($order->shipping > 0)
             <tr>
                 <td>Shipping:</td>
-                <td style="text-align: right;">${{ number_format($order->shipping, 2) }}</td>
+                <td style="text-align: right;">UGX {{ number_format($order->shipping, 2) }}</td>
             </tr>
             @endif
             @if($order->taxes > 0)
             <tr>
                 <td>Taxes:</td>
-                <td style="text-align: right;">${{ number_format($order->taxes, 2) }}</td>
+                <td style="text-align: right;">UGX {{ number_format($order->taxes, 2) }}</td>
             </tr>
             @endif
             @if($order->platform_commission > 0)
             <tr>
                 <td>Platform Fee:</td>
-                <td style="text-align: right;">${{ number_format($order->platform_commission, 2) }}</td>
+                <td style="text-align: right;">UGX {{ number_format($order->platform_commission, 2) }}</td>
             </tr>
             @endif
             <tr class="total-row">
                 <td><strong>ORDER TOTAL:</strong></td>
-                <td style="text-align: right;"><strong>${{ number_format($order->total, 2) }}</strong></td>
+                <td style="text-align: right;"><strong>UGX {{ number_format($order->total, 2) }}</strong></td>
             </tr>
         </table>
     </div>
@@ -374,7 +374,7 @@
                     {{ ucfirst($payment->status) }}
                 </span>
             </div>
-            <div><strong>${{ number_format($payment->amount, 2) }}</strong></div>
+            <div><strong>UGX {{ number_format($payment->amount, 2) }}</strong></div>
         </div>
         @endforeach
     </div>

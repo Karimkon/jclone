@@ -206,4 +206,43 @@ public function canMessageVendor(VendorProfile $vendorProfile): bool
     return true;
 }
 
+/**
+ * Relationship with shipping addresses
+ */
+public function shippingAddresses()
+{
+    return $this->hasMany(ShippingAddress::class);
+}
+
+/**
+ * Get default shipping address
+ */
+public function defaultShippingAddress()
+{
+    return $this->hasOne(ShippingAddress::class)->where('is_default', true);
+}
+
+/**
+ * Get or create default shipping address
+ */
+public function getOrCreateDefaultAddress()
+{
+    $default = $this->defaultShippingAddress;
+    
+    if (!$default) {
+        // Create from user profile if exists
+        $default = $this->shippingAddresses()->create([
+            'label' => 'Home',
+            'recipient_name' => $this->name,
+            'recipient_phone' => $this->phone ?? '',
+            'address_line_1' => $this->meta['addresses'][0]['address'] ?? '',
+            'city' => $this->meta['addresses'][0]['city'] ?? '',
+            'country' => $this->meta['addresses'][0]['country'] ?? 'Uganda',
+            'is_default' => true
+        ]);
+    }
+    
+    return $default;
+}
+
 }

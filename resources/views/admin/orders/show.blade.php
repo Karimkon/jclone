@@ -111,19 +111,58 @@
                 <h2 class="text-xl font-bold text-gray-800 mb-4">Customer Information</h2>
                 
                 <div class="space-y-2">
-                    <p class="font-medium">{{ $order->buyer->name }}</p>
-                    <p class="text-gray-600">{{ $order->buyer->email }}</p>
-                    <p class="text-gray-600">{{ $order->buyer->phone }}</p>
+                    @if($order->user)
+                    <p class="font-medium">{{ $order->user->name }}</p>
+                    <p class="text-gray-600">{{ $order->user->email }}</p>
+                    <p class="text-gray-600">{{ $order->user->phone ?? 'N/A' }}</p>
+                    @endif
                     
-                    @php
-                        $meta = json_decode($order->meta, true) ?? [];
-                    @endphp
-                    
+                    <!-- Shipping Address - FIXED SECTION -->
                     <div class="mt-4 pt-4 border-t">
                         <h3 class="font-semibold text-gray-700 mb-2">Shipping Address</h3>
-                        <p class="text-gray-600">{{ $meta['shipping_address'] ?? 'N/A' }}</p>
-                        <p class="text-gray-600">{{ $meta['shipping_city'] ?? '' }}, {{ $meta['shipping_country'] ?? '' }}</p>
-                        <p class="text-gray-600">{{ $meta['shipping_postal_code'] ?? '' }}</p>
+                        @if($order->shippingAddress)
+                            <p class="font-medium">{{ $order->shippingAddress->recipient_name }}</p>
+                            <p class="text-gray-600">{{ $order->shippingAddress->recipient_phone }}</p>
+                            <p class="text-gray-600">
+                                {{ $order->shippingAddress->address_line_1 }}
+                                @if($order->shippingAddress->address_line_2)
+                                , {{ $order->shippingAddress->address_line_2 }}
+                                @endif
+                            </p>
+                            <p class="text-gray-600">
+                                {{ $order->shippingAddress->city }}
+                                @if($order->shippingAddress->state_region)
+                                , {{ $order->shippingAddress->state_region }}
+                                @endif
+                                @if($order->shippingAddress->postal_code)
+                                , {{ $order->shippingAddress->postal_code }}
+                                @endif
+                            </p>
+                            <p class="text-gray-600">{{ $order->shippingAddress->country }}</p>
+                            
+                            @if($order->shippingAddress->delivery_instructions)
+                            <div class="mt-2 pt-2 border-t">
+                                <p class="text-sm text-gray-600">Delivery Instructions:</p>
+                                <p class="text-sm italic">{{ $order->shippingAddress->delivery_instructions }}</p>
+                            </div>
+                            @endif
+                        @else
+                            <!-- Fallback to meta data if shippingAddress relationship doesn't exist -->
+                            @php
+                                $meta = json_decode($order->meta, true) ?? [];
+                            @endphp
+                            @if(isset($meta['shipping_address']) && is_string($meta['shipping_address']))
+                                <p class="text-gray-600">{{ $meta['shipping_address'] }}</p>
+                                @if(isset($meta['shipping_city']))
+                                <p class="text-gray-600">{{ $meta['shipping_city'] }}, {{ $meta['shipping_country'] ?? '' }}</p>
+                                @endif
+                                @if(isset($meta['shipping_postal_code']))
+                                <p class="text-gray-600">{{ $meta['shipping_postal_code'] }}</p>
+                                @endif
+                            @else
+                                <p class="text-gray-600">No shipping address available</p>
+                            @endif
+                        @endif
                     </div>
                 </div>
             </div>
@@ -133,10 +172,14 @@
                 <h2 class="text-xl font-bold text-gray-800 mb-4">Vendor Information</h2>
                 
                 <div class="space-y-2">
+                    @if($order->vendorProfile)
                     <p class="font-medium">{{ $order->vendorProfile->business_name ?? 'N/A' }}</p>
                     <p class="text-gray-600">{{ $order->vendorProfile->user->name ?? '' }}</p>
                     <p class="text-gray-600">{{ $order->vendorProfile->user->email ?? '' }}</p>
                     <p class="text-gray-600">{{ $order->vendorProfile->user->phone ?? '' }}</p>
+                    @else
+                    <p class="text-gray-600">No vendor information available</p>
+                    @endif
                 </div>
             </div>
 
@@ -151,15 +194,11 @@
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Shipping</span>
-                        <span>${{ number_format($order->shipping, 2) }}</span>
+                        <span>${{ number_format($order->shipping_cost, 2) }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span class="text-gray-600">Taxes</span>
-                        <span>${{ number_format($order->taxes, 2) }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-600">Platform Commission</span>
-                        <span>${{ number_format($order->platform_commission, 2) }}</span>
+                        <span class="text-gray-600">Tax</span>
+                        <span>${{ number_format($order->tax, 2) }}</span>
                     </div>
                     <div class="pt-2 border-t">
                         <div class="flex justify-between font-bold text-lg">
@@ -176,19 +215,39 @@
     <div class="bg-white rounded-xl shadow-sm p-6">
         <h2 class="text-xl font-bold text-gray-800 mb-4">Payment Information</h2>
         
-        @php
-            $meta = json_decode($order->meta, true) ?? [];
-        @endphp
-        
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <h3 class="font-semibold text-gray-700 mb-2">Payment Method</h3>
-                <p class="text-gray-800">{{ ucfirst(str_replace('_', ' ', $meta['payment_method'] ?? 'N/A')) }}</p>
+                <p class="text-gray-800">
+                    @switch($order->payment_method)
+                        @case('cash_on_delivery')
+                            <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Cash on Delivery
+                            @break
+                        @case('wallet')
+                            <i class="fas fa-wallet text-indigo-600 mr-2"></i>Wallet
+                            @break
+                        @case('card')
+                            <i class="fas fa-credit-card text-blue-600 mr-2"></i>Credit/Debit Card
+                            @break
+                        @case('mobile_money')
+                            <i class="fas fa-mobile-alt text-purple-600 mr-2"></i>Mobile Money
+                            @break
+                        @case('bank_transfer')
+                            <i class="fas fa-university text-gray-600 mr-2"></i>Bank Transfer
+                            @break
+                        @default
+                            {{ ucfirst(str_replace('_', ' ', $order->payment_method)) }}
+                    @endswitch
+                </p>
                 <p class="text-sm text-gray-600 mt-1">
-                    @if(($meta['payment_method'] ?? '') == 'cash_on_delivery')
+                    @if($order->payment_method == 'cash_on_delivery')
                     Payment due on delivery
-                    @elseif(($meta['payment_method'] ?? '') == 'wallet')
+                    @elseif($order->payment_method == 'wallet')
                     Paid via wallet
+                    @elseif($order->payment_status == 'paid')
+                    Payment completed
+                    @else
+                    Payment pending
                     @endif
                 </p>
             </div>

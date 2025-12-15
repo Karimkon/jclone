@@ -38,12 +38,42 @@
         $canReview = $pendingOrderItem !== null;
     }
     
-    // Get vendor stats
-    $vendorStats = [
-        'rating' => \App\Models\Review::getVendorAverageRating($listing->vendor_profile_id),
-        'reviews' => \App\Models\Review::getVendorReviewsCount($listing->vendor_profile_id),
-        'positive' => $listing->vendor ? ($listing->vendor->positive_rating_percentage ?? 98) : 98,
-    ];
+   // Get vendor stats
+$vendorStats = [
+    'rating' => \App\Models\Review::getVendorAverageRating($listing->vendor_profile_id),
+    'reviews' => \App\Models\Review::getVendorReviewsCount($listing->vendor_profile_id),
+    'positive' => $listing->vendor ? ($listing->vendor->positive_rating_percentage ?? 98) : 98,
+];
+
+// Get vendor delivery performance
+$deliveryPerformance = null;
+$deliveryStats = [
+    'score' => 50,
+    'avg_time' => 0,
+    'on_time_rate' => 0,
+    'rating' => 3,
+    'delivered_orders' => 0
+];
+
+if ($listing->vendor && method_exists($listing->vendor, 'performance')) {
+    $deliveryPerformance = $listing->vendor->performance;
+    if ($deliveryPerformance) {
+        $deliveryStats['score'] = $deliveryPerformance->delivery_score ?? 50;
+        $deliveryStats['avg_time'] = $deliveryPerformance->avg_delivery_time_days ?? 0;
+        $deliveryStats['on_time_rate'] = $deliveryPerformance->on_time_delivery_rate ?? 0;
+        $deliveryStats['delivered_orders'] = $deliveryPerformance->delivered_orders ?? 0;
+        
+        // Calculate star rating (1-5)
+        if ($deliveryStats['delivered_orders'] >= 5) {
+            if ($deliveryStats['score'] >= 90) $deliveryStats['rating'] = 5;
+            elseif ($deliveryStats['score'] >= 80) $deliveryStats['rating'] = 4;
+            elseif ($deliveryStats['score'] >= 70) $deliveryStats['rating'] = 3;
+            elseif ($deliveryStats['score'] >= 60) $deliveryStats['rating'] = 2;
+            else $deliveryStats['rating'] = 1;
+        }
+    }
+}
+    
 @endphp
 
 @push('styles')
@@ -230,16 +260,6 @@
         transform: translateX(4px);
     }
     
-    .trust-badge-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-    
     /* Vendor Card */
     .vendor-card {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
@@ -347,6 +367,27 @@
     .review-image:hover {
         transform: scale(1.05);
     }
+    
+    /* Option Selection */
+    .option-btn {
+        transition: all 0.2s ease;
+    }
+    
+    .option-btn.selected {
+        border-color: #4f46e5 !important;
+        background-color: rgba(79, 70, 229, 0.1) !important;
+        color: #4f46e5;
+    }
+    
+    /* Modal Animations */
+    @keyframes scale-in {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+    }
+    
+    .animate-scale-in {
+        animation: scale-in 0.3s ease forwards;
+    }
 </style>
 @endpush
 
@@ -451,10 +492,27 @@
                                 <i class="fas fa-link"></i>
                             </button>
                         </div>
-                        <div class="flex items-center gap-4 text-sm text-gray-500">
-                            <span><i class="far fa-eye mr-1"></i> {{ rand(100, 1500) }} views</span>
-                            <span><i class="far fa-heart mr-1"></i> {{ rand(10, 200) }} saved</span>
-                        </div>
+                        {{-- Product Analytics Display --}}
+<div class="flex items-center gap-4 text-sm text-gray-600 mb-4">
+    <div class="flex items-center gap-1">
+        <i class="fas fa-eye text-blue-500"></i>
+        <span>{{ number_format($listing->view_count) }} views</span>
+    </div>
+    
+    @if($listing->purchase_count > 0)
+    <div class="flex items-center gap-1">
+        <i class="fas fa-shopping-cart text-green-500"></i>
+        <span>{{ number_format($listing->purchase_count) }} sold</span>
+    </div>
+    @endif
+    
+    @if($listing->wishlist_count > 0)
+    <div class="flex items-center gap-1">
+        <i class="fas fa-heart text-red-500"></i>
+        <span>{{ number_format($listing->wishlist_count) }} wishlisted</span>
+    </div>
+    @endif
+</div>
                     </div>
                 </div>
                 
@@ -477,6 +535,23 @@
                     <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 leading-tight">
                         {{ $listing->title }}
                     </h1>
+
+                    
+<!-- Delivery Performance Badge -->
+@if($deliveryStats['delivered_orders'] >= 10)
+<div class="mb-4">
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-100">
+        <i class="fas fa-bolt"></i>
+        @if($deliveryStats['avg_time'] <= 3)
+            Fast Delivery • {{ $deliveryStats['avg_time'] }} days avg.
+        @elseif($deliveryStats['avg_time'] <= 7)
+            Reliable Delivery • {{ $deliveryStats['avg_time'] }} days avg.
+        @else
+            Standard Delivery • {{ $deliveryStats['avg_time'] }} days avg.
+        @endif
+    </div>
+</div>
+@endif
                     
                     <!-- Rating & Reviews - DYNAMIC -->
                     <div class="flex items-center gap-4 mb-6">
@@ -499,12 +574,12 @@
                     <!-- Price Section -->
                     <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-5 mb-6">
                         <div class="flex items-end gap-4">
-                            <span class="text-4xl font-bold text-primary">
-                                UGX {{ number_format($listing->price, 2) }}
+                            <span id="productPrice" class="text-4xl font-bold text-primary">
+                                UGX {{ number_format($listing->price, 0) }}
                             </span>
                             @php $originalPrice = $listing->price * 1.25; @endphp
-                            <span class="text-lg text-gray-400 line-through mb-1">
-                                UGX {{ number_format($originalPrice, 2) }}
+                            <span id="productOriginalPrice" class="text-lg text-gray-400 line-through mb-1">
+                                UGX {{ number_format($originalPrice, 0) }}
                             </span>
                             <span class="px-2 py-1 bg-red-500 text-white text-sm font-bold rounded-lg mb-1">
                                 -20% OFF
@@ -517,29 +592,31 @@
                     
                     <!-- Stock Status -->
                     <div class="mb-6">
-                        @if($listing->stock > 10)
-                        <div class="flex items-center gap-2 text-green-600">
-                            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                            <span class="font-medium">In Stock</span>
-                            <span class="text-gray-500 text-sm">({{ $listing->stock }} available)</span>
-                        </div>
-                        @elseif($listing->stock > 0)
-                        <div class="space-y-2">
-                            <div class="flex items-center gap-2 text-orange-600">
-                                <div class="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
-                                <span class="font-medium">Low Stock</span>
-                                <span class="text-gray-500 text-sm">- Only {{ $listing->stock }} left!</span>
+                        <div id="stockStatus">
+                            @if($listing->stock > 10)
+                            <div class="flex items-center gap-2 text-green-600">
+                                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                                <span class="font-medium">In Stock</span>
+                                <span class="text-gray-500 text-sm">({{ $listing->stock }} available)</span>
                             </div>
-                            <div class="stock-progress">
-                                <div class="stock-progress-bar bg-orange-500" style="width: {{ min($listing->stock * 10, 100) }}%"></div>
+                            @elseif($listing->stock > 0)
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2 text-orange-600">
+                                    <div class="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                                    <span class="font-medium">Low Stock</span>
+                                    <span class="text-gray-500 text-sm">- Only {{ $listing->stock }} left!</span>
+                                </div>
+                                <div class="stock-progress">
+                                    <div class="stock-progress-bar bg-orange-500" style="width: {{ min($listing->stock * 10, 100) }}%"></div>
+                                </div>
                             </div>
+                            @else
+                            <div class="flex items-center gap-2 text-red-600">
+                                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                                <span class="font-medium">Out of Stock</span>
+                            </div>
+                            @endif
                         </div>
-                        @else
-                        <div class="flex items-center gap-2 text-red-600">
-                            <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span class="font-medium">Out of Stock</span>
-                        </div>
-                        @endif
                     </div>
                     
                     <!-- Product Highlights -->
@@ -578,8 +655,70 @@
                     </div>
                     @endif
                     
+                    <!-- Product Options Section -->
+                    <div id="productOptionsSection" class="mb-6 {{ $hasVariations ? '' : 'hidden' }}">
+                        <h3 class="text-md font-bold text-gray-800 mb-3">Choose Options</h3>
+                        
+                        <!-- Color Options -->
+                        @if(count($availableColors) > 0)
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($availableColors as $color)
+                                <button type="button" 
+                                        onclick="selectOption('color', '{{ $color }}')"
+                                        class="option-btn px-4 py-2 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700"
+                                        data-option="color"
+                                        data-value="{{ $color }}">
+                                    {{ $color }}
+                                </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+                        
+                        <!-- Size Options -->
+                        @if(count($availableSizes) > 0)
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($availableSizes as $size)
+                                <button type="button" 
+                                        onclick="selectOption('size', '{{ $size }}')"
+                                        class="option-btn px-4 py-2 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700"
+                                        data-option="size"
+                                        data-value="{{ $size }}">
+                                    {{ $size }}
+                                </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        @endif
+                        
+                        <!-- Selected Variant Info -->
+                        <div id="selectedVariantInfo" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-100 mb-4">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-bold text-gray-800">Selected Variant</h4>
+                                    <div class="text-sm text-gray-600 mt-1">
+                                        <p id="selectedOptionsText"></p>
+                                        <p id="variantSku" class="text-xs text-gray-500"></p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-lg font-bold text-primary" id="variantPrice"></p>
+                                    <p class="text-sm text-gray-600" id="variantStock"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hidden inputs for cart submission -->
+                    <input type="hidden" id="selectedColor" name="color" value="">
+                    <input type="hidden" id="selectedSize" name="size" value="">
+                    <input type="hidden" id="selectedVariantId" name="variant_id" value="">
+                    
                     <!-- Quantity & Actions -->
-                    @if($listing->stock > 0)
                     <div class="space-y-4 mb-6">
                         <!-- Quantity Selector -->
                         <div>
@@ -594,7 +733,7 @@
                                         <i class="fas fa-plus text-gray-600"></i>
                                     </button>
                                 </div>
-                                <span class="text-sm text-gray-500">{{ $listing->stock }} pieces available</span>
+                                <span id="stockInfo" class="text-sm text-gray-500">{{ $listing->stock }} pieces available</span>
                             </div>
                         </div>
                         
@@ -623,19 +762,6 @@
                             <span>Add to Wishlist</span>
                         </button>
                     </div>
-                    @else
-                    <!-- Out of Stock Notice -->
-                    <div class="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6 text-center">
-                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-box-open text-red-500 text-2xl"></i>
-                        </div>
-                        <h4 class="font-bold text-red-700 mb-2">Currently Out of Stock</h4>
-                        <p class="text-red-600 text-sm mb-4">This item is temporarily unavailable</p>
-                        <button class="px-6 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition">
-                            <i class="fas fa-bell mr-2"></i>Notify When Available
-                        </button>
-                    </div>
-                    @endif
                     
                     <!-- Trust Badges -->
                     <div class="space-y-3">
@@ -778,6 +904,26 @@
                         <div id="tab-shipping" class="tab-content hidden">
                             <h3 class="text-xl font-bold text-gray-900 mb-4">Shipping & Returns</h3>
                             
+                            <!-- Delivery Time Estimate -->
+    @if($deliveryStats['delivered_orders'] >= 5)
+    <div class="mb-6 p-4 bg-blue-50 rounded-2xl border border-blue-100">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-shipping-fast text-blue-600"></i>
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">This Vendor's Delivery Stats</h4>
+                <p class="text-sm text-gray-600">
+                    Based on {{ $deliveryStats['delivered_orders'] }} orders: 
+                    <span class="font-medium">Average {{ $deliveryStats['avg_time'] }} days</span> • 
+                    <span class="font-medium {{ $deliveryStats['on_time_rate'] >= 90 ? 'text-green-600' : ($deliveryStats['on_time_rate'] >= 80 ? 'text-yellow-600' : 'text-red-600') }}">
+                        {{ $deliveryStats['on_time_rate'] }}% on-time rate
+                    </span>
+                </p>
+            </div>
+        </div>
+    </div>
+    @endif
                             <div class="grid md:grid-cols-2 gap-6">
                                 <!-- Shipping Info -->
                                 <div class="p-5 bg-green-50 rounded-2xl">
@@ -833,7 +979,7 @@
                             </div>
                         </div>
                         
-                        <!-- Reviews Tab - DYNAMIC -->
+                        <!-- Reviews Tab -->
                         <div id="tab-reviews" class="tab-content hidden">
                             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                                 <h3 class="text-xl font-bold text-gray-900">Customer Reviews</h3>
@@ -909,61 +1055,13 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Review Title -->
+                                    <!-- Review Content -->
                                     @if($review->title)
                                     <h4 class="font-semibold text-gray-800 mb-2">{{ $review->title }}</h4>
                                     @endif
                                     
-                                    <!-- Review Comment -->
                                     @if($review->comment)
                                     <p class="text-gray-600 leading-relaxed mb-4">{{ $review->comment }}</p>
-                                    @endif
-                                    
-                                    <!-- Review Images -->
-                                    @if($review->images && count($review->images) > 0)
-                                    <div class="flex flex-wrap gap-2 mb-4">
-                                        @foreach($review->images as $image)
-                                        <div class="w-20 h-20 rounded-lg overflow-hidden review-image" onclick="openReviewImage('{{ asset('storage/' . $image) }}')">
-                                            <img src="{{ asset('storage/' . $image) }}" alt="Review image" class="w-full h-full object-cover">
-                                        </div>
-                                        @endforeach
-                                    </div>
-                                    @endif
-                                    
-                                    <!-- Detailed Ratings -->
-                                    @if($review->quality_rating || $review->value_rating || $review->shipping_rating)
-                                    <div class="flex flex-wrap gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-                                        @if($review->quality_rating)
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-sm text-gray-500">Quality:</span>
-                                            <div class="flex">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                <i class="fas fa-star text-xs {{ $i <= $review->quality_rating ? 'text-yellow-400' : 'text-gray-200' }}"></i>
-                                                @endfor
-                                            </div>
-                                        </div>
-                                        @endif
-                                        @if($review->value_rating)
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-sm text-gray-500">Value:</span>
-                                            <div class="flex">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                <i class="fas fa-star text-xs {{ $i <= $review->value_rating ? 'text-yellow-400' : 'text-gray-200' }}"></i>
-                                                @endfor
-                                            </div>
-                                        </div>
-                                        @endif
-                                        @if($review->shipping_rating)
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-sm text-gray-500">Shipping:</span>
-                                            <div class="flex">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                <i class="fas fa-star text-xs {{ $i <= $review->shipping_rating ? 'text-yellow-400' : 'text-gray-200' }}"></i>
-                                                @endfor
-                                            </div>
-                                        </div>
-                                        @endif
-                                    </div>
                                     @endif
                                     
                                     <!-- Helpful Votes -->
@@ -982,25 +1080,10 @@
                                             </button>
                                         </div>
                                     </div>
-                                    
-                                    <!-- Vendor Response -->
-                                    @if($review->vendor_response)
-                                    <div class="mt-4 p-4 bg-blue-50 rounded-xl border-l-4 border-blue-500">
-                                        <div class="flex items-center gap-2 mb-2">
-                                            <i class="fas fa-store text-blue-600"></i>
-                                            <span class="font-semibold text-blue-800">Vendor Response</span>
-                                            @if($review->vendor_responded_at)
-                                            <span class="text-sm text-blue-600">{{ $review->vendor_responded_at->diffForHumans() }}</span>
-                                            @endif
-                                        </div>
-                                        <p class="text-blue-700">{{ $review->vendor_response }}</p>
-                                    </div>
-                                    @endif
                                 </div>
                                 @endforeach
                             </div>
                             
-                            <!-- Load More Reviews -->
                             @if($reviewStats['count'] > 5)
                             <div class="mt-6 text-center">
                                 <a href="{{ route('marketplace.show', $listing) }}?tab=reviews&page=all" 
@@ -1041,69 +1124,103 @@
             
             <!-- Right: Sidebar -->
             <div class="space-y-6">
-                <!-- Vendor Card - DYNAMIC STATS -->
+                <!-- Vendor Card -->
                 <div class="bg-white rounded-2xl shadow-sm p-6">
                     <h4 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
                         <i class="fas fa-store text-primary"></i>
                         Vendor Information
                     </h4>
                     
-                    <div class="vendor-card mb-4">
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl flex items-center justify-center">
-                                <i class="fas fa-store text-xl"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-bold text-gray-900">{{ $listing->vendor->business_name ?? 'Verified Vendor' }}</h5>
-                                <p class="text-sm text-gray-500">
-                                    @if(($listing->vendor->vendor_type ?? '') == 'china_supplier')
-                                    <i class="fas fa-globe mr-1"></i>International Supplier
-                                    @else
-                                    <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
-                                    @endif
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Vendor Stats - DYNAMIC -->
-                    <div class="grid grid-cols-3 gap-3 mb-4">
-                        <div class="text-center p-3 bg-gray-50 rounded-xl">
-                            <div class="text-xl font-bold text-primary">{{ $vendorStats['positive'] }}%</div>
-                            <div class="text-xs text-gray-500">Positive</div>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-xl">
-                            <div class="text-xl font-bold text-primary">{{ $vendorStats['reviews'] > 0 ? $vendorStats['reviews'] : rand(100, 500) }}+</div>
-                            <div class="text-xs text-gray-500">Reviews</div>
-                        </div>
-                        <div class="text-center p-3 bg-gray-50 rounded-xl">
-                            <div class="text-xl font-bold text-primary">{{ number_format($vendorStats['rating'] ?: 4.5, 1) }}</div>
-                            <div class="text-xs text-gray-500">Rating</div>
-                        </div>
-                    </div>
+                   <div class="vendor-card mb-4">
+    <div class="flex items-center gap-4 mb-3">
+        <div class="w-14 h-14 bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl flex items-center justify-center">
+            <i class="fas fa-store text-xl"></i>
+        </div>
+        <div>
+            <h5 class="font-bold text-gray-900">{{ $listing->vendor->business_name ?? 'Verified Vendor' }}</h5>
+            <p class="text-sm text-gray-500">
+                @if(($listing->vendor->vendor_type ?? '') == 'china_supplier')
+                <i class="fas fa-globe mr-1"></i>International Supplier
+                @else
+                <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
+                @endif
+            </p>
+        </div>
+    </div>
+    
+   <!-- Delivery Performance Info -->
+@if($deliveryPerformance && $deliveryPerformance->delivered_orders >= 5)
+<div class="pt-3 border-t border-gray-100">
+    <div class="space-y-2">
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Delivery Score:</span>
+            <span class="font-semibold {{ $deliveryStats['score'] >= 80 ? 'text-green-600' : ($deliveryStats['score'] >= 60 ? 'text-yellow-600' : 'text-red-600') }}">
+                {{ $deliveryStats['score'] }}/100
+            </span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">On-Time Rate:</span>
+            <span class="font-semibold">{{ $deliveryStats['on_time_rate'] }}%</span>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+            <span class="text-gray-600">Avg. Delivery:</span>
+            <span class="font-semibold">{{ $deliveryStats['avg_time'] }} days</span>
+        </div>
+    </div>
+</div>
+@endif
+</div> 
+      <!-- Vendor Stats -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+    <div class="text-center p-3 bg-gray-50 rounded-xl">
+        <div class="text-xl font-bold text-primary">{{ $vendorStats['positive'] }}%</div>
+        <div class="text-xs text-gray-500">Positive</div>
+    </div>
+    <div class="text-center p-3 bg-gray-50 rounded-xl">
+        <div class="text-xl font-bold text-primary">{{ $vendorStats['reviews'] > 0 ? $vendorStats['reviews'] : rand(100, 500) }}+</div>
+        <div class="text-xs text-gray-500">Reviews</div>
+    </div>
+    <div class="text-center p-3 bg-gray-50 rounded-xl">
+        <div class="text-xl font-bold text-primary">{{ number_format($vendorStats['rating'] ?: 4.5, 1) }}</div>
+        <div class="text-xs text-gray-500">Rating</div>
+    </div>
+    <!-- Delivery Performance -->
+    <div class="text-center p-3 bg-gray-50 rounded-xl" title="Based on {{ $deliveryStats['delivered_orders'] ?? 0 }} deliveries">
+        <div class="flex items-center justify-center gap-1 mb-1">
+            @for($i = 1; $i <= 5; $i++)
+                <i class="fas fa-star text-xs {{ $i <= $deliveryStats['rating'] ? 'text-yellow-400' : 'text-gray-300' }}"></i>
+            @endfor
+        </div>
+        <div class="text-sm text-gray-600">
+            @if($deliveryStats['delivered_orders'] >= 5)
+                {{ $deliveryStats['avg_time'] }} days avg.
+            @else
+                New vendor
+            @endif
+        </div>
+    </div>
+</div>
                     
                     <!-- Vendor Actions -->
-                   <div class="space-y-2">
-                <!-- Request Callback Button - NEW -->
-                <button onclick="openCallbackModal()" 
-                        class="w-full py-2.5 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition flex items-center justify-center gap-2">
-                    <i class="fas fa-phone-alt"></i>
-                    Request Callback
-                </button>
+                    <div class="space-y-2">
+                        <button onclick="openCallbackModal()" 
+                                class="w-full py-2.5 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-medium hover:shadow-lg transition flex items-center justify-center gap-2">
+                            <i class="fas fa-phone-alt"></i>
+                            Request Callback
+                        </button>
 
-                <button onclick="openChatModal()" 
-                        class="w-full py-2.5 px-4 border-2 border-primary text-primary rounded-xl font-medium hover:bg-primary hover:text-white transition flex items-center justify-center gap-2">
-                    <i class="fas fa-comment-dots"></i>
-                    Chat with Vendor
-                </button>
-                
-                <a href="#" 
-                class="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
-                    <i class="fas fa-store"></i>
-                    View Store
-                </a>
-            </div>
-
+                        <button onclick="openChatModal()" 
+                                class="w-full py-2.5 px-4 border-2 border-primary text-primary rounded-xl font-medium hover:bg-primary hover:text-white transition flex items-center justify-center gap-2">
+                            <i class="fas fa-comment-dots"></i>
+                            Chat with Vendor
+                        </button>
+                        
+                        <a href="#" 
+                        class="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                            <i class="fas fa-store"></i>
+                            View Store
+                        </a>
+                    </div>
                 </div>
                 
                 <!-- Related Products -->
@@ -1201,6 +1318,103 @@
     </div>
 </div>
 
+<!-- Options Confirmation Modal -->
+<div id="optionsModal" class="fixed inset-0 z-[100] hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeOptionsModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 relative animate-scale-in">
+            <button onclick="closeOptionsModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-cogs text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Select Options</h3>
+                <p class="text-gray-500">Please select product options before adding to cart</p>
+            </div>
+            
+            <!-- Options Form -->
+            <div id="optionsForm" class="space-y-6">
+                <!-- Color Selection -->
+                @if(count($availableColors) > 0)
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Color <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalColorOptions">
+                        @foreach($availableColors as $color)
+                        <button type="button" 
+                                onclick="selectModalOption('color', '{{ $color }}')"
+                                class="modal-option-btn px-4 py-2.5 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700"
+                                data-option="color"
+                                data-value="{{ $color }}">
+                            {{ $color }}
+                        </button>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+                
+                <!-- Size Selection -->
+                @if(count($availableSizes) > 0)
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        Size <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="modalSizeOptions">
+                        @foreach($availableSizes as $size)
+                        <button type="button" 
+                                onclick="selectModalOption('size', '{{ $size }}')"
+                                class="modal-option-btn px-4 py-2.5 border-2 border-gray-200 rounded-lg hover:border-primary transition text-gray-700"
+                                data-option="size"
+                                data-value="{{ $size }}">
+                            {{ $size }}
+                        </button>
+                        @endforeach
+                    </div>
+                </div>
+                @endif
+                
+                <!-- Selected Variant Info -->
+                <div id="modalVariantInfo" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-bold text-gray-800">Selected Variant</h4>
+                            <div class="text-sm text-gray-600 mt-1 space-y-1">
+                                <p id="modalSelectedColorText"></p>
+                                <p id="modalSelectedSizeText"></p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-primary" id="modalVariantPrice"></p>
+                            <p class="text-sm text-gray-600" id="modalVariantStock"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pt-4 border-t border-gray-200">
+                    <div class="flex gap-3">
+                        <button type="button" 
+                                onclick="closeOptionsModal()" 
+                                class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
+                            Cancel
+                        </button>
+                        <button type="button" 
+                                onclick="confirmModalOptions()"
+                                id="confirmModalOptionsBtn"
+                                disabled
+                                class="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            Confirm Selection
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Request Callback Modal -->
 <div id="callbackModal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeCallbackModal()"></div>
@@ -1219,6 +1433,7 @@
             </div>
             
             <form id="callbackForm" class="space-y-4">
+                <!-- Callback form fields -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Full Name <span class="text-red-500">*</span>
@@ -1295,19 +1510,7 @@
     </div>
 </div>
 
-<style>
-@keyframes scale-in {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-}
-
-.animate-scale-in {
-    animation: scale-in 0.3s ease forwards;
-}
-</style>
-
 @include('components.chat-modal', ['listing' => $listing])
-
 @endsection
 
 @push('scripts')
@@ -1315,7 +1518,635 @@
 const isAuthenticated = @json(auth()->check());
 const csrfToken = '{{ csrf_token() }}';
 const listingId = {{ $listing->id }};
+const hasVariations = @json($hasVariations);
+const variants = @json($variants);
+const availableColors = @json($availableColors);
+const availableSizes = @json($availableSizes);
 
+// State management
+let selectedOptions = {
+    color: null,
+    size: null,
+    variant: null
+};
+let pendingAction = null; // 'addToCart' or 'buyNow'
+let pendingButton = null;
+
+// Initialize on DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Quantity controls
+    const qtyInput = document.getElementById('quantity');
+    const qtyMinus = document.getElementById('qtyMinus');
+    const qtyPlus = document.getElementById('qtyPlus');
+    
+    if (qtyMinus && qtyPlus && qtyInput) {
+        qtyMinus.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value) || 1;
+            if (val > 1) qtyInput.value = val - 1;
+        });
+        
+        qtyPlus.addEventListener('click', () => {
+            let val = parseInt(qtyInput.value) || 1;
+            const max = parseInt(qtyInput.max) || 99;
+            if (val < max) qtyInput.value = val + 1;
+        });
+    }
+    
+    // Add to Cart button
+    document.getElementById('addToCartBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        handleAddToCart(this);
+    });
+    
+    // Buy Now button
+    document.getElementById('buyNowBtn')?.addEventListener('click', function(e) {
+        e.preventDefault();
+        handleBuyNow(this);
+    });
+    
+    // Wishlist button
+    document.getElementById('wishlistBtn')?.addEventListener('click', function() {
+        toggleWishlist(this.dataset.listingId, this);
+    });
+    
+    // Check URL for tab parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+    if (tab) {
+        switchTab(tab);
+    }
+    
+    // Initialize options section visibility
+    if (hasVariations && (availableColors.length > 0 || availableSizes.length > 0)) {
+        document.getElementById('productOptionsSection').classList.remove('hidden');
+    }
+});
+
+// Handle Add to Cart with modal
+// Update the handleAddToCart and handleBuyNow functions:
+function handleAddToCart(button) {
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    pendingAction = 'addToCart';
+    pendingButton = button;
+    
+    // Debug logging
+    console.log('Has variations:', hasVariations);
+    console.log('Available colors:', availableColors);
+    console.log('Available sizes:', availableSizes);
+    console.log('Color selected:', document.getElementById('selectedColor').value);
+    console.log('Size selected:', document.getElementById('selectedSize').value);
+    console.log('Variant selected:', document.getElementById('selectedVariantId').value);
+    
+    // Show modal if product has variations AND no variant is fully selected
+    if (hasVariations && !isVariantSelected()) {
+        console.log('Opening options modal...');
+        openOptionsModal();
+    } else {
+        console.log('Adding directly...');
+        addToCartDirect();
+    }
+}
+
+// Handle Buy Now with modal
+function handleBuyNow(button) {
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    pendingAction = 'buyNow';
+    pendingButton = button;
+    
+    if (hasVariations && !isVariantSelected()) {
+        openOptionsModal();
+    } else {
+        buyNowDirect();
+    }
+}
+
+// Check if a concrete variant is selected; for variation products we require a variant_id
+function isVariantSelected() {
+    if (!hasVariations) return true;
+    const variantId = document.getElementById('selectedVariantId').value;
+    return variantId !== '';
+}
+
+// Open options modal
+// openOptionsModal function:
+function openOptionsModal() {
+    console.log('openOptionsModal called');
+    
+    // Reset modal options first
+    resetModalOptions();
+    
+    // Pre-select options if already chosen on main page
+    const mainColor = document.getElementById('selectedColor').value;
+    const mainSize = document.getElementById('selectedSize').value;
+    
+    if (mainColor) {
+        selectedOptions.color = mainColor;
+        const colorBtn = document.querySelector(`[data-option="color"][data-value="${mainColor}"]`);
+        if (colorBtn) {
+            colorBtn.classList.add('selected');
+        }
+    }
+    
+    if (mainSize) {
+        selectedOptions.size = mainSize;
+        const sizeBtn = document.querySelector(`[data-option="size"][data-value="${mainSize}"]`);
+        if (sizeBtn) {
+            sizeBtn.classList.add('selected');
+        }
+    }
+    
+    // Find matching variant with pre-selected options
+    if (mainColor || mainSize) {
+        findMatchingVariant();
+    }
+    
+    // Show modal
+    const modal = document.getElementById('optionsModal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        console.log('Modal shown');
+    }
+}
+
+// Close options modal
+function closeOptionsModal() {
+    document.getElementById('optionsModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Reset modal options
+function resetModalOptions() {
+    // Clear selections
+    selectedOptions.color = null;
+    selectedOptions.size = null;
+    selectedOptions.variant = null;
+    
+    // Reset UI
+    document.querySelectorAll('.modal-option-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Hide variant info
+    document.getElementById('modalVariantInfo').classList.add('hidden');
+    
+    // Disable confirm button
+    document.getElementById('confirmModalOptionsBtn').disabled = true;
+}
+
+// Select option in modal
+function selectModalOption(type, value) {
+    // Update UI
+    document.querySelectorAll(`[data-option="${type}"]`).forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    event.target.classList.add('selected');
+    
+    // Update selected options
+    selectedOptions[type] = value;
+    
+    // Find matching variant
+    findMatchingVariant();
+}
+
+// Find matching variant based on selected options
+function findMatchingVariant() {
+    const { color, size } = selectedOptions;
+    
+    if ((availableColors.length > 0 && !color) || (availableSizes.length > 0 && !size)) {
+        // Required options not selected
+        document.getElementById('modalVariantInfo').classList.add('hidden');
+        document.getElementById('confirmModalOptionsBtn').disabled = true;
+        return;
+    }
+    
+    // Find variant that matches selected attributes
+    const matchingVariant = variants.find(variant => {
+        const variantAttrs = variant.attributes || {};
+        
+        let colorMatch = true;
+        let sizeMatch = true;
+        
+        if (color && variantAttrs.color !== color) {
+            colorMatch = false;
+        }
+        
+        if (size && variantAttrs.size !== size) {
+            sizeMatch = false;
+        }
+        
+        return colorMatch && sizeMatch;
+    });
+    
+    if (matchingVariant) {
+        selectedOptions.variant = matchingVariant;
+        updateModalVariantInfo(matchingVariant);
+        document.getElementById('confirmModalOptionsBtn').disabled = false;
+    } else {
+        document.getElementById('modalVariantInfo').classList.add('hidden');
+        document.getElementById('confirmModalOptionsBtn').disabled = true;
+    }
+}
+
+// Update modal variant info
+function updateModalVariantInfo(variant) {
+    const modalVariantInfo = document.getElementById('modalVariantInfo');
+    modalVariantInfo.classList.remove('hidden');
+    
+    // Update text
+    const colorText = selectedOptions.color ? `Color: ${selectedOptions.color}` : '';
+    const sizeText = selectedOptions.size ? `Size: ${selectedOptions.size}` : '';
+    
+    document.getElementById('modalSelectedColorText').textContent = colorText;
+    document.getElementById('modalSelectedSizeText').textContent = sizeText;
+    
+    // Update price and stock
+    document.getElementById('modalVariantPrice').textContent = `UGX ${variant.display_price.toLocaleString()}`;
+    
+    const stockText = variant.stock > 0 
+        ? `${variant.stock} in stock` 
+        : 'Out of stock';
+    document.getElementById('modalVariantStock').textContent = stockText;
+    
+    // Enable/disable confirm button based on stock
+    document.getElementById('confirmModalOptionsBtn').disabled = variant.stock <= 0;
+}
+
+// Confirm modal options
+function confirmModalOptions() {
+    if (!selectedOptions.variant) return;
+    
+    // Update main page with selected options
+    updateMainPageOptions(selectedOptions.variant);
+    
+    // Close modal
+    closeOptionsModal();
+    
+    // Execute pending action
+    if (pendingAction === 'addToCart') {
+        addToCartDirect();
+    } else if (pendingAction === 'buyNow') {
+        buyNowDirect();
+    }
+    
+    // Reset pending state after action triggered
+    pendingAction = null;
+    pendingButton = null;
+}
+
+// Update main page with selected options
+function updateMainPageOptions(variant) {
+    // Update hidden inputs
+    if (selectedOptions.color) {
+        document.getElementById('selectedColor').value = selectedOptions.color;
+    }
+    if (selectedOptions.size) {
+        document.getElementById('selectedSize').value = selectedOptions.size;
+    }
+    document.getElementById('selectedVariantId').value = variant.id;
+    
+    // Update UI buttons
+    if (selectedOptions.color) {
+        document.querySelectorAll(`[data-option="color"]`).forEach(btn => {
+            btn.classList.remove('selected');
+            if (btn.dataset.value === selectedOptions.color) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+    
+    if (selectedOptions.size) {
+        document.querySelectorAll(`[data-option="size"]`).forEach(btn => {
+            btn.classList.remove('selected');
+            if (btn.dataset.value === selectedOptions.size) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+    
+    // Update price and stock display
+    document.getElementById('productPrice').textContent = `UGX ${variant.display_price.toLocaleString()}`;
+    document.getElementById('stockInfo').textContent = `${variant.stock} pieces available`;
+    
+    // Update stock status
+    const stockStatusDiv = document.getElementById('stockStatus');
+    if (variant.stock > 10) {
+        stockStatusDiv.innerHTML = `
+            <div class="flex items-center gap-2 text-green-600">
+                <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                <span class="font-medium">In Stock</span>
+                <span class="text-gray-500 text-sm">(${variant.stock} available)</span>
+            </div>
+        `;
+    } else if (variant.stock > 0) {
+        stockStatusDiv.innerHTML = `
+            <div class="space-y-2">
+                <div class="flex items-center gap-2 text-orange-600">
+                    <div class="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                    <span class="font-medium">Low Stock</span>
+                    <span class="text-gray-500 text-sm">- Only ${variant.stock} left!</span>
+                </div>
+                <div class="stock-progress">
+                    <div class="stock-progress-bar bg-orange-500" style="width: ${Math.min(variant.stock * 10, 100)}%"></div>
+                </div>
+            </div>
+        `;
+    } else {
+        stockStatusDiv.innerHTML = `
+            <div class="flex items-center gap-2 text-red-600">
+                <div class="w-3 h-3 bg-red-500 rounded-full"></div>
+                <span class="font-medium">Out of Stock</span>
+            </div>
+        `;
+    }
+    
+    // Show variant info
+    const variantInfoDiv = document.getElementById('selectedVariantInfo');
+    variantInfoDiv.classList.remove('hidden');
+    
+    const optionsText = [];
+    if (selectedOptions.color) optionsText.push(`Color: ${selectedOptions.color}`);
+    if (selectedOptions.size) optionsText.push(`Size: ${selectedOptions.size}`);
+    
+    document.getElementById('selectedOptionsText').textContent = optionsText.join(' | ');
+    document.getElementById('variantPrice').textContent = `UGX ${variant.display_price.toLocaleString()}`;
+    document.getElementById('variantStock').textContent = `${variant.stock} in stock`;
+    
+    // Update quantity max
+    const qtyInput = document.getElementById('quantity');
+    qtyInput.max = variant.stock;
+    if (parseInt(qtyInput.value) > variant.stock) {
+        qtyInput.value = variant.stock;
+    }
+}
+
+// Select option from main page (if user selects without modal)
+function selectOption(type, value) {
+    // Update UI
+    document.querySelectorAll(`[data-option="${type}"]`).forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    event.target.classList.add('selected');
+    
+    // Update hidden input
+    if (type === 'color') {
+        document.getElementById('selectedColor').value = value;
+        selectedOptions.color = value;
+    } else if (type === 'size') {
+        document.getElementById('selectedSize').value = value;
+        selectedOptions.size = value;
+    }
+    
+    // Find matching variant
+    findMatchingVariantForMainPage();
+}
+
+// Find matching variant for main page
+function findMatchingVariantForMainPage() {
+    const color = document.getElementById('selectedColor').value;
+    const size = document.getElementById('selectedSize').value;
+    
+    // Find matching variant
+    const matchingVariant = variants.find(variant => {
+        const variantAttrs = variant.attributes || {};
+        
+        let colorMatch = true;
+        let sizeMatch = true;
+        
+        if (color && variantAttrs.color !== color) {
+            colorMatch = false;
+        }
+        
+        if (size && variantAttrs.size !== size) {
+            sizeMatch = false;
+        }
+        
+        return colorMatch && sizeMatch;
+    });
+    
+    if (matchingVariant) {
+        selectedOptions.variant = matchingVariant;
+        document.getElementById('selectedVariantId').value = matchingVariant.id;
+        updateMainPageOptions(matchingVariant);
+    } else {
+        // Hide variant info if no match
+        document.getElementById('selectedVariantInfo').classList.add('hidden');
+        document.getElementById('selectedVariantId').value = '';
+    }
+}
+
+// Direct add to cart (without modal)
+async function addToCartDirect() {
+    const btn = pendingButton || document.getElementById('addToCartBtn');
+    const qty = parseInt(document.getElementById('quantity')?.value) || 1;
+    const originalHtml = btn.innerHTML;
+    
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
+    btn.disabled = true;
+    
+    try {
+        const cartData = {
+            quantity: qty,
+            variant_id: document.getElementById('selectedVariantId')?.value || null,
+            color: document.getElementById('selectedColor')?.value || null,
+            size: document.getElementById('selectedSize')?.value || null
+        };
+        
+        const res = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(cartData)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            btn.innerHTML = '<i class="fas fa-check"></i> Added!';
+            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            showToast('Added to cart successfully!', 'success');
+            
+            if (data.cart_count) {
+                updateCartCount(data.cart_count);
+            }
+            
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.style.background = '';
+                btn.disabled = false;
+            }, 2000);
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        showToast(error.message || 'Failed to add to cart', 'error');
+    }
+}
+
+// Direct buy now (without modal)
+async function buyNowDirect() {
+    const qty = parseInt(document.getElementById('quantity')?.value) || 1;
+    
+    try {
+        const cartData = {
+            quantity: qty,
+            variant_id: document.getElementById('selectedVariantId')?.value || null,
+            color: document.getElementById('selectedColor')?.value || null,
+            size: document.getElementById('selectedSize')?.value || null
+        };
+        
+        const res = await fetch(`/buyer/cart/add/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(cartData)
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            window.location.href = '/buyer/orders/checkout';
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (error) {
+        showToast(error.message || 'Failed to proceed', 'error');
+    }
+}
+
+// Toggle wishlist
+async function toggleWishlist(listingId, btn) {
+    if (!isAuthenticated) {
+        showAuthModal();
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await res.json();
+        
+        if (data.success) {
+            if (data.in_wishlist) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-heart"></i><span>In Wishlist</span>';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-heart"></i><span>Add to Wishlist</span>';
+            }
+            showToast(data.message || 'Wishlist updated!', 'success');
+        }
+    } catch (error) {
+        showToast('Failed to update wishlist', 'error');
+    }
+}
+
+// Update cart count
+function updateCartCount(count) {
+    const cartCountElements = document.querySelectorAll('.cart-count');
+    cartCountElements.forEach(element => {
+        element.textContent = count;
+        if (count > 0) {
+            element.classList.remove('hidden');
+            element.classList.add('animate-pulse');
+            setTimeout(() => element.classList.remove('animate-pulse'), 1000);
+        }
+    });
+}
+
+// Toast notification
+function showToast(message, type = 'info') {
+    const colors = {
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        info: 'bg-blue-500'
+    };
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-times-circle',
+        info: 'fa-info-circle'
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = `toast-notification fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-lg z-50 flex items-center gap-3`;
+    toast.innerHTML = `
+        <i class="fas ${icons[type]}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Image gallery functions
+function changeImage(src, btn) {
+    document.getElementById('mainImage').src = src;
+    document.querySelectorAll('.thumbnail-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+function openLightbox() {
+    const img = document.getElementById('mainImage').src;
+    document.getElementById('lightboxImage').src = img;
+    document.getElementById('lightbox').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    document.getElementById('lightbox').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Tab switching
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+    
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+}
+
+// Auth modal
+function showAuthModal() {
+    document.getElementById('authModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').classList.add('hidden');
+    document.body.style.overflow = '';
+}
+
+// Callback modal functions
 function openCallbackModal() {
     document.getElementById('callbackModal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
@@ -1327,7 +2158,7 @@ function closeCallbackModal() {
     document.getElementById('callbackForm').reset();
 }
 
-// Handle form submission
+// Handle callback form submission
 document.getElementById('callbackForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -1370,246 +2201,17 @@ document.getElementById('callbackForm')?.addEventListener('submit', async functi
     }
 });
 
-// Close modal on Escape key
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        closeLightbox();
+        closeAuthModal();
+        closeOptionsModal();
         closeCallbackModal();
     }
 });
 
-// Quantity Controls
-document.addEventListener('DOMContentLoaded', function() {
-    const qtyInput = document.getElementById('quantity');
-    const qtyMinus = document.getElementById('qtyMinus');
-    const qtyPlus = document.getElementById('qtyPlus');
-    
-    if (qtyMinus && qtyPlus && qtyInput) {
-        qtyMinus.addEventListener('click', () => {
-            let val = parseInt(qtyInput.value) || 1;
-            if (val > 1) qtyInput.value = val - 1;
-        });
-        
-        qtyPlus.addEventListener('click', () => {
-            let val = parseInt(qtyInput.value) || 1;
-            const max = parseInt(qtyInput.max) || 99;
-            if (val < max) qtyInput.value = val + 1;
-        });
-    }
-    
-    // Add to Cart
-    document.getElementById('addToCartBtn')?.addEventListener('click', function() {
-        addToCart(this.dataset.listingId);
-    });
-    
-    // Buy Now
-    document.getElementById('buyNowBtn')?.addEventListener('click', function() {
-        buyNow(this.dataset.listingId);
-    });
-    
-    // Wishlist
-    document.getElementById('wishlistBtn')?.addEventListener('click', function() {
-        toggleWishlist(this.dataset.listingId, this);
-    });
-    
-    // Check URL for tab parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab');
-    if (tab) {
-        switchTab(tab);
-    }
-});
-
-// Image Gallery
-function changeImage(src, btn) {
-    document.getElementById('mainImage').src = src;
-    document.querySelectorAll('.thumbnail-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
-
-function openLightbox() {
-    const img = document.getElementById('mainImage').src;
-    document.getElementById('lightboxImage').src = img;
-    document.getElementById('lightbox').classList.add('active');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeLightbox() {
-    document.getElementById('lightbox').classList.remove('active');
-    document.body.style.overflow = '';
-}
-
-// Review Image Lightbox
-function openReviewImage(src) {
-    document.getElementById('reviewLightboxImage').src = src;
-    document.getElementById('reviewImageLightbox').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeReviewImageLightbox() {
-    document.getElementById('reviewImageLightbox').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-// Tabs
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
-    
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-    
-    // Scroll to tabs if switching from link
-    if (tabName === 'reviews') {
-        document.querySelector('.tab-btn').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-}
-
-// Cart Functions
-async function addToCart(listingId) {
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    
-    const btn = document.getElementById('addToCartBtn');
-    const qty = parseInt(document.getElementById('quantity')?.value) || 1;
-    const originalHtml = btn.innerHTML;
-    
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
-    btn.disabled = true;
-    
-    try {
-        const res = await fetch(`/buyer/cart/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ quantity: qty })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            btn.innerHTML = '<i class="fas fa-check"></i> Added!';
-            btn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            showToast('Added to cart successfully!', 'success');
-            
-            setTimeout(() => {
-                btn.innerHTML = originalHtml;
-                btn.style.background = '';
-                btn.disabled = false;
-            }, 2000);
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (error) {
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
-        showToast(error.message || 'Failed to add to cart', 'error');
-    }
-}
-
-async function buyNow(listingId) {
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    
-    const qty = parseInt(document.getElementById('quantity')?.value) || 1;
-    
-    try {
-        const res = await fetch(`/buyer/cart/add/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ quantity: qty })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            window.location.href = '/buyer/orders/checkout';
-        } else {
-            throw new Error(data.message);
-        }
-    } catch (error) {
-        showToast(error.message || 'Failed to proceed', 'error');
-    }
-}
-
-async function toggleWishlist(listingId, btn) {
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    
-    try {
-        const res = await fetch(`/buyer/wishlist/toggle/${listingId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            }
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            if (data.in_wishlist) {
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-heart"></i><span>In Wishlist</span>';
-            } else {
-                btn.classList.remove('active');
-                btn.innerHTML = '<i class="far fa-heart"></i><span>Add to Wishlist</span>';
-            }
-            showToast(data.message || 'Wishlist updated!', 'success');
-        }
-    } catch (error) {
-        showToast('Failed to update wishlist', 'error');
-    }
-}
-
-// Vote on Review
-async function voteReview(reviewId, voteType, btn) {
-    if (!isAuthenticated) {
-        showAuthModal();
-        return;
-    }
-    
-    try {
-        const res = await fetch(`/buyer/reviews/${reviewId}/vote`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({ vote: voteType })
-        });
-        
-        const data = await res.json();
-        
-        if (data.success) {
-            // Update counts in UI
-            const reviewCard = btn.closest('.review-card');
-            reviewCard.querySelector('.helpful-count').textContent = data.helpful_count;
-            reviewCard.querySelector('.unhelpful-count').textContent = data.unhelpful_count;
-            showToast('Vote recorded!', 'success');
-        } else {
-            showToast(data.message || 'Failed to vote', 'error');
-        }
-    } catch (error) {
-        showToast('Failed to submit vote', 'error');
-    }
-}
-
-// Share Functions
+// Share functions
 function shareOn(platform) {
     const url = encodeURIComponent(window.location.href);
     const title = encodeURIComponent('{{ $listing->title }}');
@@ -1627,56 +2229,5 @@ function copyLink() {
     navigator.clipboard.writeText(window.location.href);
     showToast('Link copied to clipboard!', 'success');
 }
-
-// Auth Modal
-function showAuthModal() {
-    document.getElementById('authModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-
-function closeAuthModal() {
-    document.getElementById('authModal').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-// Toast Notification
-function showToast(message, type = 'info') {
-    const colors = {
-        success: 'bg-green-500',
-        error: 'bg-red-500',
-        info: 'bg-blue-500'
-    };
-    
-    const icons = {
-        success: 'fa-check-circle',
-        error: 'fa-times-circle',
-        info: 'fa-info-circle'
-    };
-    
-    const toast = document.createElement('div');
-    toast.className = `toast-notification fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 rounded-xl shadow-lg z-50 flex items-center gap-3`;
-    toast.innerHTML = `
-        <i class="fas ${icons[type]}"></i>
-        <span>${message}</span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateX(100%)';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
-
-
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeLightbox();
-        closeReviewImageLightbox();
-        closeAuthModal();
-    }
-});
 </script>
 @endpush

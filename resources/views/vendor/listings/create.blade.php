@@ -41,26 +41,41 @@
                         @enderror
                     </div>
 
-                   <!-- Simple Category Search -->
-{{-- Category Select --}}
-<div class="mb-4">
-    <label class="block font-medium text-gray-700 mb-2">Category *</label>
-   <select name="category_id" class="form-control select2" required>
-    <option value="">Select Category</option>
-    @foreach($categories as $category)
-        <option value="{{ $category->id }}">{{ $category->name }}</option>
-        @foreach($category->children as $child)
-            <option value="{{ $child->id }}">— {{ $child->name }}</option>
-            @foreach($child->children as $subchild)
-                <option value="{{ $subchild->id }}">—— {{ $subchild->name }}</option>
-            @endforeach
-        @endforeach
-    @endforeach
-</select>
-</div>
+                    <!-- Category Select -->
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Category *
+                        </label>
+                        <select name="category_id" id="category_id" required
+                                class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">Select Category</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                                @if($category->children->count() > 0)
+                                    @foreach($category->children as $child)
+                                        <option value="{{ $child->id }}" {{ old('category_id') == $child->id ? 'selected' : '' }}>
+                                            &nbsp;&nbsp;&nbsp;› {{ $child->name }}
+                                        </option>
+                                        @if($child->children->count() > 0)
+                                            @foreach($child->children as $subchild)
+                                                <option value="{{ $subchild->id }}" {{ old('category_id') == $subchild->id ? 'selected' : '' }}>
+                                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;› {{ $subchild->name }}
+                                                </option>
+                                            @endforeach
+                                        @endif
+                                    @endforeach
+                                @endif
+                            @endforeach
+                        </select>
+                        @error('category_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
 
                     <!-- SKU (Optional) -->
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             SKU (Stock Keeping Unit)
                         </label>
@@ -84,12 +99,12 @@
                     <!-- Price -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Price ($) *
+                            Price (UGX) *
                         </label>
                         <div class="relative">
-                            <span class="absolute left-3 top-3 text-gray-500">$</span>
+                            <span class="absolute left-3 top-3 text-gray-500">UGX</span>
                             <input type="number" name="price" step="0.01" min="0" required
-                                   class="w-full pl-8 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                   class="w-full pl-12 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                    placeholder="0.00"
                                    value="{{ old('price') }}">
                         </div>
@@ -204,6 +219,81 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Product Variations -->
+                <div class="p-6 border-b border-gray-200">
+                    <h2 class="text-lg font-bold text-gray-900 mb-4">Product Variations</h2>
+                    
+                    <div class="mb-6">
+                        <div class="flex items-center">
+                            <input type="checkbox" name="enable_variations" id="enable_variations" value="1" 
+                                   class="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                   onchange="toggleVariations(this.checked)">
+                            <label for="enable_variations" class="ml-2 block text-sm font-medium text-gray-700">
+                                Enable product variations (different colors/sizes with different prices/stock)
+                            </label>
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">
+                            If checked, customers will be able to select color/size options.
+                        </p>
+                    </div>
+                    
+                    <!-- Variations Container -->
+                    <div id="variationsContainer" class="hidden">
+                        <!-- Variation Generator -->
+                        <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+                            <h3 class="text-md font-medium text-gray-900 mb-3">Create Variations</h3>
+                            
+                            <!-- Colors -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Available Colors</label>
+                                <div class="flex flex-wrap gap-2 mb-2" id="colorChips">
+                                    <!-- Color chips will be added here -->
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="newColor" placeholder="Add color (e.g., Red)" 
+                                           class="flex-1 border border-gray-300 rounded-lg px-3 py-2">
+                                    <button type="button" onclick="addColor()" 
+                                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700">
+                                        Add Color
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Sizes -->
+                            <div class="mb-4">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Available Sizes</label>
+                                <div class="flex flex-wrap gap-2 mb-2" id="sizeChips">
+                                    <!-- Size chips will be added here -->
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="newSize" placeholder="Add size (e.g., M)" 
+                                           class="flex-1 border border-gray-300 rounded-lg px-3 py-2">
+                                    <button type="button" onclick="addSize()" 
+                                            class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700">
+                                        Add Size
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <button type="button" onclick="generateVariations()" 
+                                    class="w-full px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium">
+                                <i class="fas fa-magic mr-2"></i> Generate Variations
+                            </button>
+                        </div>
+                        
+                        <!-- Variations Table -->
+                        <div class="mb-6">
+                            <h3 class="text-md font-medium text-gray-900 mb-3">Variations</h3>
+                            <div id="variationsTable" class="overflow-x-auto">
+                                <!-- Variations table will be generated here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden inputs for variations -->
+                        <div id="variationsData"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- Description -->
@@ -214,135 +304,127 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">
                         Description *
                     </label>
-                    <textarea name="description" rows="6" required
+                    <textarea name="description" id="description" rows="6" required
                               class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                               placeholder="Describe your product in detail. Include features, specifications, benefits, etc.">{{ old('description') }}</textarea>
                     <p class="mt-1 text-sm text-gray-500">Minimum 100 characters. Describe your product clearly to attract buyers.</p>
+                    <div class="mt-1 text-sm">
+                        <span id="charCount">0</span> characters
+                    </div>
                     @error('description')
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
             </div>
 
-           <!-- Enhanced Images Section -->
-<div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Product Images</h2>
-    
-    <div class="mb-6">
-        <!-- Upload Zone -->
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-            Upload Images *
-        </label>
-        <div id="uploadZone" 
-             class="border-3 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-primary transition cursor-pointer bg-gray-50 hover:bg-gray-100">
-            <div class="flex flex-col items-center justify-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <i class="fas fa-images text-primary text-2xl"></i>
+            <!-- Enhanced Images Section -->
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Product Images</h2>
+                
+                <div class="mb-6">
+                    <!-- Upload Zone -->
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Images *
+                    </label>
+                    <div id="uploadZone" 
+                         class="border-3 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-primary transition cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-images text-primary text-2xl"></i>
+                            </div>
+                            <p class="text-xl font-medium text-gray-700 mb-2">Drag & Drop Images Here</p>
+                            <p class="text-sm text-gray-500 mb-4">Or click to browse your computer</p>
+                            <div class="flex items-center gap-4 mb-4">
+                                <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> Up to 5 images
+                                </span>
+                                <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> 2MB max each
+                                </span>
+                                <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> JPG, PNG, WebP
+                                </span>
+                            </div>
+                            <button type="button" onclick="document.getElementById('images').click()" 
+                                    class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                                <i class="fas fa-folder-open"></i>
+                                Browse Files
+                            </button>
+                        </div>
+                        <input type="file" name="images[]" id="images" multiple accept="image/*" 
+                               class="hidden" onchange="handleFileSelect(this)">
+                    </div>
+                    
+                    <p class="mt-4 text-sm text-gray-500 flex items-center justify-center gap-2">
+                        <i class="fas fa-lightbulb text-yellow-500"></i>
+                        <span>Tip: First image will be the main product thumbnail</span>
+                    </p>
+                    @error('images')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
-                <p class="text-xl font-medium text-gray-700 mb-2">Drag & Drop Images Here</p>
-                <p class="text-sm text-gray-500 mb-4">Or click to browse your computer</p>
-                <div class="flex items-center gap-4 mb-4">
-                    <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> Up to 5 images
-                    </span>
-                    <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> 2MB max each
-                    </span>
-                    <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> JPG, PNG, WebP
-                    </span>
-                </div>
-                <button type="button" onclick="document.getElementById('images').click()" 
-                        class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2">
-                    <i class="fas fa-folder-open"></i>
-                    Browse Files
-                </button>
-            </div>
-            <input type="file" name="images[]" id="images" multiple accept="image/*" 
-                   class="hidden" onchange="handleFileSelect(this)">
-        </div>
-        
-        <!-- Progress Bar (for large files) -->
-        <div id="uploadProgress" class="hidden mt-4">
-            <div class="flex justify-between text-sm text-gray-600 mb-1">
-                <span>Uploading...</span>
-                <span id="uploadPercent">0%</span>
-            </div>
-            <div class="w-full bg-gray-200 rounded-full h-2">
-                <div id="progressBar" class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-            </div>
-        </div>
-        
-        <p class="mt-4 text-sm text-gray-500 flex items-center justify-center gap-2">
-            <i class="fas fa-lightbulb text-yellow-500"></i>
-            <span>Tip: First image will be the main product thumbnail</span>
-        </p>
-        @error('images')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
 
-    <!-- Image Preview Gallery -->
-    <div id="imagePreview" class="hidden">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-md font-bold text-gray-900">Image Gallery</h3>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="selectAllImages()" 
-                        class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <i class="fas fa-check-square mr-1"></i> Select All
-                </button>
-                <button type="button" onclick="clearAllImages()" 
-                        class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
-                    <i class="fas fa-trash mr-1"></i> Clear All
-                </button>
-            </div>
-        </div>
-        
-        <!-- Image Counter -->
-        <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-medium text-blue-700">
-                        <span id="selectedCount">0</span> of 5 images selected
-                    </span>
-                    <span id="fileSizeInfo" class="text-xs text-blue-600"></span>
+                <!-- Image Preview Gallery -->
+                <div id="imagePreview" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-md font-bold text-gray-900">Image Gallery</h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="selectAllImages()" 
+                                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <i class="fas fa-check-square mr-1"></i> Select All
+                            </button>
+                            <button type="button" onclick="clearAllImages()" 
+                                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
+                                <i class="fas fa-trash mr-1"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Image Counter -->
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-blue-700">
+                                    <span id="selectedCount">0</span> of 5 images selected
+                                </span>
+                                <span id="fileSizeInfo" class="text-xs text-blue-600"></span>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-arrows-alt mr-1"></i> Drag to reorder
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sortable Image Grid -->
+                    <div id="newImagesSortable" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                        <!-- Images will be added here dynamically -->
+                    </div>
+                    
+                    <!-- Batch Actions -->
+                    <div id="batchActions" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            <span class="text-sm font-medium text-gray-700">
+                                <span id="batchCount">0</span> images selected
+                            </span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="setAsMain()" 
+                                    class="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary hover:text-white transition">
+                                <i class="fas fa-star mr-1"></i> Set as Main
+                            </button>
+                            <button type="button" onclick="removeSelected()" 
+                                    class="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition">
+                                <i class="fas fa-trash mr-1"></i> Remove Selected
+                            </button>
+                            <button type="button" onclick="clearSelection()" 
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition">
+                                <i class="fas fa-times mr-1"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-500">
-                    <i class="fas fa-arrows-alt mr-1"></i> Drag to reorder
-                </div>
             </div>
-        </div>
-        
-        <!-- Sortable Image Grid -->
-        <div id="newImagesSortable" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-            <!-- Images will be added here dynamically -->
-        </div>
-        
-        <!-- Batch Actions -->
-        <div id="batchActions" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-check-circle text-green-500"></i>
-                <span class="text-sm font-medium text-gray-700">
-                    <span id="batchCount">0</span> images selected
-                </span>
-            </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="setAsMain()" 
-                        class="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary hover:text-white transition">
-                    <i class="fas fa-star mr-1"></i> Set as Main
-                </button>
-                <button type="button" onclick="removeSelected()" 
-                        class="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition">
-                    <i class="fas fa-trash mr-1"></i> Remove Selected
-                </button>
-                <button type="button" onclick="clearSelection()" 
-                        class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition">
-                    <i class="fas fa-times mr-1"></i> Clear Selection
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- Submit -->
             <div class="p-6">
@@ -351,7 +433,7 @@
                             class="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium">
                         Reset Form
                     </button>
-                    <button type="submit" 
+                    <button type="submit" id="submitBtn"
                             class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-indigo-700 font-medium">
                         <i class="fas fa-plus-circle mr-2"></i> Create Product
                     </button>
@@ -360,91 +442,126 @@
         </form>
     </div>
 </div>
+@endsection
+
+@push('styles')
 <style>
-/* Enhanced upload zone */
-#uploadZone {
-    transition: all 0.3s ease;
-}
-
-#uploadZone.drag-over {
-    border-color: #4f46e5 !important;
-    background: linear-gradient(135deg, rgba(79,70,229,0.05) 0%, rgba(124,58,237,0.05) 100%);
-    transform: scale(1.01);
-}
-
-/* Image preview animations */
-.image-preview-item {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.image-preview-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-}
-
-/* Selection styles */
-.image-preview-item.selected {
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
-    transform: scale(1.02);
-}
-
-/* Progress bar animation */
-#progressBar {
-    transition: width 0.3s ease;
-}
-
-/* Toast notifications */
-.custom-toast {
-    animation: slideInRight 0.3s ease-out;
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(100%);
+    /* Enhanced upload zone */
+    #uploadZone {
+        transition: all 0.3s ease;
     }
-    to {
-        opacity: 1;
-        transform: translateX(0);
+
+    #uploadZone.drag-over {
+        border-color: #4f46e5 !important;
+        background: linear-gradient(135deg, rgba(79,70,229,0.05) 0%, rgba(124,58,237,0.05) 100%);
+        transform: scale(1.01);
     }
-}
 
-/* Sortable ghost element */
-.sortable-ghost {
-    opacity: 0.4;
-    background: #e5e7eb;
-}
+    /* Image preview animations */
+    .image-preview-item {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
-.sortable-chosen {
-    box-shadow: 0 0 20px rgba(0,0,0,0.1);
-}
+    .image-preview-item:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
 
-/* Main image badge */
-.main-image-badge {
-    animation: pulse 2s infinite;
-}
+    /* Selection styles */
+    .image-preview-item.selected {
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+        transform: scale(1.02);
+    }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-}
+    /* Progress bar animation */
+    #progressBar {
+        transition: width 0.3s ease;
+    }
 
-/* File size indicator */
-.file-size {
-    font-family: 'Courier New', monospace;
-    font-size: 0.8em;
-}
-</style> 
+    /* Toast notifications */
+    .custom-toast {
+        animation: slideInRight 0.3s ease-out;
+    }
 
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Sortable ghost element */
+    .sortable-ghost {
+        opacity: 0.4;
+        background: #e5e7eb;
+    }
+
+    .sortable-chosen {
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    /* Main image badge */
+    .main-image-badge {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    /* File size indicator */
+    .file-size {
+        font-family: 'Courier New', monospace;
+        font-size: 0.8em;
+    }
+</style>
+@endpush
+
+@push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+// Image Upload Variables
 let uploadedImages = [];
 let selectedImages = new Set();
 
-// Drag and drop functionality
+// Variations Variables
+let colors = [];
+let sizes = [];
+let variations = [];
+
+// Character counter for description
 document.addEventListener('DOMContentLoaded', function() {
+    const description = document.getElementById('description');
+    if (description) {
+        const charCount = document.getElementById('charCount');
+        charCount.textContent = description.value.length;
+        
+        description.addEventListener('input', function() {
+            charCount.textContent = this.value.length;
+        });
+    }
+    
+    // Initialize Select2 for category
+    $('#category_id').select2({
+        placeholder: 'Search for a category...',
+        allowClear: true,
+        width: '100%'
+    });
+    
+    // Initialize drag and drop
+    initDragAndDrop();
+});
+
+// Drag and drop functionality
+function initDragAndDrop() {
     const uploadZone = document.getElementById('uploadZone');
+    if (!uploadZone) return;
     
     // Prevent default drag behaviors
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -479,7 +596,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-});
+}
 
 function preventDefaults(e) {
     e.preventDefault();
@@ -487,11 +604,17 @@ function preventDefaults(e) {
 }
 
 function highlight() {
-    document.getElementById('uploadZone').classList.add('border-primary', 'bg-primary/5');
+    const uploadZone = document.getElementById('uploadZone');
+    if (uploadZone) {
+        uploadZone.classList.add('border-primary', 'bg-primary/5');
+    }
 }
 
 function unhighlight() {
-    document.getElementById('uploadZone').classList.remove('border-primary', 'bg-primary/5');
+    const uploadZone = document.getElementById('uploadZone');
+    if (uploadZone) {
+        uploadZone.classList.remove('border-primary', 'bg-primary/5');
+    }
 }
 
 function handleDrop(e) {
@@ -508,7 +631,14 @@ function handleFiles(files) {
     if (!files || files.length === 0) return;
     
     // Limit to 5 files
-    const filesArray = Array.from(files).slice(0, 5);
+    let filesArray = Array.from(files).slice(0, 5);
+    
+    // Check if adding these files would exceed limit
+    const totalAfterAdd = uploadedImages.length + filesArray.length;
+    if (totalAfterAdd > 5) {
+        alert(`Maximum 5 images allowed. You already have ${uploadedImages.length} images.`);
+        filesArray = filesArray.slice(0, 5 - uploadedImages.length);
+    }
     
     // Check file sizes
     const oversizedFiles = filesArray.filter(file => file.size > 2 * 1024 * 1024);
@@ -522,11 +652,6 @@ function handleFiles(files) {
     const totalFiles = filesArray.length;
     
     filesArray.forEach((file, index) => {
-        if (uploadedImages.length >= 5) {
-            alert('Maximum 5 images allowed. Some files were skipped.');
-            return;
-        }
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             uploadedImages.push({
@@ -541,12 +666,11 @@ function handleFiles(files) {
             
             processedCount++;
             
-            // Show progress for multiple files
-           if (processedCount === totalFiles) {
-    updateImagePreviews();
-    updateFileInputOrder();  // ADD THIS LINE
-    showSuccessMessage(`${totalFiles} images uploaded successfully!`);
-}
+            if (processedCount === totalFiles) {
+                updateImagePreviews();
+                updateFileInputOrder();
+                showSuccessMessage(`${totalFiles} images uploaded successfully!`);
+            }
         };
         reader.readAsDataURL(file);
     });
@@ -559,11 +683,13 @@ function updateImagePreviews() {
     container.innerHTML = '';
     
     if (uploadedImages.length === 0) {
-        document.getElementById('imagePreview').classList.add('hidden');
+        const imagePreview = document.getElementById('imagePreview');
+        if (imagePreview) imagePreview.classList.add('hidden');
         return;
     }
     
-    document.getElementById('imagePreview').classList.remove('hidden');
+    const imagePreview = document.getElementById('imagePreview');
+    if (imagePreview) imagePreview.classList.remove('hidden');
     
     uploadedImages.forEach((img, index) => {
         const col = document.createElement('div');
@@ -665,7 +791,9 @@ function initImageSorting() {
             });
             
             const fileInput = document.getElementById('images');
-            fileInput.files = dataTransfer.files;
+            if (fileInput) {
+                fileInput.files = dataTransfer.files;
+            }
             
             // Update UI
             updateImagePreviews();
@@ -678,30 +806,40 @@ function updateCounters() {
     const totalImages = uploadedImages.length;
     const selectedCount = uploadedImages.filter(img => img.selected).length;
     
-    document.getElementById('selectedCount').textContent = totalImages;
-    document.getElementById('batchCount').textContent = selectedCount;
+    const selectedCountEl = document.getElementById('selectedCount');
+    const batchCountEl = document.getElementById('batchCount');
+    
+    if (selectedCountEl) selectedCountEl.textContent = totalImages;
+    if (batchCountEl) batchCountEl.textContent = selectedCount;
     
     // Show/hide batch actions
     const batchActions = document.getElementById('batchActions');
-    if (selectedCount > 0) {
-        batchActions.classList.remove('hidden');
-    } else {
-        batchActions.classList.add('hidden');
+    if (batchActions) {
+        if (selectedCount > 0) {
+            batchActions.classList.remove('hidden');
+        } else {
+            batchActions.classList.add('hidden');
+        }
     }
     
     // Update upload zone text
     const uploadText = document.querySelector('#uploadZone p.text-xl');
-    if (totalImages > 0) {
-        uploadText.textContent = `Add More Images (${totalImages}/5 uploaded)`;
-    } else {
-        uploadText.textContent = 'Drag & Drop Images Here';
+    if (uploadText) {
+        if (totalImages > 0) {
+            uploadText.textContent = `Add More Images (${totalImages}/5 uploaded)`;
+        } else {
+            uploadText.textContent = 'Drag & Drop Images Here';
+        }
     }
 }
 
 function updateFileSizeInfo() {
     const totalSize = uploadedImages.reduce((sum, img) => sum + img.file.size, 0);
     const formattedSize = formatFileSize(totalSize);
-    document.getElementById('fileSizeInfo').textContent = `Total: ${formattedSize}`;
+    const fileSizeInfo = document.getElementById('fileSizeInfo');
+    if (fileSizeInfo) {
+        fileSizeInfo.textContent = `Total: ${formattedSize}`;
+    }
 }
 
 function formatFileSize(bytes) {
@@ -825,7 +963,8 @@ function clearAllImages() {
     if (!confirm('Remove all images?')) return;
     
     uploadedImages = [];
-    document.getElementById('images').value = '';
+    const fileInput = document.getElementById('images');
+    if (fileInput) fileInput.value = '';
     updateImagePreviews();
     showToast('All images cleared', 'success');
 }
@@ -837,13 +976,224 @@ function updateFileInputOrder() {
     });
     
     const fileInput = document.getElementById('images');
-    fileInput.files = dataTransfer.files;
+    if (fileInput) {
+        fileInput.files = dataTransfer.files;
+    }
+}
+
+// Variations Functions
+function toggleVariations(enabled) {
+    const container = document.getElementById('variationsContainer');
+    if (container) {
+        if (enabled) {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+        }
+    }
+}
+
+function addColor() {
+    const input = document.getElementById('newColor');
+    const color = input.value.trim();
+    
+    if (color && !colors.includes(color)) {
+        colors.push(color);
+        updateColorChips();
+        input.value = '';
+    }
+}
+
+function addSize() {
+    const input = document.getElementById('newSize');
+    const size = input.value.trim();
+    
+    if (size && !sizes.includes(size)) {
+        sizes.push(size);
+        updateSizeChips();
+        input.value = '';
+    }
+}
+
+function updateColorChips() {
+    const container = document.getElementById('colorChips');
+    if (container) {
+        container.innerHTML = colors.map(color => `
+            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center gap-1">
+                ${color}
+                <button type="button" onclick="removeColor('${color}')" class="text-blue-600 hover:text-blue-800">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </span>
+        `).join('');
+    }
+}
+
+function updateSizeChips() {
+    const container = document.getElementById('sizeChips');
+    if (container) {
+        container.innerHTML = sizes.map(size => `
+            <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center gap-1">
+                ${size}
+                <button type="button" onclick="removeSize('${size}')" class="text-green-600 hover:text-green-800">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </span>
+        `).join('');
+    }
+}
+
+function removeColor(color) {
+    colors = colors.filter(c => c !== color);
+    updateColorChips();
+}
+
+function removeSize(size) {
+    sizes = sizes.filter(s => s !== size);
+    updateSizeChips();
+}
+
+function generateVariations() {
+    if (colors.length === 0 && sizes.length === 0) {
+        alert('Please add at least one color or size');
+        return;
+    }
+    
+    variations = [];
+    
+    // If no colors or sizes, create single variation
+    if (colors.length === 0) colors = [''];
+    if (sizes.length === 0) sizes = [''];
+    
+    // Generate all combinations
+    colors.forEach(color => {
+        sizes.forEach(size => {
+            const variation = {
+                id: Date.now() + Math.random(),
+                color: color || '',
+                size: size || '',
+                sku: '',
+                price: '',
+                sale_price: '',
+                stock: 1,
+                attributes: {}
+            };
+            
+            if (color) variation.attributes.color = color;
+            if (size) variation.attributes.size = size;
+            
+            variations.push(variation);
+        });
+    });
+    
+    updateVariationsTable();
+}
+
+function updateVariationsTable() {
+    const container = document.getElementById('variationsTable');
+    const dataContainer = document.getElementById('variationsData');
+    
+    if (!container || !dataContainer) return;
+    
+    if (variations.length === 0) {
+        container.innerHTML = '<p class="text-gray-500 text-center p-4">No variations generated yet</p>';
+        dataContainer.innerHTML = '';
+        return;
+    }
+    
+    let tableHTML = `
+        <table class="min-w-full divide-y divide-gray-200 border">
+            <thead class="bg-gray-50">
+                <tr>
+                    ${colors.length > 0 ? '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Color</th>' : ''}
+                    ${sizes.length > 0 ? '<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>' : ''}
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">SKU</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price (UGX)</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sale Price (UGX)</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+    `;
+    
+    let dataHTML = '';
+    
+    variations.forEach((variation, index) => {
+        tableHTML += `
+            <tr>
+                ${colors.length > 0 ? `<td class="px-4 py-3">${variation.color || '-'}</td>` : ''}
+                ${sizes.length > 0 ? `<td class="px-4 py-3">${variation.size || '-'}</td>` : ''}
+                <td class="px-4 py-3">
+                    <input type="text" 
+                           name="variations[${index}][sku]" 
+                           value="${variation.sku}"
+                           class="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                           placeholder="SKU-${index+1}">
+                </td>
+                <td class="px-4 py-3">
+                    <input type="number" 
+                           name="variations[${index}][price]" 
+                           value="${variation.price}"
+                           step="0.01" min="0"
+                           required
+                           class="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                           placeholder="0.00">
+                </td>
+                <td class="px-4 py-3">
+                    <input type="number" 
+                           name="variations[${index}][sale_price]" 
+                           value="${variation.sale_price}"
+                           step="0.01" min="0"
+                           class="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                           placeholder="Optional">
+                </td>
+                <td class="px-4 py-3">
+                    <input type="number" 
+                           name="variations[${index}][stock]" 
+                           value="${variation.stock}"
+                           min="0"
+                           required
+                           class="w-full border border-gray-300 rounded px-2 py-1 text-sm"
+                           placeholder="0">
+                </td>
+                <td class="px-4 py-3">
+                    <button type="button" onclick="removeVariation(${index})" 
+                            class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+        
+        // Hidden inputs for attributes
+        dataHTML += `
+            <input type="hidden" name="variations[${index}][color]" value="${variation.color}">
+            <input type="hidden" name="variations[${index}][size]" value="${variation.size}">
+            <input type="hidden" name="variations[${index}][attributes][color]" value="${variation.color}">
+            <input type="hidden" name="variations[${index}][attributes][size]" value="${variation.size}">
+        `;
+    });
+    
+    tableHTML += '</tbody></table>';
+    container.innerHTML = tableHTML;
+    dataContainer.innerHTML = dataHTML;
+}
+
+function removeVariation(index) {
+    if (confirm('Remove this variation?')) {
+        variations.splice(index, 1);
+        updateVariationsTable();
+    }
 }
 
 // Form Validation Enhancement
 document.getElementById('listingForm').addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerHTML;
+    
     // Description validation
-    const description = document.querySelector('textarea[name="description"]');
+    const description = document.getElementById('description');
     if (description.value.trim().length < 100) {
         e.preventDefault();
         showToast('Description must be at least 100 characters', 'error');
@@ -852,16 +1202,23 @@ document.getElementById('listingForm').addEventListener('submit', function(e) {
         return false;
     }
     
+    // Images validation
+    if (uploadedImages.length === 0) {
+        e.preventDefault();
+        showToast('Please upload at least one image', 'error');
+        return false;
+    }
     
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Creating...';
+    
+    // Allow form to submit
     return true;
 });
 
 // Toast Notification
 function showToast(message, type = 'info') {
-    // Remove existing toasts
-    const existingToasts = document.querySelectorAll('.custom-toast');
-    existingToasts.forEach(toast => toast.remove());
-    
     const colors = {
         success: 'bg-green-500',
         error: 'bg-red-500',
@@ -876,8 +1233,12 @@ function showToast(message, type = 'info') {
         warning: 'fa-exclamation-triangle'
     };
     
+    // Remove existing toasts
+    const existingToasts = document.querySelectorAll('.custom-toast');
+    existingToasts.forEach(toast => toast.remove());
+    
     const toast = document.createElement('div');
-    toast.className = `custom-toast fixed top-6 right-6 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-50 flex items-center gap-3 animate-slideIn`;
+    toast.className = `custom-toast fixed top-6 right-6 ${colors[type]} text-white px-5 py-3 rounded-xl shadow-xl z-50 flex items-center gap-3`;
     toast.innerHTML = `
         <i class="fas ${icons[type]} text-lg"></i>
         <span class="font-medium">${message}</span>
@@ -929,19 +1290,5 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
-
-</script>
-
-@push('scripts')
-<script>
-$(document).ready(function() {
-    $('.select2').select2({
-        placeholder: 'Search for a category...',
-        allowClear: true,
-        width: '100%'
-    });
-});
 </script>
 @endpush
-
-@endsection

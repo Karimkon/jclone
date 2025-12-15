@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Vendor;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\VendorProfile;
+use App\Models\VendorPerformance;
 use App\Models\NotificationQueue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,6 +54,7 @@ class VendorOrderController extends Controller
         
         $orders = $query->orderBy('created_at', 'desc')->paginate(20);
         
+        // Update stats to include delivery metrics
         $stats = [
             'total' => Order::where('vendor_profile_id', $vendor->id)->count(),
             'pending' => Order::where('vendor_profile_id', $vendor->id)
@@ -61,10 +63,22 @@ class VendorOrderController extends Controller
                 ->where('status', 'paid')->count(),
             'processing' => Order::where('vendor_profile_id', $vendor->id)
                 ->where('status', 'processing')->count(),
+            'shipped' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'shipped')->count(),
             'delivered' => Order::where('vendor_profile_id', $vendor->id)
                 ->where('status', 'delivered')->count(),
+            'cancelled' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'cancelled')->count(),
             'revenue' => Order::where('vendor_profile_id', $vendor->id)
                 ->where('status', 'delivered')->sum('total'),
+            'avg_delivery_time' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereNotNull('delivery_time_days')
+                ->avg('delivery_time_days') ?? 0,
+            'avg_delivery_score' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereNotNull('delivery_score')
+                ->avg('delivery_score') ?? 0,
         ];
         
         return view('vendor.orders.index', compact('orders', 'stats'));
@@ -92,9 +106,9 @@ class VendorOrderController extends Controller
     }
 
     /**
-     * Update order status (vendor side)
+     * Update order status with timestamp tracking - SIMPLIFIED VERSION
      */
-     public function updateStatus(Request $request, $id)
+    public function updateStatus(Request $request, $id)
     {
         $order = Order::where('id', $id)
             ->where('vendor_profile_id', Auth::user()->vendorProfile->id)
@@ -104,133 +118,114 @@ class VendorOrderController extends Controller
             'status' => 'required|in:pending,paid,processing,shipped,delivered,cancelled'
         ]);
 
-        // Validate status transition
-        $allowedTransitions = [
-            'pending' => ['paid', 'processing', 'cancelled'],
-            'paid' => ['processing', 'cancelled'],
-            'processing' => ['shipped', 'cancelled'],
-            'shipped' => ['delivered'],
-            'delivered' => [],
-            'cancelled' => []
-        ];
-
-        if (!in_array($validated['status'], $allowedTransitions[$order->status] ?? [])) {
-            return back()->with('error', 'Invalid status transition');
-        }
-
         DB::beginTransaction();
         try {
-            // Handle meta data
-            $currentMeta = $order->meta ?? [];
-            if (!is_array($currentMeta)) {
-                $currentMeta = json_decode($currentMeta, true) ?? [];
-            }
-            
-            // Prepare updated meta
-            $updatedMeta = array_merge($currentMeta, [
-                'status_updated_at' => now()->toDateTimeString(),
-                'updated_by' => 'vendor'
-            ]);
-            
-            // Update the order
-            $order->update([
-                'status' => $validated['status'],
-                'meta' => json_encode($updatedMeta)
-            ]);
+            // Use the new Order model method
+            $order->updateStatusWithTimestamps($validated['status']);
 
-            // If marking as delivered
-            if ($validated['status'] === 'delivered') {
-                // Add delivery info to meta
-                $deliveryMeta = $order->meta ?? [];
-                if (!is_array($deliveryMeta)) {
-                    $deliveryMeta = json_decode($deliveryMeta, true) ?? [];
-                }
-                
-                $finalMeta = array_merge($deliveryMeta, [
-                    'delivered_at' => now()->toDateTimeString(),
-                    'delivery_confirmed_by_vendor' => true,
-                    'auto_confirmed' => true
+            // Create notification for buyer
+            if (in_array($validated['status'], ['processing', 'shipped', 'delivered'])) {
+                NotificationQueue::create([
+                    'user_id' => $order->buyer_id,
+                    'type' => 'order_status_update',
+                    'title' => 'Order Status Update',
+                    'message' => "Your order {$order->order_number} has been marked as " . strtoupper($validated['status']),
+                    'meta' => [
+                        'order_id' => $order->id,
+                        'new_status' => $validated['status'],
+                        'order_number' => $order->order_number,
+                    ],
+                    'status' => 'pending',
                 ]);
-                
-                $order->update([
-                    'meta' => json_encode($finalMeta)
-                ]);
-                
-                // Update escrow if exists
-                if ($order->escrow && $order->escrow->status === 'held') {
-                    $escrowMeta = $order->escrow->meta ?? [];
-                    if (!is_array($escrowMeta)) {
-                        $escrowMeta = json_decode($escrowMeta, true) ?? [];
-                    }
-                    
-                    $order->escrow->update([
-                        'status' => 'released',
-                        'released_at' => now(),
-                        'meta' => json_encode(array_merge($escrowMeta, [
-                            'released_by_system' => true,
-                            'release_reason' => 'order_delivered_by_vendor'
-                        ]))
-                    ]);
-                    
-                    Log::info('Escrow released for order ' . $order->id);
-                }
-                
-                // Send notification to buyer
-                try {
-                    NotificationQueue::create([
-                        'user_id' => $order->buyer_id,
-                        'type' => 'order_delivered',
-                        'title' => 'Order Delivered',
-                        'message' => "Your order {$order->order_number} has been marked as delivered by the vendor.",
-                        'meta' => ['order_id' => $order->id],
-                        'status' => 'pending',
-                    ]);
-                    
-                    Log::info('Delivery notification created for order ' . $order->id);
-                } catch (\Exception $e) {
-                    Log::warning('Notification error: ' . $e->getMessage());
-                    // Don't fail the whole transaction if notification fails
-                }
-            }
-
-            // If marking as cancelled, restore stock
-            if ($validated['status'] === 'cancelled') {
-                foreach ($order->items as $item) {
-                    if ($item->listing) {
-                        $item->listing->increment('stock', $item->quantity);
-                    }
-                }
-                
-                // Send cancellation notification
-                try {
-                    NotificationQueue::create([
-                        'user_id' => $order->buyer_id,
-                        'type' => 'order_cancelled',
-                        'title' => 'Order Cancelled',
-                        'message' => "Your order {$order->order_number} has been cancelled by the vendor.",
-                        'meta' => ['order_id' => $order->id],
-                        'status' => 'pending',
-                    ]);
-                } catch (\Exception $e) {
-                    Log::warning('Cancellation notification error: ' . $e->getMessage());
-                }
             }
 
             DB::commit();
 
-            return back()->with('success', 'Order status updated to ' . $validated['status']);
+            return back()->with('success', 'Order status updated successfully!');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Update order status error: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
-            
+            Log::error('Order status update failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to update status: ' . $e->getMessage());
         }
     }
+    
+    /**
+     * Show vendor performance stats
+     */
+    public function performance()
+    {
+        $vendor = Auth::user()->vendorProfile;
+        
+        // Get or calculate performance
+        $performance = VendorPerformance::where('vendor_profile_id', $vendor->id)->first();
+        
+        if (!$performance) {
+            // Calculate on the fly
+            $performance = VendorPerformance::updateForVendor($vendor->id);
+        }
+        
+        // Get recent delivered orders for timeline
+        $recentOrders = Order::where('vendor_profile_id', $vendor->id)
+            ->where('status', 'delivered')
+            ->orderBy('delivered_at', 'desc')
+            ->limit(10)
+            ->get(['order_number', 'delivery_time_days', 'delivery_score', 'delivered_at', 'processing_at', 'shipped_at']);
+        
+        // Delivery distribution with more categories
+        $distribution = [
+            'same_day' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('delivery_time_days', 0)
+                ->count(),
+            '1_2_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereBetween('delivery_time_days', [1, 2])
+                ->count(),
+            '3_5_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereBetween('delivery_time_days', [3, 5])
+                ->count(),
+            '6_10_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereBetween('delivery_time_days', [6, 10])
+                ->count(),
+            'over_10_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('delivery_time_days', '>', 10)
+                ->count(),
+        ];
+        
+        // Processing time distribution
+        $processingDistribution = [
+            'same_day' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('processing_time_hours', '<=', 24)
+                ->count(),
+            '1_2_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereBetween('processing_time_hours', [25, 48])
+                ->count(),
+            '3_5_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->whereBetween('processing_time_hours', [49, 120])
+                ->count(),
+            'over_5_days' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('processing_time_hours', '>', 120)
+                ->count(),
+        ];
+        
+        return view('vendor.performance.index', compact(
+            'performance', 
+            'recentOrders', 
+            'distribution',
+            'processingDistribution'
+        ));
+    }
 
     /**
-     * Mark order as shipped
+     * Mark order as shipped - UPDATED
      */
     public function markShipped(Request $request, Order $order)
     {
@@ -245,48 +240,66 @@ class VendorOrderController extends Controller
             'estimated_delivery' => 'nullable|date',
         ]);
 
-        $order->update([
-            'status' => 'shipped',
-            'meta' => array_merge($order->meta ?? [], [
-                'shipping_info' => [
+        DB::beginTransaction();
+        try {
+            // Use the new method
+            $order->updateStatusWithTimestamps('shipped');
+            
+            // Update meta with shipping info
+            $order->update([
+                'meta' => array_merge($order->meta ?? [], [
+                    'shipping_info' => [
+                        'tracking_number' => $request->tracking_number,
+                        'carrier' => $request->carrier,
+                        'estimated_delivery' => $request->estimated_delivery,
+                        'shipped_at' => now()->toDateTimeString(),
+                        'shipped_by' => Auth::user()->name,
+                        'shipped_by_vendor_id' => Auth::user()->vendorProfile->id,
+                    ]
+                ])
+            ]);
+
+            // Create shipment record
+            \App\Models\Shipment::create([
+                'tracking_number' => $request->tracking_number,
+                'order_id' => $order->id,
+                'status' => 'shipped',
+                'documents' => [
+                    'shipped_by_vendor' => Auth::id(),
+                    'shipped_at' => now()->toDateTimeString(),
+                    'carrier' => $request->carrier,
+                    'estimated_delivery' => $request->estimated_delivery,
+                ]
+            ]);
+
+            // Notify buyer
+            NotificationQueue::create([
+                'user_id' => $order->buyer_id,
+                'type' => 'order_shipped',
+                'title' => 'Order Shipped',
+                'message' => "Your order {$order->order_number} has been shipped via {$request->carrier}. Tracking: {$request->tracking_number}",
+                'meta' => [
+                    'order_id' => $order->id,
                     'tracking_number' => $request->tracking_number,
                     'carrier' => $request->carrier,
                     'estimated_delivery' => $request->estimated_delivery,
-                    'shipped_at' => now()->toDateTimeString(),
-                ]
-            ])
-        ]);
+                ],
+                'status' => 'pending',
+            ]);
 
-        // Create shipment record
-        \App\Models\Shipment::create([
-            'tracking_number' => $request->tracking_number,
-            'order_id' => $order->id,
-            'status' => 'shipped',
-            'documents' => [
-                'shipped_by_vendor' => Auth::id(),
-                'shipped_at' => now()->toDateTimeString(),
-            ]
-        ]);
+            DB::commit();
 
-        // Notify buyer
-        \App\Models\NotificationQueue::create([
-            'user_id' => $order->buyer_id,
-            'type' => 'order_shipped',
-            'title' => 'Order Shipped',
-            'message' => "Your order {$order->order_number} has been shipped. Tracking: {$request->tracking_number}",
-            'meta' => [
-                'order_id' => $order->id,
-                'tracking_number' => $request->tracking_number,
-                'carrier' => $request->carrier,
-            ],
-            'status' => 'pending',
-        ]);
+            return back()->with('success', 'Order marked as shipped successfully.');
 
-        return back()->with('success', 'Order marked as shipped successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Mark shipped failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to mark as shipped: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Cancel order (vendor request)
+     * Cancel order (vendor request) - UPDATED
      */
     public function requestCancel(Request $request, Order $order)
     {
@@ -300,35 +313,73 @@ class VendorOrderController extends Controller
         ]);
 
         // Only allow cancellation for pending/paid orders
-        if (!in_array($order->status, ['pending', 'paid'])) {
-            return back()->with('error', 'Cannot cancel order in current status.');
+        if (!in_array($order->status, ['pending', 'paid', 'confirmed'])) {
+            return back()->with('error', 'Cannot cancel order in current status: ' . $order->status);
         }
 
-        $order->update([
-            'meta' => array_merge($order->meta ?? [], [
-                'cancel_request' => [
-                    'requested_by' => Auth::id(),
+        DB::beginTransaction();
+        try {
+            // Use the new method
+            $order->updateStatusWithTimestamps('cancelled');
+            
+            // Add cancellation reason to meta
+            $order->update([
+                'meta' => array_merge($order->meta ?? [], [
+                    'cancel_request' => [
+                        'requested_by' => 'vendor',
+                        'requested_by_vendor_id' => Auth::user()->vendorProfile->id,
+                        'reason' => $request->reason,
+                        'requested_at' => now()->toDateTimeString(),
+                        'approved_at' => now()->toDateTimeString(),
+                        'approved_by' => Auth::user()->name,
+                    ]
+                ])
+            ]);
+
+            // Restore stock for order items
+            foreach ($order->items as $item) {
+                if ($item->listing) {
+                    $item->listing->increment('stock', $item->quantity);
+                }
+            }
+
+            // Notify buyer
+            NotificationQueue::create([
+                'user_id' => $order->buyer_id,
+                'type' => 'order_cancelled',
+                'title' => 'Order Cancelled',
+                'message' => "Order {$order->order_number} has been cancelled by the vendor. Reason: {$request->reason}",
+                'meta' => [
+                    'order_id' => $order->id,
+                    'cancelled_by' => 'vendor',
                     'reason' => $request->reason,
-                    'requested_at' => now()->toDateTimeString(),
-                ]
-            ])
-        ]);
+                ],
+                'status' => 'pending',
+            ]);
 
-        // Notify admin
-        \App\Models\NotificationQueue::create([
-            'type' => 'admin_notification',
-            'title' => 'Vendor Requested Order Cancellation',
-            'message' => "Vendor requested to cancel order {$order->order_number}. Reason: {$request->reason}",
-            'meta' => [
-                'order_id' => $order->id,
-                'vendor_id' => Auth::user()->vendorProfile->id,
-                'reason' => $request->reason,
-                'action_url' => route('admin.orders.show', $order),
-            ],
-            'status' => 'pending',
-        ]);
+            // Notify admin
+            NotificationQueue::create([
+                'type' => 'admin_notification',
+                'title' => 'Order Cancelled by Vendor',
+                'message' => "Order {$order->order_number} was cancelled by vendor. Reason: {$request->reason}",
+                'meta' => [
+                    'order_id' => $order->id,
+                    'vendor_id' => Auth::user()->vendorProfile->id,
+                    'reason' => $request->reason,
+                    'action_url' => route('admin.orders.show', $order),
+                ],
+                'status' => 'pending',
+            ]);
 
-        return back()->with('success', 'Cancellation request submitted. Admin will review.');
+            DB::commit();
+
+            return back()->with('success', 'Order cancelled successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Request cancel failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to cancel order: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -349,7 +400,7 @@ class VendorOrderController extends Controller
     }
 
     /**
-     * Export orders
+     * Export orders - ADD DELIVERY METRICS
      */
     public function export(Request $request)
     {
@@ -374,7 +425,7 @@ class VendorOrderController extends Controller
 
         $orders = $query->orderBy('created_at', 'desc')->get();
 
-        // Transform for export
+        // Transform for export - ADD DELIVERY FIELDS
         $exportData = $orders->map(function($order) {
             return [
                 'Order Number' => $order->order_number,
@@ -382,6 +433,12 @@ class VendorOrderController extends Controller
                 'Buyer Name' => $order->buyer->name ?? 'N/A',
                 'Buyer Email' => $order->buyer->email ?? 'N/A',
                 'Status' => $order->status,
+                'Processing Date' => $order->processing_at?->format('Y-m-d H:i:s') ?? 'N/A',
+                'Shipping Date' => $order->shipped_at?->format('Y-m-d H:i:s') ?? 'N/A',
+                'Delivery Date' => $order->delivered_at?->format('Y-m-d H:i:s') ?? 'N/A',
+                'Delivery Time (Days)' => $order->delivery_time_days ?? 'N/A',
+                'Processing Time (Hours)' => $order->processing_time_hours ?? 'N/A',
+                'Delivery Score' => $order->delivery_score ?? 'N/A',
                 'Items Count' => $order->items->count(),
                 'Subtotal' => $order->subtotal,
                 'Shipping' => $order->shipping,
@@ -389,8 +446,6 @@ class VendorOrderController extends Controller
             ];
         });
 
-        // For MVP, return JSON
-        // In production, generate CSV/Excel
         return response()->json([
             'orders' => $exportData,
             'vendor' => $vendor->business_name,
@@ -401,7 +456,7 @@ class VendorOrderController extends Controller
     }
 
     /**
-     * Get order statistics for dashboard
+     * Get order statistics for dashboard - ADD DELIVERY METRICS
      */
     public function statistics(Request $request)
     {
@@ -442,9 +497,21 @@ class VendorOrderController extends Controller
                 ->where('created_at', '>=', $date)
                 ->where('status', 'delivered')
                 ->avg('total') ?? 0,
+            // DELIVERY METRICS
+            'avg_delivery_time' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('delivered_at', '>=', $date)
+                ->whereNotNull('delivery_time_days')
+                ->avg('delivery_time_days') ?? 0,
+            'avg_delivery_score' => Order::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'delivered')
+                ->where('delivered_at', '>=', $date)
+                ->whereNotNull('delivery_score')
+                ->avg('delivery_score') ?? 0,
+            'on_time_delivery_rate' => $this->calculateOnTimeRate($vendor->id, $date),
         ];
 
-        // Monthly trend for chart
+        // Monthly trend for chart - ADD DELIVERY METRICS
         $monthlyTrend = [];
         for ($i = 5; $i >= 0; $i--) {
             $monthDate = now()->subMonths($i);
@@ -461,10 +528,23 @@ class VendorOrderController extends Controller
                 ->whereMonth('created_at', $monthDate->month)
                 ->count();
             
+            // Delivery metrics
+            $deliveredOrders = Order::where('vendor_profile_id', $vendor->id)
+                ->whereYear('delivered_at', $monthDate->year)
+                ->whereMonth('delivered_at', $monthDate->month)
+                ->where('status', 'delivered')
+                ->whereNotNull('delivery_time_days')
+                ->get();
+            
+            $avgDeliveryTime = $deliveredOrders->avg('delivery_time_days') ?? 0;
+            $avgDeliveryScore = $deliveredOrders->avg('delivery_score') ?? 0;
+            
             $monthlyTrend[] = [
                 'month' => $month,
                 'revenue' => $revenue,
                 'orders' => $orders,
+                'avg_delivery_time' => round($avgDeliveryTime, 1),
+                'avg_delivery_score' => round($avgDeliveryScore, 1),
             ];
         }
 
@@ -473,5 +553,24 @@ class VendorOrderController extends Controller
             'monthly_trend' => $monthlyTrend,
             'period' => $period,
         ]);
+    }
+    
+    /**
+     * Calculate on-time delivery rate
+     */
+    private function calculateOnTimeRate($vendorId, $date)
+    {
+        $deliveredOrders = Order::where('vendor_profile_id', $vendorId)
+            ->where('status', 'delivered')
+            ->where('delivered_at', '>=', $date)
+            ->whereNotNull('delivery_time_days')
+            ->get();
+        
+        if ($deliveredOrders->count() === 0) {
+            return 0;
+        }
+        
+        $onTimeDeliveries = $deliveredOrders->where('delivery_time_days', '<=', 7)->count();
+        return round(($onTimeDeliveries / $deliveredOrders->count()) * 100, 1);
     }
 }

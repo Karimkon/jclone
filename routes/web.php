@@ -357,6 +357,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/reviews/{review}/respond', [VendorReviewController::class, 'respond'])->name('reviews.respond');
         Route::put('/reviews/{review}/respond', [VendorReviewController::class, 'updateResponse'])->name('reviews.update-response');
         Route::delete('/reviews/{review}/respond', [VendorReviewController::class, 'deleteResponse'])->name('reviews.delete-response');
+
+        Route::get('/performance', [VendorOrderController::class, 'performance'])->name('performance');
     });
 
     // ====================
@@ -573,10 +575,16 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/reviews/{review}', [ReviewController::class, 'update'])->name('reviews.update');
         Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
         
+         // Shipping Addresses
+        Route::resource('addresses', \App\Http\Controllers\Buyer\ShippingAddressController::class);
+        Route::post('addresses/{id}/set-default', [\App\Http\Controllers\Buyer\ShippingAddressController::class, 'setDefault'])
+            ->name('addresses.set-default');
+
         // Review Voting
         Route::post('/reviews/{review}/vote', [ReviewController::class, 'vote'])->name('reviews.vote');
     });
 });
+
 
 // ====================
 // IMPORT CALCULATOR (Public API)
@@ -624,6 +632,32 @@ Route::get('/wishlist/count', function() {
     return response()->json(['authenticated' => false, 'count' => 0]);
 })->name('wishlist.count');
 
+
+// Analytics API (for AJAX tracking)
+Route::prefix('api/analytics')->name('api.analytics.')->group(function () {
+    Route::post('/track', [App\Http\Controllers\Api\AnalyticsApiController::class, 'track'])
+        ->name('track');
+});
+
+// Admin Analytics Routes
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::prefix('analytics/products')->name('analytics.products.')->group(function () {
+        Route::get('/', [App\Http\Controllers\Admin\ProductAnalyticsController::class, 'index'])
+            ->name('index');
+        Route::get('/{id}', [App\Http\Controllers\Admin\ProductAnalyticsController::class, 'show'])
+            ->name('show');
+        Route::get('/export/clicked-not-bought', [App\Http\Controllers\Admin\ProductAnalyticsController::class, 'exportClickedNotBought'])
+            ->name('export-clicked-not-bought');
+    });
+});
+
+// Vendor Analytics Routes
+Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor')->name('vendor.')->group(function () {
+    Route::get('/analytics', [App\Http\Controllers\Vendor\VendorAnalyticsController::class, 'index'])
+        ->name('analytics');
+    Route::get('/analytics/{id}', [App\Http\Controllers\Vendor\VendorAnalyticsController::class, 'show'])
+        ->name('analytics.show');
+});
 
 // ====================
 // DEBUG ROUTES (Development only)

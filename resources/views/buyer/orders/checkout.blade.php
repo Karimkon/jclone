@@ -19,55 +19,84 @@
             <!-- Left Column: Shipping & Payment -->
             <div class="lg:col-span-2 space-y-6">
                 <!-- Shipping Address -->
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-bold mb-4">Shipping Address</h2>
-                    
-                    <div class="space-y-4">
+               
+                <!-- Shipping Address -->
+<div class="bg-white rounded-lg shadow p-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold">Shipping Address</h2>
+        <a href="{{ route('buyer.addresses.create') }}" 
+           class="text-sm text-primary hover:underline flex items-center gap-1">
+            <i class="fas fa-plus-circle"></i> Add New Address
+        </a>
+    </div>
+    
+    @if($addresses->count() > 0)
+        <div class="space-y-3">
+            @foreach($addresses as $address)
+            <label class="flex items-start p-4 border-2 rounded-lg cursor-pointer transition {{ $address->is_default ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-primary' }}">
+                <input type="radio" 
+                       name="shipping_address_id" 
+                       value="{{ $address->id }}" 
+                       {{ $address->is_default ? 'checked' : '' }}
+                       required
+                       class="mt-1 mr-4 h-5 w-5 text-primary">
+                <div class="flex-1">
+                    <div class="flex items-start justify-between">
                         <div>
-                            <label class="block text-gray-700 font-medium mb-2">Full Address *</label>
-                            <textarea name="shipping_address" rows="3" required
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                      placeholder="Street address, building, apartment">{{ old('shipping_address', Auth::user()->meta['addresses'][0]['address'] ?? '') }}</textarea>
-                            @error('shipping_address')
-                                <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                            @enderror
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-2">City *</label>
-                                <input type="text" name="shipping_city" required
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                       value="{{ old('shipping_city', Auth::user()->meta['addresses'][0]['city'] ?? '') }}">
-                                @error('shipping_city')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            @if($address->label)
+                                <span class="inline-block px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded mb-2">
+                                    <i class="fas fa-tag"></i> {{ $address->label }}
+                                </span>
+                            @endif
+                            @if($address->is_default)
+                                <span class="inline-block px-2 py-0.5 bg-primary text-white text-xs rounded mb-2">
+                                    <i class="fas fa-star"></i> Default
+                                </span>
+                            @endif
                             
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-2">Country *</label>
-                                <select name="shipping_country" required
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                    <option value="">Select Country</option>
-                                    <option value="Uganda" {{ old('shipping_country', Auth::user()->meta['addresses'][0]['country'] ?? '') == 'Uganda' ? 'selected' : '' }}>Uganda</option>
-                                    <option value="Kenya" {{ old('shipping_country') == 'Kenya' ? 'selected' : '' }}>Kenya</option>
-                                    <option value="Tanzania" {{ old('shipping_country') == 'Tanzania' ? 'selected' : '' }}>Tanzania</option>
-                                    <option value="Rwanda" {{ old('shipping_country') == 'Rwanda' ? 'selected' : '' }}>Rwanda</option>
-                                </select>
-                                @error('shipping_country')
-                                    <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            <p class="font-semibold text-gray-900">{{ $address->recipient_name }}</p>
+                            <p class="text-sm text-gray-600">{{ $address->recipient_phone }}</p>
+                            <p class="text-sm text-gray-700 mt-2">
+                                {{ $address->address_line_1 }}
+                                @if($address->address_line_2), {{ $address->address_line_2 }}@endif
+                            </p>
+                            <p class="text-sm text-gray-600">
+                                {{ $address->city }}@if($address->state_region), {{ $address->state_region }}@endif
+                                @if($address->postal_code) - {{ $address->postal_code }}@endif
+                            </p>
+                            <p class="text-sm text-gray-600">{{ $address->country }}</p>
+                            
+                            @if($address->delivery_instructions)
+                                <p class="text-xs text-gray-500 mt-2 italic">
+                                    <i class="fas fa-info-circle"></i> {{ $address->delivery_instructions }}
+                                </p>
+                            @endif
                         </div>
                         
-                        <div>
-                            <label class="block text-gray-700 font-medium mb-2">Postal Code (Optional)</label>
-                            <input type="text" name="shipping_postal_code"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                   value="{{ old('shipping_postal_code', Auth::user()->meta['addresses'][0]['postal_code'] ?? '') }}">
-                        </div>
+                        <a href="{{ route('buyer.addresses.edit', $address->id) }}" 
+                           class="text-sm text-gray-500 hover:text-primary ml-4">
+                            <i class="fas fa-edit"></i>
+                        </a>
                     </div>
                 </div>
+            </label>
+            @endforeach
+        </div>
+    @else
+        <div class="text-center py-8 bg-gray-50 rounded-lg">
+            <i class="fas fa-map-marker-alt text-gray-300 text-4xl mb-3"></i>
+            <p class="text-gray-600 mb-4">No shipping addresses found</p>
+            <a href="{{ route('buyer.addresses.create') }}" 
+               class="inline-block px-6 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700">
+                Add Your First Address
+            </a>
+        </div>
+    @endif
+    
+    @error('shipping_address_id')
+        <p class="text-red-500 text-sm mt-2">{{ $message }}</p>
+    @enderror
+</div>
                 
                 <!-- Payment Method -->
                 <div class="bg-white rounded-lg shadow p-6">

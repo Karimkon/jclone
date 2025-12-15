@@ -166,5 +166,54 @@ async function updateChatBadge() {
 
     @yield('scripts')
     @stack('scripts')
+    <script>
+// Product Analytics Tracker
+class ProductAnalytics {
+    constructor(listingId, source = 'direct') {
+        this.listingId = listingId;
+        this.source = source;
+        this.tracked = new Set();
+    }
+
+    async track(type, meta = {}) {
+        const key = `${type}_${this.listingId}`;
+        if (this.tracked.has(key)) return;
+
+        try {
+            const response = await fetch('/api/analytics/track', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    listing_id: this.listingId,
+                    type: type,
+                    source: this.source,
+                    meta: meta
+                })
+            });
+
+            if (response.ok) this.tracked.add(key);
+        } catch (error) {
+            console.error('Analytics tracking error:', error);
+        }
+    }
+
+    trackView() { this.track('view'); }
+    trackClick() { this.track('click'); }
+    trackAddToCart(quantity = 1) { this.track('add_to_cart', { quantity }); }
+    trackAddToWishlist() { this.track('add_to_wishlist'); }
+    trackShare(platform = 'unknown') { this.track('share', { platform }); }
+}
+
+// Auto-track view on product page
+@if(isset($listing) && request()->routeIs('marketplace.show'))
+document.addEventListener('DOMContentLoaded', () => {
+    const analytics = new ProductAnalytics({{ $listing->id }}, '{{ request()->input("source", "direct") }}');
+    analytics.trackView();
+});
+@endif
+</script>
 </body>
 </html>

@@ -42,7 +42,7 @@
         </div>
         <div class="bg-white p-4 rounded-lg shadow border-l-4 border-indigo-500">
             <p class="text-sm text-gray-600">Revenue</p>
-            <p class="text-2xl font-bold">${{ number_format($stats['revenue'], 2) }}</p>
+            <p class="text-2xl font-bold">UGX {{ number_format($stats['revenue'], 2) }}</p>
         </div>
     </div>
 

@@ -79,30 +79,140 @@ class ListingController extends Controller
         return view('marketplace.index', compact('listings', 'categories'));
     }
 
-    /**
-     * Display single listing (public)
-     */
-    public function showPublic(Listing $listing)
-    {
-        if (!$listing->is_active) {
-            abort(404);
-        }
-        
-        $listing->load(['images', 'vendor.user', 'category']);
-        
-        // Increment views (you can implement this later)
-        // $listing->increment('views');
-        
-        // Get related listings
-        $related = Listing::where('category_id', $listing->category_id)
-            ->where('id', '!=', $listing->id)
-            ->where('is_active', true)
-            ->with('images')
-            ->take(4)
-            ->get();
-        
-        return view('marketplace.show', compact('listing', 'related'));
+   /**
+ * Display single listing (public)
+ */
+public function showPublic(Listing $listing)
+{
+    if (!$listing->is_active) {
+        abort(404);
     }
+
+     app(\App\Services\ProductAnalyticsService::class)->trackView(
+        $listing->id,
+        request()->input('source', 'direct')
+    );
+    
+    $listing->load(['images', 'vendor.user', 'category']);
+    
+    // Get vendor delivery performance data
+    $deliveryPerformance = null;
+    $deliveryStats = [
+        'score' => 50,
+        'avg_time' => 0,
+        'on_time_rate' => 0,
+        'rating' => 3,
+        'delivered_orders' => 0
+    ];
+    
+    if ($listing->vendor) {
+        // Use the existing performance relationship
+        $deliveryPerformance = $listing->vendor->performance;
+        
+        if ($deliveryPerformance) {
+            $deliveryStats = [
+                'score' => $deliveryPerformance->delivery_score ?? 50,
+                'avg_time' => $deliveryPerformance->avg_delivery_time_days ?? 0,
+                'on_time_rate' => $deliveryPerformance->on_time_delivery_rate ?? 0,
+                'delivered_orders' => $deliveryPerformance->delivered_orders ?? 0,
+                'rating' => $listing->vendor->delivery_rating // Use your existing accessor
+            ];
+        } else {
+            // No performance record yet, use vendor's delivery_rating accessor
+            $deliveryStats['rating'] = $listing->vendor->delivery_rating;
+        }
+    }
+    
+    // Get vendor stats for other metrics
+    $vendorStats = [
+        'rating' => $listing->vendor->average_rating ?? 0,
+        'reviews' => $listing->vendor->total_reviews ?? 0,
+        'positive' => $listing->vendor->positive_rating_percentage ?? 98,
+    ];
+    
+    // Get review statistics
+    $reviewStats = [
+        'average' => \App\Models\Review::getAverageRating($listing->id),
+        'count' => \App\Models\Review::getReviewsCount($listing->id),
+        'distribution' => \App\Models\Review::getRatingDistribution($listing->id),
+    ];
+    $totalDistribution = array_sum($reviewStats['distribution']) ?: 1;
+    
+    // Get reviews for this listing
+    $reviews = \App\Models\Review::where('listing_id', $listing->id)
+        ->where('status', 'approved')
+        ->with(['user:id,name', 'votes'])
+        ->orderBy('helpful_count', 'desc')
+        ->orderBy('created_at', 'desc')
+        ->take(5)
+        ->get();
+    
+    // Check if current user can write a review
+    $canReview = false;
+    $pendingOrderItem = null;
+    if (auth()->check()) {
+        $pendingOrderItem = \App\Models\OrderItem::whereHas('order', function($q) use ($listing) {
+            $q->where('buyer_id', auth()->id())
+              ->where('status', 'delivered');
+        })
+        ->where('listing_id', $listing->id)
+        ->whereDoesntHave('review', function($q) {
+            $q->where('user_id', auth()->id());
+        })
+        ->first();
+        
+        $canReview = $pendingOrderItem !== null;
+    }
+    
+    // Get all variants for this listing
+    $variants = $listing->variants->map(function($variant) {
+        return [
+            'id' => $variant->id,
+            'sku' => $variant->sku,
+            'price' => $variant->price,
+            'sale_price' => $variant->sale_price,
+            'stock' => $variant->stock,
+            'attributes' => $variant->attributes ?? [],
+            'image' => $variant->image ? asset('storage/' . $variant->image) : null,
+            'display_price' => $variant->sale_price ?? $variant->price,
+            'display_name' => $variant->display_name,
+            'in_stock' => $variant->stock > 0
+        ];
+    });
+    
+    // Get unique colors and sizes from variants
+    $availableColors = $listing->available_colors;
+    $availableSizes = $listing->available_sizes;
+    
+    // Check if product has variations
+    $hasVariations = $listing->has_variations;
+    
+    // Get related listings
+    $related = Listing::where('category_id', $listing->category_id)
+        ->where('id', '!=', $listing->id)
+        ->where('is_active', true)
+        ->with('images')
+        ->take(4)
+        ->get();
+
+    return view('marketplace.show', compact(
+        'listing', 
+        'related',
+        'reviewStats',
+        'totalDistribution',
+        'reviews',
+        'canReview',
+        'pendingOrderItem',
+        'vendorStats',
+        'variants',
+        'availableColors',
+        'availableSizes',
+        'hasVariations',
+        'deliveryPerformance',
+        'deliveryStats'
+    ));
+}
+
 
     /**
      * Display vendor's listings

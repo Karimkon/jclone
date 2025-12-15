@@ -98,33 +98,84 @@
             </div>
 
             <!-- Shipping Information (Compact) -->
-            @if($order->meta && isset($order->meta['shipping_address']))
-            <div class="bg-white rounded-lg shadow">
-                <div class="px-4 py-3 border-b border-gray-200">
-                    <h2 class="font-bold text-gray-900">Shipping Information</h2>
-                </div>
-                <div class="p-3">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                            <div class="text-xs text-gray-600 mb-1">Shipping Address</div>
-                            <div class="text-sm">{{ $order->meta['shipping_address'] }}</div>
-                        </div>
-                        
-                        @if($order->meta && isset($order->meta['shipping_info']))
-                        <div>
-                            <div class="text-xs text-gray-600 mb-1">Shipping Details</div>
-                            <div class="text-sm">
-                                <div><span class="font-medium">Carrier:</span> {{ $order->meta['shipping_info']['carrier'] ?? 'N/A' }}</div>
-                                <div><span class="font-medium">Tracking:</span> {{ $order->meta['shipping_info']['tracking_number'] ?? 'N/A' }}</div>
+@if($order->meta && isset($order->meta['shipping_address']))
+<div class="bg-white rounded-lg shadow">
+    <div class="px-4 py-3 border-b border-gray-200">
+        <h2 class="font-bold text-gray-900">Shipping Information</h2>
+    </div>
+    <div class="p-3">
+        <div class="space-y-3">
+            <!-- Shipping Address -->
+            <div>
+                <div class="text-xs text-gray-600 mb-1">Shipping Address</div>
+                @php
+                    $shippingAddress = is_array($order->meta['shipping_address'] ?? null) 
+                        ? $order->meta['shipping_address'] 
+                        : json_decode($order->meta['shipping_address'] ?? '[]', true);
+                @endphp
+                
+                @if(!empty($shippingAddress))
+                    <div class="text-sm">
+                        @if(isset($shippingAddress['recipient_name']))
+                            <div class="font-medium">{{ $shippingAddress['recipient_name'] }}</div>
+                        @endif
+                        @if(isset($shippingAddress['recipient_phone']))
+                            <div class="text-gray-600">{{ $shippingAddress['recipient_phone'] }}</div>
+                        @endif
+                        @if(isset($shippingAddress['address_line_1']))
+                            <div class="text-gray-600">
+                                {{ $shippingAddress['address_line_1'] }}
+                                @if(!empty($shippingAddress['address_line_2']))
+                                    , {{ $shippingAddress['address_line_2'] }}
+                                @endif
                             </div>
-                        </div>
+                        @endif
+                        @if(isset($shippingAddress['city']) || isset($shippingAddress['state_region']) || isset($shippingAddress['postal_code']))
+                            <div class="text-gray-600">
+                                {{ $shippingAddress['city'] ?? '' }}
+                                @if(!empty($shippingAddress['state_region']))
+                                    , {{ $shippingAddress['state_region'] }}
+                                @endif
+                                @if(!empty($shippingAddress['postal_code']))
+                                    , {{ $shippingAddress['postal_code'] }}
+                                @endif
+                            </div>
+                        @endif
+                        @if(isset($shippingAddress['country']))
+                            <div class="text-gray-600">{{ $shippingAddress['country'] }}</div>
+                        @endif
+                        @if(!empty($shippingAddress['delivery_instructions']))
+                            <div class="mt-2 pt-2 border-t border-gray-100">
+                                <p class="text-xs text-gray-500">Delivery Instructions:</p>
+                                <p class="text-xs italic">{{ $shippingAddress['delivery_instructions'] }}</p>
+                            </div>
                         @endif
                     </div>
+                @else
+                    <div class="text-sm text-gray-500">No shipping address provided</div>
+                @endif
+            </div>
+            
+            <!-- Shipping Details -->
+            @if($order->meta && isset($order->meta['shipping_info']))
+            <div class="border-t border-gray-100 pt-3">
+                <div class="text-xs text-gray-600 mb-1">Shipping Details</div>
+                <div class="text-sm">
+                    <div><span class="font-medium">Carrier:</span> {{ $order->meta['shipping_info']['carrier'] ?? 'N/A' }}</div>
+                    <div><span class="font-medium">Tracking:</span> {{ $order->meta['shipping_info']['tracking_number'] ?? 'N/A' }}</div>
+                    @if(isset($order->meta['shipping_info']['estimated_delivery']))
+                        <div><span class="font-medium">Est. Delivery:</span> {{ \Carbon\Carbon::parse($order->meta['shipping_info']['estimated_delivery'])->format('M d, Y') }}</div>
+                    @endif
+                    @if(isset($order->meta['shipping_info']['shipped_at']))
+                        <div><span class="font-medium">Shipped:</span> {{ \Carbon\Carbon::parse($order->meta['shipping_info']['shipped_at'])->format('M d, Y') }}</div>
+                    @endif
                 </div>
             </div>
             @endif
         </div>
-
+    </div>
+</div>
+@endif
         <!-- Right Column: Summary & Actions -->
         <div class="space-y-4">
             <!-- Order Summary (Compact) -->

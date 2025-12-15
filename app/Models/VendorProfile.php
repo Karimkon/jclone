@@ -161,4 +161,50 @@ public function getPositiveRatingPercentageAttribute()
     
     return round(($positive / $total) * 100);
 }
+
+public function getPerformanceAttribute()
+{
+    return VendorPerformance::where('vendor_profile_id', $this->id)->first();
+}
+
+/**
+ * Get vendor's delivery rating (star-based)
+ */
+public function getDeliveryRatingAttribute()
+{
+    $performance = $this->performance;
+    
+    if (!$performance || $performance->delivered_orders < 5) {
+        return 3; // Default 3 stars for new vendors
+    }
+    
+    // Convert score (0-100) to stars (1-5)
+    $score = $performance->delivery_score;
+    
+    if ($score >= 90) return 5;
+    if ($score >= 80) return 4;
+    if ($score >= 70) return 3;
+    if ($score >= 60) return 2;
+    return 1;
+}
+
+/**
+ * Get vendor ranking text
+ */
+public function getRankingTextAttribute()
+{
+    $performance = $this->performance;
+    
+    if (!$performance || $performance->delivered_orders < 5) {
+        return 'Not enough data';
+    }
+    
+    $score = $performance->delivery_score;
+    
+    if ($score >= 90) return 'Excellent';
+    if ($score >= 80) return 'Very Good';
+    if ($score >= 70) return 'Good';
+    if ($score >= 60) return 'Average';
+    return 'Needs Improvement';
+}
 }

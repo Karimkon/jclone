@@ -274,27 +274,80 @@
                 </div>
             </div>
 
-            <!-- Shipping Information -->
-            <div class="bg-white rounded-xl shadow-sm p-6">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Shipping Information</h2>
-                
+           <!-- Shipping Information -->
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">Shipping Information</h2>
+    
+    @php
+        $meta = $order->meta ?? [];
+        // Get shipping address from meta (it's stored as an array in 'shipping_address' key)
+        $shippingAddress = isset($meta['shipping_address']) ? (array)$meta['shipping_address'] : [];
+    @endphp
+    
+    @if(!empty($shippingAddress))
+    <div class="space-y-2">
+        <p class="font-medium">{{ $shippingAddress['recipient_name'] ?? 'N/A' }}</p>
+        <p class="text-gray-600">{{ $shippingAddress['recipient_phone'] ?? 'N/A' }}</p>
+        <p class="text-gray-600">
+            {{ $shippingAddress['address_line_1'] ?? 'N/A' }}
+            @if(!empty($shippingAddress['address_line_2']))
+            , {{ $shippingAddress['address_line_2'] }}
+            @endif
+        </p>
+        <p class="text-gray-600">
+            {{ $shippingAddress['city'] ?? 'N/A' }}
+            @if(!empty($shippingAddress['state_region']))
+            , {{ $shippingAddress['state_region'] }}
+            @endif
+            @if(!empty($shippingAddress['postal_code']))
+            , {{ $shippingAddress['postal_code'] }}
+            @endif
+        </p>
+        <p class="text-gray-600">{{ $shippingAddress['country'] ?? 'N/A' }}</p>
+        
+        @if(!empty($shippingAddress['delivery_instructions']))
+        <div class="mt-3 pt-3 border-t">
+            <p class="text-sm text-gray-600">Delivery Instructions:</p>
+            <p class="text-sm italic">{{ $shippingAddress['delivery_instructions'] }}</p>
+        </div>
+        @endif
+        
+        @if(isset($meta['payment_method']))
+        <div class="mt-4 pt-4 border-t">
+            <p class="text-gray-600">Payment Method:</p>
+            <p class="font-medium">
                 @php
-                    $meta = $order->meta ?? [];
+                    $paymentMethod = $meta['payment_method'] ?? 'N/A';
                 @endphp
-                
-                <div class="space-y-2">
-                    <p class="font-medium">{{ $meta['shipping_address'] ?? 'N/A' }}</p>
-                    <p class="text-gray-600">{{ $meta['shipping_city'] ?? '' }}, {{ $meta['shipping_country'] ?? '' }}</p>
-                    <p class="text-gray-600">{{ $meta['shipping_postal_code'] ?? '' }}</p>
-                    
-                    @if(isset($meta['payment_method']))
-                    <div class="mt-4 pt-4 border-t">
-                        <p class="text-gray-600">Payment Method:</p>
-                        <p class="font-medium">{{ ucfirst(str_replace('_', ' ', $meta['payment_method'])) }}</p>
-                    </div>
-                    @endif
-                </div>
-            </div>
+                @switch($paymentMethod)
+                    @case('cash_on_delivery')
+                        <i class="fas fa-money-bill-wave text-green-600 mr-2"></i>Cash on Delivery
+                        @break
+                    @case('wallet')
+                        <i class="fas fa-wallet text-indigo-600 mr-2"></i>Wallet
+                        @break
+                    @case('card')
+                        <i class="fas fa-credit-card text-blue-600 mr-2"></i>Credit/Debit Card
+                        @break
+                    @case('mobile_money')
+                        <i class="fas fa-mobile-alt text-purple-600 mr-2"></i>Mobile Money
+                        @break
+                    @case('bank_transfer')
+                        <i class="fas fa-university text-gray-600 mr-2"></i>Bank Transfer
+                        @break
+                    @default
+                        {{ ucfirst(str_replace('_', ' ', $paymentMethod)) }}
+                @endswitch
+            </p>
+        </div>
+        @endif
+    </div>
+    @else
+    <div class="text-center py-4 text-gray-500">
+        <p>No shipping address available</p>
+    </div>
+    @endif
+</div>
             
             <!-- Vendor Info -->
             @if($order->vendorProfile)
