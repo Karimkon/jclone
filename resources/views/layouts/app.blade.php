@@ -139,30 +139,7 @@ async function updateChatBadge() {
         </div>
     </footer>
 
-    <!-- Authentication Modal -->
-    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-gray-900">Login Required</h3>
-                    <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <p class="text-gray-600 mb-6">
-                    Please login or create an account to continue with this action.
-                </p>
-                <div class="flex space-x-3">
-                    <a href="{{ route('login') }}" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg text-center hover:bg-indigo-700 transition">
-                        <i class="fas fa-sign-in-alt mr-2"></i>Login
-                    </a>
-                    <a href="{{ route('register') }}" class="flex-1 border-2 border-indigo-600 text-indigo-600 py-2 px-4 rounded-lg text-center hover:bg-indigo-50 transition">
-                        <i class="fas fa-user-plus mr-2"></i>Sign Up
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
+   
 
     @yield('scripts')
     @stack('scripts')

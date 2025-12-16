@@ -49,11 +49,6 @@ class AdminListingController extends Controller
             }
         }
         
-        // Featured filter
-        if ($request->has('featured')) {
-            $query->where('is_featured', $request->featured === 'true');
-        }
-        
         // Category filter
         if ($request->has('category') && $request->category) {
             $query->where('category_id', $request->category);

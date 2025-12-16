@@ -73,7 +73,42 @@ if ($listing->vendor && method_exists($listing->vendor, 'performance')) {
         }
     }
 }
+     // Check if listing has variations
+     $hasVariations = $listing->variants && $listing->variants->where('stock', '>', 0)->count() > 0;
     
+    // Get all variants with stock > 0
+    $variants = $listing->variants
+        ->where('stock', '>', 0)
+        ->where('is_active', true)
+        ->map(function($variant) {
+            return [
+                'id' => $variant->id,
+                'price' => $variant->price,
+                'display_price' => $variant->display_price ?? $variant->price,
+                'stock' => $variant->stock,
+                'attributes' => $variant->attributes ?? []
+            ];
+        })->toArray();
+    
+    // Get available colors and sizes from variants WITH STOCK
+    $availableColors = [];
+    $availableSizes = [];
+    
+    if ($hasVariations) {
+        foreach ($listing->variants->where('stock', '>', 0) as $variant) {
+            $attrs = $variant->attributes ?? [];
+            if (isset($attrs['color']) && $variant->stock > 0) {
+                $availableColors[] = $attrs['color'];
+            }
+            if (isset($attrs['size']) && $variant->stock > 0) {
+                $availableSizes[] = $attrs['size'];
+            }
+        }
+        
+        // Remove duplicates
+        $availableColors = array_unique($availableColors);
+        $availableSizes = array_unique($availableSizes);
+    }
 @endphp
 
 @push('styles')
@@ -313,6 +348,148 @@ if ($listing->vendor && method_exists($listing->vendor, 'performance')) {
         border-radius: 3px;
         transition: width 0.5s ease;
     }
+
+    .modal-option-btn,
+#modalColorOptions button,
+#modalSizeOptions button {
+    background: white !important;
+    color: #374151 !important; /* gray-700 */
+    border: 2px solid #d1d5db !important; /* gray-300 */
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.modal-option-btn:hover,
+#modalColorOptions button:hover,
+#modalSizeOptions button:hover {
+    border-color: #6366f1 !important; /* primary/indigo */
+    background: #eef2ff !important; /* indigo-50 */
+    color: #4f46e5 !important;
+}
+
+/* Selected state */
+.modal-option-btn.selected,
+#modalColorOptions button.selected,
+#modalSizeOptions button.selected,
+button[data-option].selected {
+    background: #6366f1 !important; /* primary/indigo-600 */
+    color: white !important;
+    border-color: #4f46e5 !important;
+    font-weight: 600 !important;
+}
+
+/* Ensure proper contrast for selected state */
+.option-btn.selected,
+button[data-option].bg-primary {
+    background: #6366f1 !important;
+    color: white !important;
+    border-color: #4f46e5 !important;
+}
+
+/* Variant info box */
+#modalVariantInfo {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%) !important;
+    border-color: #c7d2fe !important;
+}
+
+#modalVariantInfo h4 {
+    color: #1e293b !important;
+}
+
+#modalVariantInfo .text-gray-600 {
+    color: #475569 !important;
+}
+
+#modalVariantPrice {
+    color: #6366f1 !important;
+}
+
+#modalVariantStock {
+    color: #475569 !important;
+}
+
+/* Confirm button - Make it visible and attractive */
+#confirmModalOptionsBtn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+
+#confirmModalOptionsBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+#confirmModalOptionsBtn:disabled {
+    background: #d1d5db !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
+
+/* Cancel button */
+button[onclick="closeOptionsModal()"] {
+    background: white !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    font-weight: 600 !important;
+}
+
+button[onclick="closeOptionsModal()"]:hover {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+}
+
+/* Close button (X) */
+#optionsModal button[onclick="closeOptionsModal()"].w-8 {
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+}
+
+#optionsModal button[onclick="closeOptionsModal()"].w-8:hover {
+    background: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+/* Labels */
+#optionsModal label {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+/* Required asterisk */
+#optionsModal label .text-red-500 {
+    color: #ef4444 !important;
+}
+
+/* Modal title and description */
+#optionsModal h3 {
+    color: #111827 !important;
+}
+
+#optionsModal .text-gray-500 {
+    color: #6b7280 !important;
+}
+
+/* Icon in modal header */
+#optionsModal .fa-cogs {
+    color: #6366f1 !important;
+}
+
+/* Selected options text */
+#modalSelectedColorText,
+#modalSelectedSizeText {
+    color: #374151 !important;
+    font-weight: 500 !important;
+}
+
+/* Ensure modal content is readable */
+#optionsModal .bg-white {
+    background: white !important;
+}
     
     /* Toast Animation */
     @keyframes slideIn {
@@ -1534,6 +1711,11 @@ let pendingButton = null;
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM Loaded - Variations:', hasVariations);
+    console.log('Variants:', variants);
+    console.log('Available colors:', availableColors);
+    console.log('Available sizes:', availableSizes);
+    
     // Quantity controls
     const qtyInput = document.getElementById('quantity');
     const qtyMinus = document.getElementById('qtyMinus');
@@ -1553,21 +1735,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Add to Cart button
-    document.getElementById('addToCartBtn')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        handleAddToCart(this);
-    });
+    const addToCartBtn = document.getElementById('addToCartBtn');
+    if (addToCartBtn) {
+        addToCartBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Add to cart clicked');
+            handleAddToCart(this);
+        });
+    }
     
     // Buy Now button
-    document.getElementById('buyNowBtn')?.addEventListener('click', function(e) {
-        e.preventDefault();
-        handleBuyNow(this);
-    });
+    const buyNowBtn = document.getElementById('buyNowBtn');
+    if (buyNowBtn) {
+        buyNowBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Buy now clicked');
+            handleBuyNow(this);
+        });
+    }
     
     // Wishlist button
-    document.getElementById('wishlistBtn')?.addEventListener('click', function() {
-        toggleWishlist(this.dataset.listingId, this);
-    });
+    const wishlistBtn = document.getElementById('wishlistBtn');
+    if (wishlistBtn) {
+        wishlistBtn.addEventListener('click', function() {
+            toggleWishlist(this.dataset.listingId, this);
+        });
+    }
     
     // Check URL for tab parameter
     const urlParams = new URLSearchParams(window.location.search);
@@ -1577,12 +1770,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize options section visibility
-    if (hasVariations && (availableColors.length > 0 || availableSizes.length > 0)) {
-        document.getElementById('productOptionsSection').classList.remove('hidden');
+    const optionsSection = document.getElementById('productOptionsSection');
+    if (hasVariations && optionsSection) {
+        optionsSection.classList.remove('hidden');
+        console.log('Options section shown');
     }
 });
 
-// Handle Add to Cart with modal
 // Update the handleAddToCart and handleBuyNow functions:
 function handleAddToCart(button) {
     if (!isAuthenticated) {
@@ -1593,22 +1787,27 @@ function handleAddToCart(button) {
     pendingAction = 'addToCart';
     pendingButton = button;
     
-    // Debug logging
-    console.log('Has variations:', hasVariations);
-    console.log('Available colors:', availableColors);
-    console.log('Available sizes:', availableSizes);
-    console.log('Color selected:', document.getElementById('selectedColor').value);
-    console.log('Size selected:', document.getElementById('selectedSize').value);
-    console.log('Variant selected:', document.getElementById('selectedVariantId').value);
+    console.log('Variation check:', {
+        hasVariations: hasVariations,
+        availableColors: availableColors,
+        availableSizes: availableSizes,
+        selectedVariantId: document.getElementById('selectedVariantId')?.value
+    });
     
-    // Show modal if product has variations AND no variant is fully selected
-    if (hasVariations && !isVariantSelected()) {
-        console.log('Opening options modal...');
-        openOptionsModal();
-    } else {
-        console.log('Adding directly...');
-        addToCartDirect();
+    // Show modal if product has variations AND no variant is selected
+    if (hasVariations) {
+        const selectedVariantId = document.getElementById('selectedVariantId')?.value;
+        console.log('Selected variant ID:', selectedVariantId);
+        
+        if (!selectedVariantId || selectedVariantId === '') {
+            console.log('Opening options modal...');
+            openOptionsModal();
+            return;
+        }
     }
+    
+    console.log('Adding directly...');
+    addToCartDirect();
 }
 
 // Handle Buy Now with modal
@@ -1621,20 +1820,42 @@ function handleBuyNow(button) {
     pendingAction = 'buyNow';
     pendingButton = button;
     
-    if (hasVariations && !isVariantSelected()) {
-        openOptionsModal();
-    } else {
-        buyNowDirect();
+    if (hasVariations) {
+        const selectedVariantId = document.getElementById('selectedVariantId')?.value;
+        if (!selectedVariantId || selectedVariantId === '') {
+            openOptionsModal();
+            return;
+        }
     }
+    
+    buyNowDirect();
 }
-
 // Check if a concrete variant is selected; for variation products we require a variant_id
 function isVariantSelected() {
     if (!hasVariations) return true;
-    const variantId = document.getElementById('selectedVariantId').value;
-    return variantId !== '';
+    
+    const variantId = document.getElementById('selectedVariantId')?.value;
+    const color = document.getElementById('selectedColor')?.value;
+    const size = document.getElementById('selectedSize')?.value;
+    
+    // If no colors/sizes available, then variant ID alone is enough
+    if ((availableColors.length === 0 && availableSizes.length === 0) && variantId) {
+        return true;
+    }
+    
+    // If colors/sizes are available, check if all required options are selected
+    let requiredSelected = true;
+    
+    if (availableColors.length > 0 && !color) {
+        requiredSelected = false;
+    }
+    
+    if (availableSizes.length > 0 && !size) {
+        requiredSelected = false;
+    }
+    
+    return requiredSelected && variantId;
 }
-
 // Open options modal
 // openOptionsModal function:
 function openOptionsModal() {

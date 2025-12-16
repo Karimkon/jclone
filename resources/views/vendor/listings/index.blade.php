@@ -110,7 +110,7 @@
                             {{ $listing->category->name ?? 'Uncategorized' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            ${{ number_format($listing->price, 2) }}
+                            UGX {{ number_format($listing->price, 2) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{{ $listing->stock }}</div>

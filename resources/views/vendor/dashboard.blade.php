@@ -28,7 +28,7 @@
                 </div>
                 <div>
                     <p class="text-gray-600">Total Sales</p>
-                    <p class="text-2xl font-bold text-gray-800">${{ number_format($stats['total_sales'] ?? 0, 2) }}</p>
+                    <p class="text-2xl font-bold text-gray-800">UGX {{ number_format($stats['total_sales'] ?? 0, 2) }}</p>
                 </div>
             </div>
         </div>
@@ -127,7 +127,7 @@
                             <p class="text-sm text-gray-600">{{ $order->buyer->name }}</p>
                         </div>
                         <div class="text-right">
-                            <p class="font-bold">${{ number_format($order->total, 2) }}</p>
+                            <p class="font-bold">UGX {{ number_format($order->total, 2) }}</p>
                             <span class="text-xs px-2 py-1 rounded-full 
                                 @if($order->status == 'pending') bg-yellow-100 text-yellow-800
                                 @elseif($order->status == 'paid') bg-blue-100 text-blue-800
@@ -175,7 +175,7 @@
                         
                         <div class="flex-1">
                             <h4 class="font-medium text-gray-800 line-clamp-1">{{ $listing->title }}</h4>
-                            <p class="text-lg font-bold text-indigo-600">${{ number_format($listing->price, 2) }}</p>
+                            <p class="text-lg font-bold text-indigo-600">UGX {{ number_format($listing->price, 2) }}</p>
                             <div class="flex items-center justify-between mt-2">
                                 <span class="text-sm text-gray-600">
                                     Stock: {{ $listing->stock }}

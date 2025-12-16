@@ -10,34 +10,48 @@ use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
-   /**
- * Display all categories (public)
- */
-public function index()
-{
-    $categories = Category::where('is_active', true)
-        ->whereNull('parent_id')
-        ->with(['children' => function($query) {
-            $query->where('is_active', true)
-                ->orderBy('order')
-                ->withCount('listings');
-        }])
-        ->withCount('listings') // Add this to get listing counts
-        ->orderBy('order')
-        ->get();
-    
-    return view('categories.index', compact('categories'));
-}
+    /**
+     * Display all categories (public)
+     */
+    public function index()
+    {
+        $categories = Category::where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->orderBy('order');
+            }])
+            ->orderBy('order')
+            ->get();
+        
+        // Add total listings count to each category
+        $categories->each(function($category) {
+            $category->listings_count = $category->total_listings_count;
+            
+            // Also add count to children
+            $category->children->each(function($child) {
+                $child->listings_count = $child->total_listings_count;
+            });
+        });
+        
+        return view('categories.index', compact('categories'));
+    }
 
     /**
-     * Display category with listings (public)
+     * Display category with listings (public) - INCLUDING DESCENDANT LISTINGS
      */
     public function show($slug)
     {
-        $category = Category::where('slug', $slug)->where('is_active', true)->firstOrFail();
+        $category = Category::where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
         
+        // Get all descendant category IDs
+        $categoryIds = $category->getDescendantIds();
+        
+        // Get listings from this category AND all descendants
         $listings = Listing::where('is_active', true)
-            ->where('category_id', $category->id)
+            ->whereIn('category_id', $categoryIds)
             ->with(['vendor', 'images'])
             ->orderBy('created_at', 'desc')
             ->paginate(20);
@@ -47,7 +61,15 @@ public function index()
             ->orderBy('order')
             ->get();
         
-        return view('categories.show', compact('category', 'listings', 'subcategories'));
+        // Add listings count to subcategories
+        $subcategories->each(function($subcat) {
+            $subcat->listings_count = $subcat->total_listings_count;
+        });
+        
+        // Total count for display
+        $totalProducts = $category->total_listings_count;
+        
+        return view('categories.show', compact('category', 'listings', 'subcategories', 'totalProducts'));
     }
 
     /**
@@ -55,10 +77,14 @@ public function index()
      */
     public function adminIndex()
     {
-        $categories = Category::withCount('listings')
-            ->with('parent')
+        $categories = Category::with('parent')
             ->orderBy('order')
             ->paginate(20);
+        
+        // Add total listings count to each category
+        $categories->each(function($category) {
+            $category->total_listings = $category->total_listings_count;
+        });
         
         $parentCategories = Category::whereNull('parent_id')->get();
         
@@ -159,8 +185,8 @@ public function index()
      */
     public function destroy(Category $category)
     {
-        // Check if category has listings
-        if ($category->listings()->count() > 0) {
+        // Check if category has listings (including descendants)
+        if ($category->total_listings_count > 0) {
             return back()->with('error', 'Cannot delete category with listings. Move listings first.');
         }
 

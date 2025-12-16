@@ -36,9 +36,13 @@ class ListingController extends Controller
         
         // Category filter
         if ($request->has('category') && $request->category) {
-            $query->where('category_id', $request->category);
+            $category = Category::find($request->category);
+            if ($category) {
+                // Get ALL descendant category IDs including the selected category
+                $categoryIds = $category->getDescendantIds();
+                $query->whereIn('category_id', $categoryIds);
+            }
         }
-        
         // Origin filter
         if ($request->has('origin') && $request->origin) {
             $query->where('origin', $request->origin);
@@ -75,9 +79,24 @@ class ListingController extends Controller
         }
         
         $listings = $query->paginate(24);
-        $categories = Category::where('is_active', true)->whereNull('parent_id')->get();
+         $categories = Category::where('is_active', true)
+        ->whereNull('parent_id')
+        ->with(['children' => function($query) {
+            $query->where('is_active', true);
+        }])
+        ->orderBy('order')
+        ->get();
+
+          $categories->each(function($category) {
+        $category->listings_count = $category->total_listings_count;
         
-        return view('marketplace.index', compact('listings', 'categories'));
+        $category->children->each(function($child) {
+            $child->listings_count = $child->total_listings_count;
+        });
+    });
+         $totalProducts = Listing::where('is_active', true)->count();
+        
+        return view('marketplace.index', compact('listings', 'categories', 'totalProducts'));
     }
 
    /**

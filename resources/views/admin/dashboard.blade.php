@@ -84,37 +84,42 @@
 
     <!-- Quick Stats Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <!-- Recent Activity -->
-        <div class="bg-white rounded-xl shadow-lg">
-            <div class="p-6 border-b">
-                <h2 class="text-xl font-bold text-gray-900">Recent Activity</h2>
-            </div>
-            <div class="p-6">
-                <div class="space-y-4">
-                    @php
-                        $activities = [
-                            ['icon' => 'fas fa-user-plus', 'color' => 'text-green-500', 'text' => 'New vendor registered', 'time' => '5 minutes ago'],
-                            ['icon' => 'fas fa-shopping-cart', 'color' => 'text-blue-500', 'text' => 'New order #ORD-001', 'time' => '15 minutes ago'],
-                            ['icon' => 'fas fa-exclamation-circle', 'color' => 'text-red-500', 'text' => 'New dispute opened', 'time' => '30 minutes ago'],
-                            ['icon' => 'fas fa-check-circle', 'color' => 'text-green-500', 'text' => 'Vendor approved', 'time' => '1 hour ago'],
-                            ['icon' => 'fas fa-upload', 'color' => 'text-purple-500', 'text' => 'New product listed', 'time' => '2 hours ago'],
-                        ];
-                    @endphp
-                    
-                    @foreach($activities as $activity)
-                    <div class="flex items-start">
-                        <div class="mr-3">
-                            <i class="{{ $activity['icon'] }} {{ $activity['color'] }} text-lg"></i>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-gray-900">{{ $activity['text'] }}</p>
-                            <p class="text-sm text-gray-500">{{ $activity['time'] }}</p>
-                        </div>
-                    </div>
-                    @endforeach
+       <!-- Recent Activity -->
+<div class="bg-white rounded-xl shadow-lg">
+    <div class="p-6 border-b">
+        <h2 class="text-xl font-bold text-gray-900">Recent Activity</h2>
+        <a href="{{ route('admin.activity-logs') }}" class="text-sm text-indigo-600 hover:text-indigo-800">
+            View all activity
+        </a>
+    </div>
+    <div class="p-6">
+        <div class="space-y-4">
+            @forelse($recentActivities as $activity)
+            <div class="flex items-start">
+                <div class="mr-3">
+                    <i class="{{ $activity->icon ?? 'fas fa-circle' }} {{ $activity->color ?? 'text-gray-500' }} text-lg"></i>
+                </div>
+                <div class="flex-1">
+                    <p class="text-gray-900">{{ $activity->description }}</p>
+                    <p class="text-sm text-gray-500">
+                        {{ \App\Services\ActivityLogger::formatActivityTime($activity->created_at) }}
+                    </p>
+                    @if($activity->causer)
+                    <p class="text-xs text-gray-400 mt-1">
+                        By: {{ $activity->causer->name ?? 'System' }}
+                    </p>
+                    @endif
                 </div>
             </div>
+            @empty
+            <div class="text-center py-8">
+                <i class="fas fa-history text-gray-300 text-4xl mb-3"></i>
+                <p class="text-gray-500">No recent activity</p>
+            </div>
+            @endforelse
         </div>
+    </div>
+</div>
 
         <!-- Quick Actions -->
         <div class="bg-white rounded-xl shadow-lg">

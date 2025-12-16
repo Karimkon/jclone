@@ -139,7 +139,7 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-bold text-gray-900">
-                                ${{ number_format($order->total, 2) }}
+                                UGX {{ number_format($order->total, 2) }}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">

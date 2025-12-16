@@ -22,7 +22,8 @@
                 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select name="service_category_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <select name="service_category_id" id="jobCategorySelect" 
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                         <option value="">Select Category</option>
                         @foreach($categories as $cat)
                         <option value="{{ $cat->id }}" {{ old('service_category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
@@ -221,3 +222,32 @@
     </form>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for job category
+    $('#jobCategorySelect').select2({
+        placeholder: "Type to search for a category...",
+        allowClear: true,
+        width: '100%',
+        dropdownParent: $('body'), // Ensure dropdown appears above everything
+        minimumResultsForSearch: 0 // Always show search box
+    });
+    
+    // Debug: Check if Select2 is loaded
+    if (!$.fn.select2) {
+        console.error('Select2 is not loaded!');
+    } else {
+        console.log('Select2 is loaded, initializing...');
+    }
+    
+    // Debug: Check if element exists
+    if ($('#jobCategorySelect').length) {
+        console.log('jobCategorySelect element found');
+    } else {
+        console.error('jobCategorySelect element NOT found!');
+    }
+});
+</script>
+@endpush

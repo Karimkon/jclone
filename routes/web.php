@@ -33,6 +33,10 @@ use App\Http\Controllers\Marketplace\JobsServicesController;
 use App\Http\Controllers\Vendor\VendorJobController;
 use App\Http\Controllers\Vendor\VendorServiceController;
 use App\Http\Controllers\Buyer\BuyerJobsServicesController;
+use App\Http\Controllers\Admin\ContactMessageController;
+use \App\Http\Controllers\Admin\ReportController;
+use \App\Http\Controllers\Admin\AdminProfileController;
+use \App\Http\Controllers\Admin\AdminSettingsController;
 
 // ====================
 // PUBLIC ROUTES
@@ -412,9 +416,6 @@ Route::middleware(['auth'])->group(function () {
         // Disputes
         Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
         Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
-        
-        // Reports
-        Route::get('/reports', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('reports.index');
 
         // Escrow management
         Route::prefix('escrows')->name('escrows.')->group(function () {
@@ -457,6 +458,50 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/import/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'importCSV'])->name('import.csv');
     });
     
+     Route::prefix('contact-messages')->name('contact-messages.')->group(function () {
+        Route::get('/', [ContactMessageController::class, 'index'])->name('index');
+        Route::get('/{id}', [ContactMessageController::class, 'show'])->name('show');
+        Route::post('/{id}/status', [ContactMessageController::class, 'updateStatus'])->name('update-status');
+        Route::post('/{id}/response', [ContactMessageController::class, 'sendResponse'])->name('send-response');
+        Route::delete('/{id}', [ContactMessageController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-actions', [ContactMessageController::class, 'bulkActions'])->name('bulk-actions');
+    });
+
+    Route::prefix('reports')->name('reports.')->group(function () {
+    Route::get('/', [ReportController::class, 'index'])->name('index');
+    Route::get('/sales-detailed', [ReportController::class, 'salesDetailed'])->name('sales.detailed');
+    Route::get('/financial', [ReportController::class, 'financialReport'])->name('financial');
+    Route::get('/user-acquisition', [ReportController::class, 'userAcquisition'])->name('user.acquisition');
+    Route::get('/vendor-performance', [ReportController::class, 'vendorPerformance'])->name('vendor.performance');
+    Route::get('/category-performance', [ReportController::class, 'categoryPerformance'])->name('category.performance');
+    Route::get('/platform-analytics', [ReportController::class, 'platformAnalytics'])->name('platform.analytics');
+    Route::get('/export', [ReportController::class, 'export'])->name('export');
+});
+
+// Profile & Settings Routes
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [AdminProfileController::class, 'index'])->name('index');
+        Route::put('/update', [AdminProfileController::class, 'update'])->name('update');
+        Route::put('/change-password', [AdminProfileController::class, 'changePassword'])->name('change-password');
+        Route::post('/upload-photo', [AdminProfileController::class, 'uploadPhoto'])->name('upload-photo');
+        Route::delete('/remove-photo', [AdminProfileController::class, 'removePhoto'])->name('remove-photo');
+    });
+    
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/', [AdminSettingsController::class, 'index'])->name('index');
+        Route::put('/general', [AdminSettingsController::class, 'updateGeneral'])->name('general.update');
+        Route::put('/email', [AdminSettingsController::class, 'updateEmail'])->name('email.update');
+        Route::put('/notifications', [AdminSettingsController::class, 'updateNotifications'])->name('notifications.update');
+        Route::put('/security', [AdminSettingsController::class, 'updateSecurity'])->name('security.update');
+        Route::post('/backup', [AdminSettingsController::class, 'createBackup'])->name('backup.create');
+        Route::get('/logs', [AdminSettingsController::class, 'viewLogs'])->name('logs');
+        Route::delete('/logs/clear', [AdminSettingsController::class, 'clearLogs'])->name('logs.clear');
+    });
+
+    Route::get('/activity-logs', function () {
+        $logs = \App\Models\ActivityLog::orderBy('created_at', 'desc')->paginate(20);
+        return view('admin.activity-logs.index', compact('logs'));
+    })->name('activity-logs');
     });
     
     // ====================

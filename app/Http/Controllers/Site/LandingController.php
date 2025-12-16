@@ -6,32 +6,33 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Listing;
 use App\Models\Promotion;
+use App\Models\ContactMessage; 
 use Illuminate\Http\Request;
+
 
 class LandingController extends Controller
 {
     /**
      * Display homepage
      */
-  public function index()
+ public function index()
     {
         // Get categories with children and listing counts
         $categories = Category::where('is_active', true)
             ->whereNull('parent_id')
-            ->withCount('listings')
             ->with(['children' => function($query) {
                 $query->where('is_active', true)
-                    ->withCount('listings')
                     ->with(['children' => function($q) {
-                        $q->where('is_active', true)->withCount('listings');
+                        $q->where('is_active', true);
                     }]);
-            }, 'listings' => function($query) {
-                $query->where('is_active', true)
-                    ->with('images')
-                    ->take(4);
             }])
             ->orderBy('name')
             ->get();
+
+        // Add total listings count to each category (includes descendants)
+        $categories->each(function($category) {
+            $category->listings_count = $category->total_listings_count;
+        });
 
         // Featured products (you can add a 'is_featured' column later)
         $featuredProducts = Listing::where('is_active', true)
@@ -54,7 +55,7 @@ class LandingController extends Controller
             ->take(12)
             ->get();
 
-        // Flash deals (products with potential discounts - you can add discount column later)
+        // Flash deals (products with potential discounts)
         $flashDeals = Listing::where('is_active', true)
             ->with(['images', 'category'])
             ->where('stock', '>', 0)
@@ -62,7 +63,7 @@ class LandingController extends Controller
             ->take(10)
             ->get();
 
-        // Top selling (you can track this with order count later)
+        // Top selling
         $topSelling = Listing::where('is_active', true)
             ->with(['images', 'category'])
             ->where('stock', '>', 0)
@@ -95,103 +96,6 @@ class LandingController extends Controller
             'localProducts'
         ));
     }
-
-    /**
-     * Display about page
-     */
-    public function about()
-    {
-        return view('site.about');
-    }
-
-    /**
-     * Display contact page
-     */
-    public function contact()
-    {
-        return view('site.contact');
-    }
-
-    /**
-     * Display FAQ page
-     */
-    public function faq()
-    {
-        $faqs = [
-            [
-                'question' => 'How do I buy products?',
-                'answer' => 'Browse products, add to cart, checkout securely with multiple payment options.'
-            ],
-            [
-                'question' => 'How does vendor verification work?',
-                'answer' => 'All vendors undergo ID verification, business documentation check, and guarantor validation.'
-            ],
-            [
-                'question' => 'What is escrow protection?',
-                'answer' => 'Your payment is held securely until you confirm receipt of goods.'
-            ],
-            [
-                'question' => 'How do imports work?',
-                'answer' => 'We handle shipping, customs clearance, and delivery for imported goods.'
-            ],
-            [
-                'question' => 'What are the shipping costs?',
-                'answer' => 'Shipping costs vary based on weight, distance, and delivery speed.'
-            ],
-            [
-                'question' => 'How long does delivery take?',
-                'answer' => 'Local: 1-3 days, Imported: 7-14 days depending on customs.'
-            ],
-        ];
-        
-        return view('site.faq', compact('faqs'));
-    }
-
-    /**
-     * Display terms and conditions
-     */
-    public function terms()
-    {
-        return view('site.terms');
-    }
-
-    /**
-     * Display privacy policy
-     */
-    public function privacy()
-    {
-        return view('site.privacy');
-    }
-
-    /**
-     * Handle contact form submission
-     */
-    public function submitContact(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|max:255',
-        'subject' => 'required|string|max:255',
-        'message' => 'required|string|max:2000',
-        'contact_type' => 'required|in:support,vendor,buyer,other',
-    ]);
-
-    // Store contact message
-    \App\Models\ContactMessage::create($validated);
-
-    // Queue email notification
-    \App\Models\NotificationQueue::create([
-        'user_id' => null, // Admin notification
-        'type' => 'contact_form',
-        'title' => 'New Contact Form: ' . $validated['subject'],
-        'message' => "From: {$validated['name']} ({$validated['email']})\nType: {$validated['contact_type']}\n\nMessage:\n{$validated['message']}",
-        'meta' => $validated,
-        'status' => 'pending',
-    ]);
-
-    return back()->with('success', 'Thank you for contacting us! We will respond within 24 hours.');
-}
-
     /**
      * Display vendor benefits page
      */
@@ -240,6 +144,57 @@ public function vendorBenefits()
     return view('site.vendor-benefits', compact('benefits', 'stats'));
 }
 
+
+/**
+ * Display FAQ page
+ */
+public function faq()
+{
+    $faqs = [
+        [
+            'question' => 'What is ' . config('app.name') . '?',
+            'answer' => config('app.name') . ' is a secure online marketplace with escrow protection. We connect buyers and sellers while ensuring safe transactions through our escrow system.'
+        ],
+        [
+            'question' => 'How does escrow work?',
+            'answer' => 'When you buy a product, your payment is held securely in escrow. The seller ships your order, and you have time to inspect it. Once you confirm receipt, the payment is released to the seller.'
+        ],
+        [
+            'question' => 'How do I become a vendor?',
+            'answer' => 'Click "Become a Vendor" in the navigation menu or visit the vendor registration page. You\'ll need to provide business information, ID verification, and agree to our terms. Once approved, you can start listing products.'
+        ],
+        [
+            'question' => 'How long does shipping take?',
+            'answer' => 'Shipping times vary: Local products: 1-3 days, Imported products: 7-14 days. You\'ll receive tracking information once your order is shipped.'
+        ],
+        [
+            'question' => 'What payment methods do you accept?',
+            'answer' => 'We accept mobile money, credit/debit cards, and bank transfers. All payments are processed securely through our escrow system.'
+        ],
+        [
+            'question' => 'Can I return a product?',
+            'answer' => 'Yes, we have a 30-day return policy for most items. Products must be in original condition with packaging. Some items (perishable, custom-made) may not be returnable.'
+        ],
+        [
+            'question' => 'How do I track my order?',
+            'answer' => 'After your order ships, you\'ll receive a tracking number via email/SMS. You can also check order status in your account dashboard.'
+        ],
+        [
+            'question' => 'What if I don\'t receive my order?',
+            'answer' => 'If your order doesn\'t arrive within the estimated time, contact our support team. Since payments are held in escrow, you won\'t lose your money.'
+        ],
+        [
+            'question' => 'Are there any seller fees?',
+            'answer' => 'We charge a small commission on successful sales. There are no listing fees or monthly subscriptions. Detailed commission rates are available in the vendor dashboard.'
+        ],
+        [
+            'question' => 'How do I contact customer support?',
+            'answer' => 'You can reach us via: Email: support@' . parse_url(config('app.url'), PHP_URL_HOST) . ', Live Chat: Available on our website, Phone: +256 XXX XXX XXX'
+        ]
+    ];
+    
+    return view('site.faq', compact('faqs'));
+}
     /**
      * Display how it works page
      */
@@ -262,5 +217,39 @@ public function vendorBenefits()
         ];
 
         return view('site.how-it-works', compact('buyerSteps', 'vendorSteps'));
+    }
+
+     /**
+     * Display contact page
+     */
+   public function contact()
+    {
+        return view('site.contact');
+    }
+
+    /**
+     * Handle contact form submission
+     */
+    public function submitContact(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'subject' => 'required|string|max:255',
+            'message' => 'required|string|min:10',
+            'contact_type' => 'required|in:buyer,vendor,support,partner,other',
+        ]);
+
+        // Create contact message
+        ContactMessage::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'subject' => $validated['subject'],
+            'message' => $validated['message'],
+            'contact_type' => $validated['contact_type'],
+            'status' => 'new',
+        ]);
+
+        return back()->with('success', 'Thank you for your message. We will get back to you soon!');
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\Listing;
 use App\Models\Category;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 
 class AdminDashboardController extends Controller
@@ -22,12 +23,14 @@ class AdminDashboardController extends Controller
             'totalProducts' => Listing::count(),
             'activeVendors' => VendorProfile::where('vetting_status', 'approved')->count(),
             'categories' => Category::count(),
-            'totalRevenue' => 0,
-            'monthlyRevenue' => 0,
+            'totalRevenue' => Order::where('status', 'completed')->sum('total'), // Changed total_amount to total
+            'monthlyRevenue' => Order::where('status', 'completed')
+                ->whereMonth('created_at', now()->month)
+                ->sum('total'), // Changed total_amount to total
         ];
 
-        // Get recent activities (you can implement this later)
-        $recentActivities = [];
+        // Get recent activities
+        $recentActivities = ActivityLogger::getRecentActivities(5);
         
         // Get system info
         $systemInfo = [

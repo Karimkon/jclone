@@ -1,221 +1,214 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Marketplace - {{ config('app.name') }}</title>
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        .product-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-        }
-        
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
-        
-        .filter-sidebar {
-            position: sticky;
-            top: 1rem;
-        }
-        
-        .price-range {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: linear-gradient(to right, #e5e7eb, #4f46e5);
-            outline: none;
-        }
-        
-        .price-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4f46e5;
-            cursor: pointer;
-            border: 3px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .price-range::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: #4f46e5;
-            cursor: pointer;
-            border: 3px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-        
-        .category-tag {
-            transition: all 0.2s ease;
-        }
-        
-        .category-tag:hover {
-            transform: scale(1.05);
-        }
-        
-        .active-filter {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-        }
-        
-        .pagination-link {
-            transition: all 0.2s ease;
-        }
-        
-        .pagination-link:hover {
-            background-color: #f3f4f6;
-        }
-        
-        @media (max-width: 768px) {
-            .filter-sidebar {
-                position: static;
-            }
-            
-            .product-image {
-                height: 200px;
-                object-fit: cover;
-            }
-        }
-        
-        /* Improved visibility for all zoom levels */
-        html {
-            -webkit-text-size-adjust: 100%;
-            text-size-adjust: 100%;
-        }
-        
-        .text-responsive {
-            font-size: clamp(0.875rem, 2vw, 1rem);
-        }
-        
-        .heading-responsive {
-            font-size: clamp(1.25rem, 3vw, 1.5rem);
-        }
-        
-        /* Ensure good contrast */
-        .text-primary {
-            color: #4f46e5;
-        }
-        
-        .bg-primary {
-            background-color: #4f46e5;
-        }
-        
-        .border-primary {
-            border-color: #4f46e5;
-        }
-    </style>
-</head>
-<body class="bg-gray-50">
-    <!-- Navigation -->
-    <nav class="bg-white shadow-lg sticky top-0 z-50">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex items-center justify-between">
-                <!-- Logo -->
-                <a href="{{ route('welcome') }}" class="flex items-center space-x-2">
-                    <i class="fas fa-store text-2xl text-primary"></i>
-                    <span class="text-xl font-bold text-gray-800">{{ config('app.name') }}</span>
-                </a>
-                
-                <!-- Search Bar -->
-                <div class="hidden md:flex flex-1 max-w-lg mx-8">
-                    <form method="GET" action="{{ route('marketplace.index') }}" class="w-full">
-                        <div class="relative">
-                            <input 
-                                type="text" 
-                                name="search" 
-                                placeholder="Search products..." 
-                                value="{{ request('search') }}" 
-                                class="w-full pl-12 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                            >
-                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                        </div>
-                    </form>
-                </div>
-                
-                <!-- User Actions -->
-                <div class="flex items-center space-x-4">
-                    @auth
-                        <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-gray-600 hover:text-primary">
-                            <i class="fas fa-shopping-cart text-xl"></i>
-                            @if($cartCount ?? 0 > 0)
-                                <span class="absolute -top-1 -right-1 bg-primary text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                                    {{ $cartCount }}
-                                </span>
-                            @endif
-                        </a>
-                        <a href="{{ route('buyer.wishlist.index') }}" class="p-2 text-gray-600 hover:text-primary">
-                            <i class="fas fa-heart text-xl"></i>
-                        </a>
-                        <div class="relative group">
-                            <button class="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
-                                <i class="fas fa-user-circle text-xl text-gray-600"></i>
-                                <span class="hidden md:inline text-sm font-medium">{{ auth()->user()->name }}</span>
-                            </button>
-                            <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl hidden group-hover:block z-50">
-                                <a href="{{ route('buyer.dashboard') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 rounded-t-lg">
-                                    <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
-                                </a>
-                                <a href="{{ route('buyer.orders.index') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
-                                    <i class="fas fa-shopping-bag mr-2"></i>My Orders
-                                </a>
-                                <a href="{{ route('buyer.profile') }}" class="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-100">
-                                    <i class="fas fa-user-edit mr-2"></i>Profile
-                                </a>
-                                <div class="border-t">
-                                    <form action="{{ route('logout') }}" method="POST" class="block">
-                                        @csrf
-                                        <button type="submit" class="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-gray-100 rounded-b-lg">
-                                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <a href="{{ route('login') }}" class="text-gray-600 hover:text-primary">
-                            <i class="fas fa-sign-in-alt mr-1"></i>Login
-                        </a>
-                        <a href="{{ route('register') }}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                            Sign Up
-                        </a>
-                    @endauth
-                </div>
-            </div>
-            
-            <!-- Mobile Search -->
-            <div class="md:hidden mt-3">
-                <form method="GET" action="{{ route('marketplace.index') }}">
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            name="search" 
-                            placeholder="Search products..." 
-                            value="{{ request('search') }}" 
-                            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        >
-                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </nav>
+@extends('layouts.app')
+
+@section('title', 'Marketplace - ' . config('app.name'))
+
+@section('content')
+
+<style>
+/* Variation Modal Styles for Marketplace Index */
+
+/* Modal overlay */
+#variationModal {
+    backdrop-filter: blur(8px);
+}
+
+/* Modal option buttons - Default state */
+#variationModal button[data-option] {
+    background: white !important;
+    color: #374151 !important; /* gray-700 */
+    border: 2px solid #d1d5db !important; /* gray-300 */
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+#variationModal button[data-option]:hover {
+    border-color: #6366f1 !important; /* primary/indigo */
+    background: #eef2ff !important; /* indigo-50 */
+    color: #4f46e5 !important;
+}
+
+/* Selected state */
+#variationModal button[data-option].selected,
+#variationModal button[data-option].border-primary {
+    background: #6366f1 !important; /* primary/indigo-600 */
+    color: white !important;
+    border-color: #4f46e5 !important;
+    font-weight: 600 !important;
+}
+
+/* Variant info box */
+#variationModal #selectedVariantInfo {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%) !important;
+    border-color: #c7d2fe !important;
+}
+
+#variationModal #selectedVariantInfo h4 {
+    color: #1e293b !important;
+}
+
+#variationModal #selectedVariantInfo .text-gray-600,
+#variationModal #selectedOptionsText {
+    color: #475569 !important;
+    font-weight: 500 !important;
+}
+
+#variationModal #variantPrice {
+    color: #6366f1 !important;
+    font-weight: 700 !important;
+}
+
+#variationModal #variantStock {
+    color: #475569 !important;
+}
+
+/* Add to Cart button in modal */
+#variationModal #addWithVariationBtn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+
+#variationModal #addWithVariationBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+#variationModal #addWithVariationBtn:disabled {
+    background: #d1d5db !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
+
+/* Cancel button */
+#variationModal button[onclick="closeVariationModal()"] {
+    background: white !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    font-weight: 600 !important;
+}
+
+#variationModal button[onclick="closeVariationModal()"]:hover {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+}
+
+/* Close button (X) at top */
+#variationModal .bg-gray-100 {
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+}
+
+#variationModal .bg-gray-100:hover {
+    background: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+/* Labels */
+#variationModal label {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+/* Required asterisk */
+#variationModal .text-red-500 {
+    color: #ef4444 !important;
+}
+
+/* Modal title */
+#variationModal h3 {
+    color: #111827 !important;
+    font-weight: 700 !important;
+}
+
+/* Modal background */
+#variationModal .bg-white {
+    background: white !important;
+}
+
+/* Ensure text is visible */
+#variationModal .text-gray-900 {
+    color: #111827 !important;
+}
+
+#variationModal .text-gray-700 {
+    color: #374151 !important;
+}
+
+#variationModal .text-gray-600 {
+    color: #475569 !important;
+}
+
+#variationModal .text-gray-800 {
+    color: #1f2937 !important;
+}
+
+/* Primary color text */
+#variationModal .text-primary {
+    color: #6366f1 !important;
+}
+[data-quick-cart] {
+    background: #6366f1 !important; /* indigo-600 */
+    color: white !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: flex !important;
+}
+
+[data-quick-cart]:hover {
+    background: #4f46e5 !important; /* indigo-700 */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4) !important;
+}
+
+/* Remove the opacity/visibility transitions that hide the button */
+.product-card .quick-add {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transition: transform 0.2s ease, background 0.2s ease !important;
+}
+
+/* Ensure the button container is always visible */
+.product-card [data-quick-cart] {
+    background: #6366f1 !important;
+    color: white !important;
+}
+
+/* Alternative: If you want it to be slightly transparent but still visible */
+/* Remove the above and use this instead: */
+/*
+.product-card .quick-add {
+    opacity: 0.8 !important;
+    visibility: visible !important;
+}
+
+.product-card:hover .quick-add {
+    opacity: 1 !important;
+}
+*/
+
+/* Fix for wishlist button too */
+[data-quick-wishlist] {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure product actions are always visible */
+.product-actions {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) !important;
+}
+
+/* Make sure the cart icon is visible */
+[data-quick-cart] i {
+    color: white !important;
+    opacity: 1 !important;
+}
+</style>
 
     <!-- Main Content -->
     <div class="container mx-auto px-4 py-6">
@@ -232,17 +225,17 @@
                         <h4 class="font-semibold text-gray-700 mb-3">Categories</h4>
                         <div class="space-y-2">
                             <a href="{{ route('marketplace.index', request()->except('category')) }}" 
-                               class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ !request('category') ? 'active-filter' : 'text-gray-600' }}">
-                                <span>All Categories</span>
-                                <span class="text-sm opacity-75">{{ $totalProducts ?? 0 }}</span>
-                            </a>
-                            @foreach($categories as $category)
-                                <a href="{{ route('marketplace.index', array_merge(request()->except('category'), ['category' => $category->id])) }}" 
-                                   class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('category') == $category->id ? 'active-filter' : 'text-gray-600' }}">
-                                    <span>{{ $category->name }}</span>
-                                    <span class="text-sm opacity-75">{{ $category->listings_count ?? 0 }}</span>
-                                </a>
-                            @endforeach
+   class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ !request('category') ? 'active-filter' : 'text-gray-600' }}">
+    <span>All Categories</span>
+    <span class="text-sm opacity-75">{{ $totalProducts ?? 0 }}</span>
+</a>
+@foreach($categories as $category)
+    <a href="{{ route('marketplace.index', array_merge(request()->except('category'), ['category' => $category->id])) }}" 
+       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('category') == $category->id ? 'active-filter' : 'text-gray-600' }}">
+        <span>{{ $category->name }}</span>
+        <span class="text-sm opacity-75">{{ $category->listings_count ?? 0 }}</span>
+    </a>
+@endforeach
                         </div>
                     </div>
                     
@@ -699,97 +692,7 @@
 </div>
     
     
-           <!-- Footer -->
-    <footer class="bg-gray-900 text-white pt-10 pb-6">
-        <div class="container mx-auto px-4">
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
-                <div class="col-span-2 md:col-span-1">
-                    <div class="flex items-center gap-2 mb-4">
-                        <div class="w-8 h-8 bg-gradient-to-br from-primary to-purple-600 rounded-lg flex items-center justify-center">
-                            <i class="fas fa-store text-white text-sm"></i>
-                        </div>
-                        <span class="text-lg font-bold">{{ config('app.name') }}</span>
-                    </div>
-                    <p class="text-gray-400 text-sm mb-4 leading-relaxed">
-                        Your trusted marketplace with escrow protection.
-                    </p>
-                    <div class="flex gap-2">
-                        <a href="#" class="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-primary transition text-sm">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-sm">
-                            <i class="fab fa-twitter"></i>
-                        </a>
-                        <a href="#" class="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-sm">
-                            <i class="fab fa-instagram"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-3 text-sm">Company</h5>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="{{ route('site.about') }}" class="text-gray-400 hover:text-white transition">About Us</a></li>
-                        <li><a href="{{ route('site.howItWorks') }}" class="text-gray-400 hover:text-white transition">How It Works</a></li>
-                        <li><a href="{{ route('site.vendorBenefits') }}" class="text-gray-400 hover:text-white transition">Vendor Benefits</a></li>
-                        <li><a href="{{ route('site.contact') }}" class="text-gray-400 hover:text-white transition">Contact Us</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-3 text-sm">Support</h5>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="{{ route('site.faq') }}" class="text-gray-400 hover:text-white transition">FAQ</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Help Center</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Shipping Info</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Returns & Refunds</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-3 text-sm">Legal</h5>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="{{ route('site.terms') }}" class="text-gray-400 hover:text-white transition">Terms & Conditions</a></li>
-                        <li><a href="{{ route('site.privacy') }}" class="text-gray-400 hover:text-white transition">Privacy Policy</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Cookie Policy</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Dispute Resolution</a></li>
-                    </ul>
-                </div>
-                
-                <div>
-                    <h5 class="font-bold mb-3 text-sm">For Vendors</h5>
-                    <ul class="space-y-2 text-xs">
-                        <li><a href="{{ route('vendor.onboard.create') }}" class="text-gray-400 hover:text-white transition">Sell on Platform</a></li>
-                        <li><a href="{{ route('vendor.login') }}" class="text-gray-400 hover:text-white transition">Vendor Dashboard</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Seller Resources</a></li>
-                        <li><a href="#" class="text-gray-400 hover:text-white transition">Commission Rates</a></li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="border-t border-gray-800 pt-4">
-                <div class="flex flex-col md:flex-row items-center justify-between gap-3">
-                    <p class="text-gray-500 text-xs">
-                        © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
-                    </p>
-                    <div class="flex items-center gap-2">
-                        <span class="text-gray-500 text-xs">We accept:</span>
-                        <div class="flex gap-1">
-                            <div class="w-8 h-5 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fab fa-cc-visa text-gray-400 text-sm"></i>
-                            </div>
-                            <div class="w-8 h-5 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fab fa-cc-mastercard text-gray-400 text-sm"></i>
-                            </div>
-                            <div class="w-8 h-5 bg-gray-800 rounded flex items-center justify-center">
-                                <i class="fas fa-mobile-alt text-gray-400 text-xs"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </footer>
+
     
     <!-- JavaScript -->
 
@@ -846,12 +749,12 @@ async function quickAddToCart(listingId, button) {
             const checkData = await checkResponse.json();
             console.log('Variation check data:', checkData);
             
-            if (checkData.has_variations && (checkData.available_colors.length > 0 || checkData.available_sizes.length > 0)) {
-                console.log('Product has variations, showing modal');
-                await showVariationModal(listingId, button);
-                cartProcessing = false;
-                return;
-            } else {
+           if (checkData.has_variations && (checkData.available_colors.length > 0 || checkData.available_sizes.length > 0)) {
+    cartProcessing = false;
+    showVariationModal(listingId, button);
+    return;
+}
+ else {
                 console.log('Product has no variations (or empty options)');
             }
         }
@@ -1333,24 +1236,39 @@ window.closeVariationModal = function() {
         }, 3000);
     }
     
-    // Auth Modal Functions
-    function showAuthModal() {
-        const modal = document.getElementById('authModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-    
-    function closeAuthModal() {
-        const modal = document.getElementById('authModal');
-        if (modal) {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            document.body.style.overflow = 'auto';
-        }
-    }
+   function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    const content = document.getElementById('authModalContent');
+
+    if (!modal || !content) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    requestAnimationFrame(() => {
+        content.classList.remove('opacity-0', 'scale-95');
+        content.classList.add('opacity-100', 'scale-100');
+    });
+
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById('authModal');
+    const content = document.getElementById('authModalContent');
+
+    if (!modal || !content) return;
+
+    content.classList.add('opacity-0', 'scale-95');
+    content.classList.remove('opacity-100', 'scale-100');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = 'auto';
+    }, 200);
+}
+
     
     // Event listeners
     document.addEventListener('DOMContentLoaded', function() {
@@ -1425,82 +1343,7 @@ window.closeVariationModal = function() {
     </div>
 </div>
 
-<!-- Options Modal for Product Variations -->
-<div id="optionsModal" class="fixed inset-0 z-[100] hidden">
-    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeOptionsModal()"></div>
-    <div class="absolute inset-0 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-lg w-full p-6 relative animate-scale-in">
-            <button onclick="closeOptionsModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
-                <i class="fas fa-times"></i>
-            </button>
-            
-            <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-cogs text-primary text-2xl"></i>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-900 mb-2">Select Options</h3>
-                <p class="text-gray-500">Please select product options before adding to cart</p>
-            </div>
-            
-            <!-- Options Form -->
-            <div id="optionsForm" class="space-y-6">
-                <!-- Color Selection -->
-                <div id="colorOptionsSection" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-3">
-                        Color <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex flex-wrap gap-2" id="modalColorOptions">
-                        <!-- Color options will be dynamically added -->
-                    </div>
-                </div>
-                
-                <!-- Size Selection -->
-                <div id="sizeOptionsSection" class="hidden">
-                    <label class="block text-sm font-medium text-gray-700 mb-3">
-                        Size <span class="text-red-500">*</span>
-                    </label>
-                    <div class="flex flex-wrap gap-2" id="modalSizeOptions">
-                        <!-- Size options will be dynamically added -->
-                    </div>
-                </div>
-                
-                <!-- Selected Variant Info -->
-                <div id="modalVariantInfo" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="font-bold text-gray-800">Selected Variant</h4>
-                            <div class="text-sm text-gray-600 mt-1 space-y-1">
-                                <p id="modalSelectedColorText"></p>
-                                <p id="modalSelectedSizeText"></p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-bold text-primary" id="modalVariantPrice"></p>
-                            <p class="text-sm text-gray-600" id="modalVariantStock"></p>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="pt-4 border-t border-gray-200">
-                    <div class="flex gap-3">
-                        <button type="button" 
-                                onclick="closeOptionsModal()" 
-                                class="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition">
-                            Cancel
-                        </button>
-                        <button type="button" 
-                                onclick="confirmModalOptions()"
-                                id="confirmModalOptionsBtn"
-                                disabled
-                                class="flex-1 py-3 px-4 bg-primary text-white rounded-xl font-bold hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            Confirm Selection
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 <!-- Product Variation Loader -->
 <div id="variationLoader" class="hidden">
@@ -1508,5 +1351,4 @@ window.closeVariationModal = function() {
 </div>
 
 
-</body>
-</html>
+@endsection

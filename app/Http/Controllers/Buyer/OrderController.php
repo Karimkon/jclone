@@ -12,6 +12,7 @@ use App\Models\BuyerWallet;
 use App\Models\WalletTransaction;
 use App\Models\ShippingAddress;
 use App\Models\Payment;
+use App\Services\ActivityLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +107,7 @@ class OrderController extends Controller
             return back()->with('error', 'Your cart is empty');
         }
 
+        ActivityLogger::logOrderCreated($order);
         // Validate wallet balance if wallet payment
         if ($validated['payment_method'] === 'wallet') {
             $wallet = BuyerWallet::where('user_id', Auth::id())->first();

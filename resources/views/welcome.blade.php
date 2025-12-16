@@ -85,6 +85,173 @@
         aside > div {
             overflow: visible !important;
         }
+
+        /* Modal overlay */
+#optionsModal {
+    backdrop-filter: blur(8px);
+}
+
+/* Modal option buttons - Default state */
+.modal-option-btn,
+#modalColorOptions button,
+#modalSizeOptions button {
+    background: white !important;
+    color: #374151 !important; /* gray-700 */
+    border: 2px solid #d1d5db !important; /* gray-300 */
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.modal-option-btn:hover,
+#modalColorOptions button:hover,
+#modalSizeOptions button:hover {
+    border-color: #6366f1 !important; /* primary/indigo */
+    background: #eef2ff !important; /* indigo-50 */
+    color: #4f46e5 !important;
+}
+
+/* Selected state */
+.modal-option-btn.selected,
+#modalColorOptions button.selected,
+#modalSizeOptions button.selected,
+button[data-option].selected {
+    background: #6366f1 !important; /* primary/indigo-600 */
+    color: white !important;
+    border-color: #4f46e5 !important;
+    font-weight: 600 !important;
+}
+
+/* Ensure proper contrast for selected state */
+.option-btn.selected,
+button[data-option].bg-primary {
+    background: #6366f1 !important;
+    color: white !important;
+    border-color: #4f46e5 !important;
+}
+
+/* Variant info box */
+#modalVariantInfo {
+    background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%) !important;
+    border-color: #c7d2fe !important;
+}
+
+#modalVariantInfo h4 {
+    color: #1e293b !important;
+}
+
+#modalVariantInfo .text-gray-600 {
+    color: #475569 !important;
+}
+
+#modalVariantPrice {
+    color: #6366f1 !important;
+}
+
+#modalVariantStock {
+    color: #475569 !important;
+}
+
+/* Confirm button - Make it visible and attractive */
+#confirmModalOptionsBtn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+}
+
+#confirmModalOptionsBtn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4) !important;
+}
+
+#confirmModalOptionsBtn:disabled {
+    background: #d1d5db !important;
+    color: #9ca3af !important;
+    cursor: not-allowed !important;
+    box-shadow: none !important;
+}
+
+/* Cancel button */
+button[onclick="closeOptionsModal()"] {
+    background: white !important;
+    color: #374151 !important;
+    border: 2px solid #d1d5db !important;
+    font-weight: 600 !important;
+}
+
+button[onclick="closeOptionsModal()"]:hover {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
+}
+
+/* Close button (X) */
+#optionsModal button[onclick="closeOptionsModal()"].w-8 {
+    background: #f3f4f6 !important;
+    color: #6b7280 !important;
+}
+
+#optionsModal button[onclick="closeOptionsModal()"].w-8:hover {
+    background: #e5e7eb !important;
+    color: #374151 !important;
+}
+
+/* Labels */
+#optionsModal label {
+    color: #1f2937 !important;
+    font-weight: 600 !important;
+}
+
+/* Required asterisk */
+#optionsModal label .text-red-500 {
+    color: #ef4444 !important;
+}
+
+/* Modal title and description */
+#optionsModal h3 {
+    color: #111827 !important;
+}
+
+#optionsModal .text-gray-500 {
+    color: #6b7280 !important;
+}
+
+/* Icon in modal header */
+#optionsModal .fa-cogs {
+    color: #6366f1 !important;
+}
+
+/* Selected options text */
+#modalSelectedColorText,
+#modalSelectedSizeText {
+    color: #374151 !important;
+    font-weight: 500 !important;
+}
+
+/* Ensure modal content is readable */
+#optionsModal .bg-white {
+    background: white !important;
+}
+
+/* Add this to your existing <style> section */
+.product-card .badge-imported,
+.product-card .badge-local,
+.product-card .badge-hot,
+.product-card .badge-new,
+.product-card .badge-sale {
+    font-size: 0.65rem !important;
+    padding: 0.15rem 0.4rem !important;
+    line-height: 1.2 !important;
+    margin: 0.05rem !important;
+    border-radius: 0.25rem !important;
+}
+
+/* Reduce icon size in badges */
+.product-card [class*="badge-"] i {
+    font-size: 0.55rem !important;
+    margin-right: 0.15rem !important;
+}
         
         /* Adjust positioning for better visibility */
         .cat-sidebar-item:hover > .cat-submenu { 
@@ -627,37 +794,74 @@
                 </section>
                 
                 <!-- JUST ARRIVED -->
-                @if(isset($recentProducts) && $recentProducts->count())
-                <section>
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="section-line purple">
-                            <h2 class="text-lg font-bold text-ink-800 font-display">🆕 Just Arrived</h2>
-                        </div>
-                        <a href="{{ route('marketplace.index', ['sort' => 'newest']) }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
-                    </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
-                        @foreach($recentProducts->take(6) as $product)
-                        <div class="product-card shadow-sm border border-ink-100">
-                            <div class="relative aspect-square overflow-hidden bg-ink-50">
-                                <a href="{{ route('marketplace.show', $product) }}">
-                                    @if($product->images->first())
-                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
-                                    @endif
-                                </a>
-                                <span class="absolute top-2 left-2 badge-new text-white text-xs px-2 py-0.5 rounded-full font-medium">NEW</span>
-                            </div>
-                           <div class="p-3">
-    <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 h-10">{{ $product->title }}</h3>
-    <div class="flex items-baseline mt-2">
-        <span class="text-xs text-ink-500 mr-1">UGX</span>
-        <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
+@if(isset($recentProducts) && $recentProducts->count())
+<section>
+    <div class="flex items-center justify-between mb-4">
+        <div class="section-line purple">
+            <h2 class="text-lg font-bold text-ink-800 font-display">🆕 Just Arrived</h2>
+        </div>
+        <a href="{{ route('marketplace.index', ['sort' => 'newest']) }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
     </div>
-</div>
-                        </div>
-                        @endforeach
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
+        @foreach($recentProducts->take(6) as $product)
+        <div class="product-card shadow-sm border border-ink-100">
+            <div class="relative aspect-square overflow-hidden bg-ink-50">
+                <a href="{{ route('marketplace.show', $product) }}">
+                    @if($product->images->first())
+                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
+                         alt="{{ $product->title }}" 
+                         class="product-image w-full h-full object-cover">
+                    @else
+                    <div class="w-full h-full flex items-center justify-center">
+                        <i class="fas fa-image text-ink-300 text-3xl"></i>
                     </div>
-                </section>
-                @endif
+                    @endif
+                </a>
+                <span class="absolute top-2 left-2 badge-new text-white text-xs px-2 py-0.5 rounded-full font-medium">NEW</span>
+                
+                <!-- Quick Actions - ADD THIS -->
+                <div class="product-actions absolute top-2 right-2 flex flex-col gap-1">
+                    <button data-quick-wishlist data-listing-id="{{ $product->id }}" 
+                            class="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center hover:bg-coral-50 transition">
+                        <i class="far fa-heart text-ink-500 hover:text-coral-500 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- UPDATED: Add price AND cart button -->
+            <div class="p-3">
+                <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
+                <a href="{{ route('marketplace.show', $product) }}">
+                    <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">
+                        {{ $product->title }}
+                    </h3>
+                </a>
+                
+                <div class="flex items-center justify-between mt-3">
+                    <div class="flex items-baseline gap-1">
+                        <span class="text-xs text-ink-500">UGX</span>
+                        <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
+                    </div>
+                    
+                    <!-- ADD TO CART BUTTON - ADD THIS -->
+                    @if($product->stock > 0)
+                    <button data-quick-cart data-listing-id="{{ $product->id }}" 
+                            class="quick-add w-7 h-7 btn-primary rounded-lg flex items-center justify-center ml-2 flex-shrink-0">
+                        <i class="fas fa-shopping-cart text-xs"></i>
+                    </button>
+                    @else
+                    <button class="w-7 h-7 bg-gray-200 rounded-lg flex items-center justify-center ml-2 cursor-not-allowed" 
+                            title="Out of Stock">
+                        <i class="fas fa-times text-gray-500 text-xs"></i>
+                    </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</section>
+@endif
                 
                 <!-- TRUST BADGES -->
                 <section>
@@ -1004,47 +1208,34 @@ let buttonsSetup = false;
 
 // Function to setup quick action buttons
 function setupQuickActionButtons() {
-    // Prevent duplicate setup
-    if (buttonsSetup) {
-        console.log('Buttons already setup, skipping...');
-        return;
-    }
-    
     console.log('Setting up quick action buttons...');
     
-    // Quick Add to Cart buttons
-    document.querySelectorAll('[data-quick-cart]').forEach(btn => {
-        // Remove any existing listeners first
-        btn.replaceWith(btn.cloneNode(true));
-        const newBtn = document.querySelector(`[data-quick-cart][data-listing-id="${btn.getAttribute('data-listing-id')}"]`);
-        
-        newBtn.addEventListener('click', function(e) {
+    // Use event delegation for cart buttons
+    document.addEventListener('click', async function(e) {
+        // Check if clicked element or its parent has data-quick-cart
+        const cartBtn = e.target.closest('[data-quick-cart]');
+        if (cartBtn) {
             e.preventDefault();
             e.stopPropagation();
-            e.stopImmediatePropagation(); // Prevent other listeners
-            console.log('Cart button clicked (single event)');
-            const listingId = this.getAttribute('data-listing-id');
-            quickAddToCart(listingId, this);
-        }, { once: false }); // Use capture phase to ensure it fires first
-    });
-    
-    // Quick Add to Wishlist buttons
-    document.querySelectorAll('[data-quick-wishlist]').forEach(btn => {
-        // Remove any existing listeners first
-        btn.replaceWith(btn.cloneNode(true));
-        const newBtn = document.querySelector(`[data-quick-wishlist][data-listing-id="${btn.getAttribute('data-listing-id')}"]`);
+            console.log('Cart button clicked via delegation');
+            const listingId = cartBtn.getAttribute('data-listing-id');
+            await quickAddToCart(listingId, cartBtn);
+            return;
+        }
         
-        newBtn.addEventListener('click', function(e) {
+        // Check if clicked element or its parent has data-quick-wishlist
+        const wishlistBtn = e.target.closest('[data-quick-wishlist]');
+        if (wishlistBtn) {
             e.preventDefault();
             e.stopPropagation();
-            e.stopImmediatePropagation(); // Prevent other listeners
-            const listingId = this.getAttribute('data-listing-id');
-            quickAddToWishlist(listingId, this);
-        }, { once: false });
+            console.log('Wishlist button clicked via delegation');
+            const listingId = wishlistBtn.getAttribute('data-listing-id');
+            await quickAddToWishlist(listingId, wishlistBtn);
+            return;
+        }
     });
     
-    buttonsSetup = true;
-    console.log('Quick action buttons setup complete');
+    console.log('Quick action buttons setup complete (event delegation)');
 }
 
 function initCategoryNavigation() {
