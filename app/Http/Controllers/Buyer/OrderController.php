@@ -107,7 +107,6 @@ class OrderController extends Controller
             return back()->with('error', 'Your cart is empty');
         }
 
-        ActivityLogger::logOrderCreated($order);
         // Validate wallet balance if wallet payment
         if ($validated['payment_method'] === 'wallet') {
             $wallet = BuyerWallet::where('user_id', Auth::id())->first();
@@ -218,6 +217,8 @@ class OrderController extends Controller
                         'notes' => $validated['notes'] ?? null,
                     ]
                 ]);
+
+                ActivityLogger::logOrderCreated($order);
 
                  // TRACK PURCHASES - Add this after order creation
     $cart = Cart::where('user_id', auth()->id())->first();
@@ -491,6 +492,7 @@ class OrderController extends Controller
         
         // Update vendor performance
         $this->updateVendorPerformance($order);
+        
 
         // Handle COD payment
         $payment = $order->payments()->where('provider', 'cash')->first();
@@ -540,6 +542,7 @@ class OrderController extends Controller
         }
 
         DB::commit();
+        ActivityLogger::logOrderDelivered($order);
 
         return back()->with('success', 'Delivery confirmed and payment recorded! Thank you for your purchase.');
 
@@ -739,6 +742,9 @@ private function calculateOverallScore($performance)
                 'status' => 'confirmed',
                 'confirmed_at' => now(),
             ]);
+
+            ActivityLogger::logWalletPayment($order);
+
             
             // 5. Create escrow record
             $escrow = Escrow::create([

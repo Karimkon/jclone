@@ -150,6 +150,66 @@
 #variationModal .text-primary {
     color: #6366f1 !important;
 }
+
+/* Auth Modal Specific Styles */
+#authModal .bg-white {
+    background: white !important;
+}
+
+#authModal a {
+    text-decoration: none !important;
+}
+
+#authModal .bg-gradient-to-r {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    color: white !important;
+}
+
+#authModal .border-indigo-600 {
+    border-color: #4f46e5 !important;
+    color: #4f46e5 !important;
+    background: white !important;
+}
+
+#authModal .border-indigo-600:hover {
+    background: #4f46e5 !important;
+    color: white !important;
+}
+
+#authModal h3,
+#authModal p {
+    color: inherit !important;
+}
+
+#authModal .text-gray-900 {
+    color: #111827 !important;
+}
+
+#authModal .text-gray-500 {
+    color: #6b7280 !important;
+}
+
+#authModal .text-primary {
+    color: #4f46e5 !important;
+}
+
+/* Animation classes */
+#authModalContent.opacity-0 {
+    opacity: 0;
+}
+
+#authModalContent.opacity-100 {
+    opacity: 1;
+}
+
+#authModalContent.scale-95 {
+    transform: scale(0.95);
+}
+
+#authModalContent.scale-100 {
+    transform: scale(1);
+}
+
 [data-quick-cart] {
     background: #6366f1 !important; /* indigo-600 */
     color: white !important;
@@ -1318,24 +1378,30 @@ function closeAuthModal() {
     });
 </script>
     
-    <!-- Auth Modal -->
-<div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-    <div class="bg-white rounded-xl shadow-xl max-w-md w-full transform transition-all duration-300 scale-95 opacity-0" id="authModalContent">
-        <div class="p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-gray-900">Sign In Required</h3>
-                <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-600 transition">
-                    <i class="fas fa-times text-lg"></i>
-                </button>
+ <!-- Auth Modal -->
+<div id="authModal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAuthModal()"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 relative shadow-2xl transform transition-all duration-300" id="authModalContent">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lock text-primary text-2xl"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h3>
+                <p class="text-gray-500">Please login or create an account to continue with this action.</p>
             </div>
-            <p class="text-gray-600 mb-6">
-                Please login or create an account to continue with this action.
-            </p>
-            <div class="flex flex-col space-y-3">
-                <a href="{{ route('login') }}" class="bg-primary text-white py-3 px-4 rounded-lg text-center font-semibold hover:bg-indigo-700 transition flex items-center justify-center">
+            
+            <div class="space-y-3">
+                <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
+                   class="block w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-center hover:from-indigo-700 hover:to-purple-700 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                     <i class="fas fa-sign-in-alt mr-2"></i>Login
                 </a>
-                <a href="{{ route('register') }}" class="border-2 border-primary text-primary py-3 px-4 rounded-lg text-center font-semibold hover:bg-primary hover:text-white transition flex items-center justify-center">
+                <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
+                   class="block w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold text-center hover:bg-indigo-600 hover:text-white transition">
                     <i class="fas fa-user-plus mr-2"></i>Create Account
                 </a>
             </div>

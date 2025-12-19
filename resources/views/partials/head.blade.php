@@ -3,6 +3,9 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title', config('app.name'))</title>
 
+<link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}?v=2">
+<link rel="shortcut icon" href="{{ asset('favicon.png') }}?v=2">
+
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -138,4 +141,32 @@
     }
     
     html { scroll-behavior: smooth; }
+
+    /* Responsive adjustments for Mobile Devices */
+@media screen and (max-width: 768px) {
+    /* Container adjustments */
+    .container, .main-content {
+        width: 100% !important;
+        padding: 0 15px;
+        overflow-x: hidden;
+    }
+
+    /* Stack product cards vertically or in 2 columns */
+    .product-grid { 
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* Two products per row instead of 4+ */
+        gap: 10px;
+    }
+
+    /* Hide sidebar on mobile or move it below content */
+    .sidebar {
+        display: none; 
+    }
+
+    /* Fix image overflow */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+}
 </style>

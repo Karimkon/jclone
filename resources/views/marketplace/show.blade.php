@@ -565,6 +565,43 @@ button[onclick="closeOptionsModal()"]:hover {
     .animate-scale-in {
         animation: scale-in 0.3s ease forwards;
     }
+    @media (max-width: 768px) {
+    /* Prevent the main container from expanding */
+    .container {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: hidden !important;
+    }
+
+    /* Fix the main product image container */
+    .main-image-container {
+        height: auto !important;
+        min-height: 300px;
+    }
+
+    .main-image {
+        height: 300px !important; /* Forces height to stay reasonable on phones */
+        width: 100% !important;
+        object-fit: cover !important;
+    }
+
+    /* Force the grid to stay inside the screen */
+    .grid {
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    /* Fix the breadcrumb from pushing the screen width */
+    nav.flex.items-center {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+}
 </style>
 @endpush
 
@@ -1468,7 +1505,7 @@ button[onclick="closeOptionsModal()"]:hover {
 <div id="authModal" class="fixed inset-0 z-50 hidden">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeAuthModal()"></div>
     <div class="absolute inset-0 flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-md w-full p-8 relative animate-scale-in">
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 relative animate-scale-in shadow-2xl">
             <button onclick="closeAuthModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200 transition">
                 <i class="fas fa-times"></i>
             </button>
@@ -1483,11 +1520,11 @@ button[onclick="closeOptionsModal()"]:hover {
             
             <div class="space-y-3">
                 <a href="{{ route('login') }}?redirect={{ urlencode(url()->current()) }}" 
-                   class="block w-full py-3 bg-primary text-white rounded-xl font-bold text-center hover:bg-indigo-700 transition">
+                   class="block w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-center hover:from-indigo-700 hover:to-purple-700 transition shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                     <i class="fas fa-sign-in-alt mr-2"></i>Sign In
                 </a>
                 <a href="{{ route('register') }}?redirect={{ urlencode(url()->current()) }}" 
-                   class="block w-full py-3 border-2 border-primary text-primary rounded-xl font-bold text-center hover:bg-primary hover:text-white transition">
+                   class="block w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-xl font-bold text-center hover:bg-indigo-600 hover:text-white transition">
                     <i class="fas fa-user-plus mr-2"></i>Create Account
                 </a>
             </div>

@@ -91,25 +91,7 @@
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&display=swap');
         
-        :root {
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 70px;
-            --header-height: 70px;
-            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-            --glass-bg: rgba(255, 255, 255, 0.8);
-            --glass-border: rgba(255, 255, 255, 0.2);
-        }
-        
-        .dark {
-            --glass-bg: rgba(30, 41, 59, 0.8);
-            --glass-border: rgba(255, 255, 255, 0.1);
-        }
-        
-        /* Custom Styles */
         * {
             margin: 0;
             padding: 0;
@@ -118,72 +100,67 @@
         
         body {
             font-family: 'Inter', sans-serif;
+            background: #f8fafc;
             overflow-x: hidden;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         }
         
         .dark body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: #0f172a;
         }
         
-        /* Glassmorphism */
+        /* Glass effect */
         .glass {
-            background: var(--glass-bg);
+            background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--glass-border);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
-        /* Sidebar Styles */
-        .sidebar-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 100vh;
-            z-index: 100;
-            transition: var(--transition-smooth);
-            display: flex;
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
+        /* Sidebar */
         .sidebar {
-            width: var(--sidebar-width);
-            height: 100%;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            box-shadow: var(--shadow-xl);
-            display: flex;
-            flex-direction: column;
-            transition: var(--transition-smooth);
-            border-right: 1px solid rgba(226, 232, 240, 0.5);
-            overflow: hidden;
+            width: 260px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 50;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
         
         .dark .sidebar {
-            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-            border-right: 1px solid rgba(71, 85, 105, 0.5);
+            background: #1e293b;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
         }
         
         .sidebar.collapsed {
-            width: var(--sidebar-collapsed-width);
+            width: 70px;
         }
         
         .sidebar-header {
-            height: var(--header-height);
-            padding: 0 1.5rem;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+            padding: 0 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
         }
         
         .dark .sidebar-header {
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+            border-bottom: 1px solid #334155;
         }
         
         .logo-container {
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            transition: var(--transition-smooth);
+            min-width: 0;
         }
         
         .logo-icon {
@@ -195,7 +172,6 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
         }
         
         .logo-text {
@@ -204,15 +180,13 @@
             background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            background-clip: text;
             white-space: nowrap;
             overflow: hidden;
-            transition: var(--transition-smooth);
+            text-overflow: ellipsis;
         }
         
         .sidebar.collapsed .logo-text {
-            opacity: 0;
-            width: 0;
+            display: none;
         }
         
         .logo-subtitle {
@@ -226,49 +200,52 @@
             display: none;
         }
         
-        /* Toggle Button */
+        /* Toggle button */
         .toggle-btn {
             width: 36px;
             height: 36px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            border: 1px solid rgba(226, 232, 240, 0.5);
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
             color: #64748b;
             cursor: pointer;
-            transition: var(--transition-smooth);
+            transition: all 0.2s;
+            flex-shrink: 0;
         }
         
         .dark .toggle-btn {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            border: 1px solid rgba(71, 85, 105, 0.5);
+            background: #334155;
+            border: 1px solid #475569;
             color: #cbd5e1;
         }
         
         .toggle-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        /* User Profile */
+        /* User profile */
         .user-profile {
             padding: 1.5rem;
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            transition: var(--transition-smooth);
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
         
         .dark .user-profile {
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+            border-bottom: 1px solid #334155;
         }
         
         .sidebar.collapsed .user-profile {
             padding: 1rem;
+            justify-content: center;
         }
         
         .user-avatar {
-            position: relative;
             width: 44px;
             height: 44px;
             border-radius: 12px;
@@ -277,22 +254,22 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
-            overflow: hidden;
+            position: relative;
         }
         
         .user-avatar img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 12px;
         }
         
         .user-status {
             position: absolute;
             bottom: -2px;
             right: -2px;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             background: #10b981;
             border: 2px solid white;
             border-radius: 50%;
@@ -303,91 +280,129 @@
         }
         
         .user-info {
-            transition: var(--transition-smooth);
-            overflow: hidden;
+            min-width: 0;
         }
         
         .sidebar.collapsed .user-info {
-            opacity: 0;
-            width: 0;
-            margin: 0;
+            display: none;
+        }
+        
+        .user-name {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .dark .user-name {
+            color: white;
+        }
+        
+        .user-role {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.125rem;
+        }
+        
+        .dark .user-role {
+            color: #94a3b8;
         }
         
         /* Navigation */
         .nav-container {
             flex: 1;
-            padding: 1rem 0.75rem;
+            padding: 1rem 0;
             overflow-y: auto;
             overflow-x: hidden;
         }
+
+        .nav-container {
+    flex: 1;
+    padding: 1rem 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* Add these properties for proper scrolling */
+    height: calc(100vh - 270px); /* Adjust based on header and footer heights */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on mobile */
+}
+
+/* When sidebar is collapsed */
+.sidebar.collapsed .nav-container {
+    height: calc(100vh - 200px); /* Less height needed when collapsed */
+}
+
+/* For mobile view */
+@media (max-width: 1024px) {
+    .nav-container {
+        height: calc(100vh - 230px);
+    }
+}
+
+/* Also add a separate class for the main content scroll */
+.content-scroll {
+    overflow-y: auto;
+    height: calc(100vh - 140px); /* Adjust based on header height */
+}
+
+/* Update the content wrapper */
+.content-wrapper {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto; /* Add this */
+    max-height: calc(100vh - 140px); /* Add this */
+}
         
         .nav-section {
             margin-bottom: 1.5rem;
         }
         
         .nav-section-title {
-            padding: 0 1rem;
-            margin-bottom: 0.75rem;
+            padding: 0 1.5rem 0.5rem;
             font-size: 0.75rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: #94a3b8;
-            transition: var(--transition-smooth);
-            white-space: nowrap;
-            overflow: hidden;
         }
         
         .sidebar.collapsed .nav-section-title {
-            opacity: 0;
-            height: 0;
-            margin: 0;
-            padding: 0;
+            display: none;
         }
         
         .nav-item {
-            position: relative;
-            margin: 0.25rem 0;
+            margin: 0.125rem 0.75rem;
         }
         
         .nav-link {
             display: flex;
             align-items: center;
-            padding: 0.875rem 1rem;
-            border-radius: 12px;
-            color: #64748b;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            color: #475569;
             text-decoration: none;
-            transition: var(--transition-smooth);
-            gap: 0.75rem;
+            transition: all 0.2s;
+            position: relative;
+        }
+        
+        .dark .nav-link {
+            color: #cbd5e1;
         }
         
         .nav-link:hover {
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            background: #f1f5f9;
             color: #4f46e5;
-            transform: translateX(5px);
         }
         
         .dark .nav-link:hover {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            background: #334155;
+            color: #818cf8;
         }
         
         .nav-link.active {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            background: #6366f1;
             color: white;
-            box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
-        }
-        
-        .nav-link.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 60%;
-            background: white;
-            border-radius: 0 2px 2px 0;
-            opacity: 0.8;
         }
         
         .nav-icon {
@@ -397,36 +412,38 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
-            font-size: 1.125rem;
         }
         
         .nav-text {
             font-size: 0.875rem;
             font-weight: 500;
+            margin-left: 0.75rem;
             white-space: nowrap;
-            transition: var(--transition-smooth);
         }
         
         .sidebar.collapsed .nav-text {
-            opacity: 0;
-            width: 0;
-            margin: 0;
+            display: none;
         }
         
         .badge {
             margin-left: auto;
-            min-width: 20px;
-            height: 20px;
-            padding: 0 0.375rem;
             background: #ef4444;
             color: white;
-            border-radius: 10px;
             font-size: 0.75rem;
             font-weight: 600;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            min-width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            animation: pulse 2s infinite;
+        }
+        
+        .sidebar.collapsed .badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
         }
         
         /* Tooltip for collapsed sidebar */
@@ -435,9 +452,9 @@
             left: calc(100% + 10px);
             top: 50%;
             transform: translateY(-50%);
-            padding: 0.5rem 0.75rem;
             background: #1e293b;
             color: white;
+            padding: 0.5rem 0.75rem;
             border-radius: 6px;
             font-size: 0.75rem;
             font-weight: 500;
@@ -446,7 +463,6 @@
             opacity: 0;
             transition: opacity 0.2s;
             z-index: 1000;
-            box-shadow: var(--shadow-lg);
         }
         
         .nav-tooltip::before {
@@ -464,119 +480,290 @@
             opacity: 1;
         }
         
-        /* Bottom Section */
+        /* Sidebar bottom */
         .sidebar-bottom {
             padding: 1rem;
-            border-top: 1px solid rgba(226, 232, 240, 0.5);
-            transition: var(--transition-smooth);
+            border-top: 1px solid #e2e8f0;
         }
         
         .dark .sidebar-bottom {
-            border-top: 1px solid rgba(71, 85, 105, 0.5);
+            border-top: 1px solid #334155;
         }
         
-        /* Main Content */
+        /* Main content */
         .main-content {
-            margin-left: var(--sidebar-width);
-            transition: var(--transition-smooth);
+            margin-left: 260px;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         
         .main-content.expanded {
-            margin-left: var(--sidebar-collapsed-width);
+            margin-left: 70px;
         }
         
         /* Header */
         .main-header {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            height: var(--header-height);
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(226, 232, 240, 0.5);
-            padding: 0 2rem;
+            height: 70px;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 0 2rem;
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            position: sticky;
+            top: 0;
+            z-index: 40;
         }
         
         .dark .main-header {
-            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        
+        .dark .mobile-menu-btn {
+            background: #334155;
+            border: 1px solid #475569;
+            color: #cbd5e1;
         }
         
         .header-title {
-            font-size: 1.5rem;
-            font-weight: 700;
+            font-size: 1.25rem;
+            font-weight: 600;
             color: #1e293b;
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
         }
         
         .dark .header-title {
-            color: #f1f5f9;
+            color: white;
         }
         
-        /* Header Controls */
+        .header-description {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+        }
+        
+        .dark .header-description {
+            color: #94a3b8;
+        }
+        
+        /* Header controls */
         .header-controls {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
         
-        /* Notification Bell */
-        .notification-btn {
+        .search-container {
             position: relative;
+        }
+        
+        .search-input {
+            width: 240px;
+            padding: 0.5rem 2.5rem 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: white;
+            font-size: 0.875rem;
+        }
+        
+        .dark .search-input {
+            background: #334155;
+            border: 1px solid #475569;
+            color: white;
+        }
+        
+        .search-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        
+        .icon-btn {
             width: 40px;
             height: 40px;
-            border-radius: 10px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            color: #64748b;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
             cursor: pointer;
-            transition: var(--transition-smooth);
+            transition: all 0.2s;
+            position: relative;
         }
         
-        .dark .notification-btn {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            border: 1px solid rgba(71, 85, 105, 0.5);
+        .dark .icon-btn {
+            background: #334155;
+            border: 1px solid #475569;
             color: #cbd5e1;
         }
         
-        .notification-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        .icon-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
-        /* Theme Toggle */
-        .theme-toggle {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+        .notification-badge {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 18px;
+            height: 18px;
+            background: #ef4444;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-            border: 1px solid rgba(226, 232, 240, 0.5);
-            color: #64748b;
-            cursor: pointer;
-            transition: var(--transition-smooth);
         }
         
-        .dark .theme-toggle {
-            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
-            border: 1px solid rgba(71, 85, 105, 0.5);
+        .user-menu-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 8px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .dark .user-menu-btn {
+            background: #334155;
+            border: 1px solid #475569;
             color: #cbd5e1;
         }
         
-        /* Mobile Overlay */
+        .user-menu-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .user-menu-info {
+            text-align: left;
+        }
+        
+        .user-menu-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .user-menu-role {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        .dark .user-menu-role {
+            color: #94a3b8;
+        }
+        
+        /* Dropdowns */
+        .dropdown {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.5rem);
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            min-width: 280px;
+            z-index: 50;
+            overflow: hidden;
+            display: none;
+        }
+        
+        .dark .dropdown {
+            background: #1e293b;
+            border: 1px solid #334155;
+        }
+        
+        .dropdown-header {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .dark .dropdown-header {
+            border-bottom: 1px solid #334155;
+        }
+        
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: #475569;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        
+        .dark .dropdown-item {
+            color: #cbd5e1;
+        }
+        
+        .dropdown-item:hover {
+            background: #f8fafc;
+        }
+        
+        .dark .dropdown-item:hover {
+            background: #334155;
+        }
+        
+        /* Main content area */
+        .content-wrapper {
+            flex: 1;
+            padding: 1.5rem;
+        }
+        
+        /* Footer */
+        .main-footer {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #e2e8f0;
+            background: white;
+        }
+        
+        .dark .main-footer {
+            background: #1e293b;
+            border-top: 1px solid #334155;
+        }
+        
+        /* Mobile overlay */
         .mobile-overlay {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
@@ -584,16 +771,11 @@
             bottom: 0;
             background: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
-            z-index: 90;
-            display: none;
+            z-index: 45;
         }
         
         /* Responsive */
         @media (max-width: 1024px) {
-            :root {
-                --sidebar-width: 260px;
-            }
-            
             .sidebar {
                 transform: translateX(-100%);
             }
@@ -603,25 +785,45 @@
             }
             
             .main-content {
-                margin-left: 0;
+                margin-left: 0 !important;
             }
             
-            .main-content.expanded {
-                margin-left: 0;
+            .mobile-menu-btn {
+                display: flex;
             }
             
-            .mobile-overlay.active {
-                display: block;
+            .search-input {
+                width: 200px;
             }
         }
         
-        @media (max-width: 640px) {
+        @media (max-width: 768px) {
+            .search-container {
+                display: none;
+            }
+            
+            .user-menu-info {
+                display: none;
+            }
+            
             .main-header {
                 padding: 0 1rem;
             }
             
+            .content-wrapper {
+                padding: 1rem;
+            }
+        }
+        
+        @media (max-width: 640px) {
             .header-controls {
                 gap: 0.5rem;
+            }
+            
+            .main-footer {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
             }
         }
         
@@ -637,7 +839,7 @@
         }
         
         .dark ::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: #334155;
         }
         
         ::-webkit-scrollbar-thumb {
@@ -654,448 +856,422 @@
         }
         
         /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         .animate-in {
-            animation: fadeIn 0.5s ease-out;
+            animation: fadeIn 0.3s ease-out;
         }
         
-        .slide-in-left {
-            animation: slideIn 0.3s ease-out;
+        /* Loading animation */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
         }
         
-        .slide-out-left {
-            animation: slideOut 0.3s ease-in;
-        }
-        
-        /* Loading States */
-        .loading-shimmer {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
-        
-        /* Pulse Animation */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body class="dark:bg-dark-950">
-    <!-- Sidebar Container -->
-    <div class="sidebar-container">
-        <!-- Sidebar -->
-        <aside id="sidebar" class="sidebar">
-            <!-- Header -->
-            <div class="sidebar-header">
-                <div class="logo-container">
-                    <div class="logo-icon">
-                        <i class="fas fa-store text-white text-lg"></i>
-                    </div>
-                    <div>
-                        <div class="logo-text">{{ config('app.name') }}</div>
-                        <div class="logo-subtitle">ADMIN PANEL</div>
-                    </div>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar dark:bg-dark-800">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <i class="fas fa-store text-white"></i>
                 </div>
-                <button id="toggleSidebar" class="toggle-btn">
-                    <i class="fas fa-chevron-left text-sm"></i>
-                </button>
-            </div>
-            
-            <!-- User Profile -->
-            <div class="user-profile flex items-center gap-3">
-                <div class="user-avatar">
-                    @if(Auth::user()->profile_photo)
-                        <img src="{{ asset('storage/' . Auth::user()->profile_photo) }}" alt="{{ Auth::user()->name }}">
-                    @else
-                        <span class="text-white font-semibold">{{ substr(Auth::user()->name, 0, 1) }}</span>
-                    @endif
-                    <div class="user-status"></div>
-                </div>
-                <div class="user-info">
-                    <div class="font-semibold text-dark-900 dark:text-white truncate">{{ Auth::user()->name }}</div>
-                    <div class="text-xs text-dark-500 dark:text-dark-400 flex items-center gap-1">
-                        <span class="bg-primary-100 dark:bg-primary-900 text-primary-800 dark:text-primary-200 px-2 py-0.5 rounded-md text-xs font-medium">
-                            {{ ucfirst(Auth::user()->role) }}
-                        </span>
-                        <span class="flex items-center">
-                            <span class="w-1.5 h-1.5 bg-success rounded-full mr-1"></span>
-                            Online
-                        </span>
-                    </div>
+                <div>
+                    <div class="logo-text">{{ config('app.name') }}</div>
+                    <div class="logo-subtitle">ADMIN PANEL</div>
                 </div>
             </div>
-            
-            <!-- Navigation -->
-            <div class="nav-container scrollbar-thin">
-                <!-- Dashboard -->
-                <div class="nav-section">
-                    <div class="nav-section-title">MAIN</div>
-                    <div class="nav-item">
-                        <a href="{{ route('admin.dashboard') }}" 
-                           class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-tachometer-alt"></i>
-                            </div>
-                            <span class="nav-text">Dashboard</span>
-                            <div class="nav-tooltip">Dashboard</div>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- User Management -->
-                <div class="nav-section">
-                    <div class="nav-section-title">USER MANAGEMENT</div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.users.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <span class="nav-text">Users</span>
-                            <div class="nav-tooltip">Users</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.vendors.pending') }}" 
-                           class="nav-link {{ request()->routeIs('admin.vendors.pending') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <span class="nav-text">Vendor Applications</span>
-                            @php $pendingVendors = \App\Models\VendorProfile::where('vetting_status', 'pending')->count(); @endphp
-                            @if($pendingVendors > 0)
-                                <span class="badge">{{ $pendingVendors }}</span>
-                            @endif
-                            <div class="nav-tooltip">Vendor Applications</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.vendors.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.vendors.index') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-list-alt"></i>
-                            </div>
-                            <span class="nav-text">All Vendors</span>
-                            <div class="nav-tooltip">All Vendors</div>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Content Management -->
-                <div class="nav-section">
-                    <div class="nav-section-title">CONTENT MANAGEMENT</div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.categories.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-tags"></i>
-                            </div>
-                            <span class="nav-text">Categories</span>
-                            <div class="nav-tooltip">Categories</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.listings.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.listings.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-box"></i>
-                            </div>
-                            <span class="nav-text">Products</span>
-                            <div class="nav-tooltip">Products</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.orders.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-shopping-bag"></i>
-                            </div>
-                            <span class="nav-text">Orders</span>
-                            <div class="nav-tooltip">Orders</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.disputes.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
-                            </div>
-                            <span class="nav-text">Disputes</span>
-                            @php $pendingDisputes = \App\Models\Dispute::where('status', 'open')->count(); @endphp
-                            @if($pendingDisputes > 0)
-                                <span class="badge">{{ $pendingDisputes }}</span>
-                            @endif
-                            <div class="nav-tooltip">Disputes</div>
-                        </a>
-                    </div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.contact-messages.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.contact-messages.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-envelope"></i>
-                            </div>
-                            <span class="nav-text">Contact Messages</span>
-                            @php $newMessages = \App\Models\ContactMessage::where('status', 'new')->count(); @endphp
-                            @if($newMessages > 0)
-                                <span class="badge">{{ $newMessages }}</span>
-                            @endif
-                            <div class="nav-tooltip">Contact Messages</div>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Finance -->
-                <div class="nav-section">
-                    <div class="nav-section-title">FINANCE</div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.withdrawals.pending') }}" 
-                           class="nav-link {{ request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-money-bill-wave"></i>
-                            </div>
-                            <span class="nav-text">Withdrawals</span>
-                            @php $pendingWithdrawals = \App\Models\VendorWithdrawal::whereIn('status', ['pending', 'processing'])->count(); @endphp
-                            @if($pendingWithdrawals > 0)
-                                <span class="badge">{{ $pendingWithdrawals }}</span>
-                            @endif
-                            <div class="nav-tooltip">Withdrawals</div>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Analytics -->
-                <div class="nav-section">
-                    <div class="nav-section-title">ANALYTICS</div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.reports.index') }}" 
-                           class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                            <div class="nav-icon">
-                                <i class="fas fa-chart-bar"></i>
-                            </div>
-                            <span class="nav-text">Reports</span>
-                            <div class="nav-tooltip">Reports</div>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Settings -->
-                <div class="nav-section">
-                    <div class="nav-section-title">SETTINGS</div>
-                    
-                    <div class="nav-item">
-                        <a href="{{ route('admin.settings.index') }}" class="nav-link">
-                            <div class="nav-icon">
-                                <i class="fas fa-cog"></i>
-                            </div>
-                            <span class="nav-text">Settings</span>
-                            <div class="nav-tooltip">Settings</div>
-                        </a>
-                    </div>
-                    
-                    
-                </div>
-            </div>
-            
-            <!-- Bottom Section -->
-            <div class="sidebar-bottom">
-                <form id="dropdownLogoutForm" action="{{ route('logout') }}" method="POST">
-    @csrf
-    <button type="submit" class="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
-        <i class="fas fa-sign-out-alt w-4"></i>
-        <span>Sign Out</span>
-    </button>
-</form>
-                <div class="mt-3 text-center">
-                    <div class="text-xs text-dark-500 dark:text-dark-400 font-mono">
-                        {{ config('app.name') }} v1.0.0
-                    </div>
-                    <div class="text-xs text-dark-400 dark:text-dark-500 mt-1">
-                        © {{ date('Y') }} All rights reserved
-                    </div>
-                </div>
-            </div>
-        </aside>
+            <button id="toggleSidebar" class="toggle-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        </div>
         
-        <!-- Mobile Overlay -->
-        <div id="mobileOverlay" class="mobile-overlay" onclick="toggleMobileSidebar()"></div>
-    </div>
-
+        <!-- User Profile -->
+        <div class="user-profile">
+            <div class="user-avatar">
+                @if(Auth::user()->profile_photo)
+                    <img src="{{ asset('storage/' . Auth::user()->profile_photo) }}" alt="{{ Auth::user()->name }}">
+                @else
+                    <span class="text-white font-semibold">{{ substr(Auth::user()->name, 0, 1) }}</span>
+                @endif
+                <div class="user-status"></div>
+            </div>
+            <div class="user-info">
+                <div class="user-name">{{ Auth::user()->name }}</div>
+                <div class="user-role">{{ ucfirst(Auth::user()->role) }}</div>
+            </div>
+        </div>
+        
+        <!-- Navigation -->
+        <div class="nav-container" id="sidebarNav">
+            <!-- Dashboard -->
+            <div class="nav-section">
+                <div class="nav-section-title">MAIN</div>
+                <div class="nav-item">
+                    <a href="{{ route('admin.dashboard') }}" 
+                       class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-tachometer-alt"></i>
+                        </div>
+                        <span class="nav-text">Dashboard</span>
+                        <div class="nav-tooltip">Dashboard</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- User Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">USER MANAGEMENT</div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.users.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <span class="nav-text">Users</span>
+                        <div class="nav-tooltip">Users</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.vendors.pending') }}" 
+                       class="nav-link {{ request()->routeIs('admin.vendors.pending') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-store"></i>
+                        </div>
+                        <span class="nav-text">Vendor Applications</span>
+                        @php $pendingVendors = \App\Models\VendorProfile::where('vetting_status', 'pending')->count(); @endphp
+                        @if($pendingVendors > 0)
+                            <span class="badge">{{ $pendingVendors }}</span>
+                        @endif
+                        <div class="nav-tooltip">Vendor Applications</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.vendors.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.vendors.index') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-list-alt"></i>
+                        </div>
+                        <span class="nav-text">All Vendors</span>
+                        <div class="nav-tooltip">All Vendors</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Content Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">CONTENT MANAGEMENT</div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.categories.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <span class="nav-text">Categories</span>
+                        <div class="nav-tooltip">Categories</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.listings.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.listings.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <span class="nav-text">Products</span>
+                        <div class="nav-tooltip">Products</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.orders.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-shopping-bag"></i>
+                        </div>
+                        <span class="nav-text">Orders</span>
+                        <div class="nav-tooltip">Orders</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.disputes.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.disputes.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <span class="nav-text">Disputes</span>
+                        @php $pendingDisputes = \App\Models\Dispute::where('status', 'open')->count(); @endphp
+                        @if($pendingDisputes > 0)
+                            <span class="badge">{{ $pendingDisputes }}</span>
+                        @endif
+                        <div class="nav-tooltip">Disputes</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.contact-messages.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.contact-messages.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <span class="nav-text">Contact Messages</span>
+                        @php $newMessages = \App\Models\ContactMessage::where('status', 'new')->count(); @endphp
+                        @if($newMessages > 0)
+                            <span class="badge">{{ $newMessages }}</span>
+                        @endif
+                        <div class="nav-tooltip">Contact Messages</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Finance -->
+            <div class="nav-section">
+                <div class="nav-section-title">FINANCE</div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.withdrawals.pending') }}" 
+                       class="nav-link {{ request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <span class="nav-text">Withdrawals</span>
+                        @php $pendingWithdrawals = \App\Models\VendorWithdrawal::whereIn('status', ['pending', 'processing'])->count(); @endphp
+                        @if($pendingWithdrawals > 0)
+                            <span class="badge">{{ $pendingWithdrawals }}</span>
+                        @endif
+                        <div class="nav-tooltip">Withdrawals</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Analytics -->
+            <div class="nav-section">
+                <div class="nav-section-title">ANALYTICS</div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.reports.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <span class="nav-text">Reports</span>
+                        <div class="nav-tooltip">Reports</div>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Settings -->
+            <div class="nav-section">
+                <div class="nav-section-title">SETTINGS</div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.settings.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <span class="nav-text">Settings</span>
+                        <div class="nav-tooltip">Settings</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="{{ route('admin.profile.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.profile.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <span class="nav-text">Profile</span>
+                        <div class="nav-tooltip">Profile</div>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Section -->
+        <div class="sidebar-bottom">
+            <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="flex items-center justify-center gap-2 w-full p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Sign Out</span>
+                </button>
+            </form>
+            <div class="mt-3 text-center">
+                <div class="text-xs text-dark-500 dark:text-dark-400 font-mono">
+                    {{ config('app.name') }} v1.0.0
+                </div>
+                <div class="text-xs text-dark-400 dark:text-dark-500 mt-1">
+                    © {{ date('Y') }} All rights reserved
+                </div>
+            </div>
+        </div>
+    </aside>
+    
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" class="mobile-overlay"></div>
+    
     <!-- Main Content -->
     <div id="mainContent" class="main-content">
         <!-- Header -->
-        <header class="main-header glass">
-            <div class="flex items-center justify-between w-full">
-                <!-- Left Section -->
-                <div class="flex items-center gap-4">
-                    <!-- Mobile Menu Button -->
-                    <button id="mobileMenuButton" class="lg:hidden p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800 transition">
-                        <i class="fas fa-bars text-dark-700 dark:text-dark-300"></i>
-                    </button>
-                    
-                    <!-- Page Title -->
-                    <div>
-                        <h1 class="header-title">@yield('page-title', 'Dashboard')</h1>
-                        <p class="text-sm text-dark-500 dark:text-dark-400">@yield('page-description', 'Welcome to the admin dashboard')</p>
+        <header class="main-header glass dark:bg-dark-800">
+            <div class="header-left">
+                <button id="mobileMenuButton" class="mobile-menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div>
+                    <h1 class="header-title">@yield('page-title', 'Dashboard')</h1>
+                    <p class="header-description">@yield('page-description', 'Welcome to the admin dashboard')</p>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <!-- Search -->
+                <div class="search-container">
+                    <input type="text" placeholder="Search..." class="search-input">
+                    <div class="search-icon">
+                        <i class="fas fa-search"></i>
                     </div>
                 </div>
                 
-                <!-- Right Section -->
-                <div class="header-controls">
-                    <!-- Quick Search -->
-                    <div class="relative hidden md:block">
-                        <input type="text" 
-                               placeholder="Search..." 
-                               class="pl-10 pr-4 py-2 w-64 rounded-lg border border-dark-200 dark:border-dark-700 bg-white dark:bg-dark-800 text-dark-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
-                        <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-                            <i class="fas fa-search text-dark-400 dark:text-dark-500"></i>
-                        </div>
-                    </div>
-                    
-                    <!-- Theme Toggle -->
-                    <button id="themeToggle" class="theme-toggle">
-                        <i class="fas fa-sun dark:fa-moon"></i>
+                <!-- Theme Toggle -->
+                <button id="themeToggle" class="icon-btn">
+                    <i class="fas fa-sun"></i>
+                </button>
+                
+                <!-- Notifications -->
+                <div class="relative">
+                    <button id="notificationButton" class="icon-btn">
+                        <i class="fas fa-bell"></i>
+                        @php
+                            $totalNotifications = ($pendingWithdrawals ?? 0) + ($pendingVendors ?? 0) + ($pendingDisputes ?? 0) + ($newMessages ?? 0);
+                        @endphp
+                        @if($totalNotifications > 0)
+                            <span class="notification-badge">{{ $totalNotifications }}</span>
+                        @endif
                     </button>
                     
-                    <!-- Notifications -->
-                    <div class="relative">
-                        <button id="notificationButton" class="notification-btn">
-                            <i class="fas fa-bell"></i>
-                            @php
-                                $totalNotifications = $pendingWithdrawals + $pendingVendors + $pendingDisputes + $newMessages;
-                            @endphp
-                            @if($totalNotifications > 0)
-                                <span class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center animate-pulse">
-                                    {{ $totalNotifications }}
-                                </span>
-                            @endif
-                        </button>
-                        
-                        <!-- Notification Dropdown -->
-                        <div id="notificationDropdown" class="absolute right-0 mt-2 w-80 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-dark-200 dark:border-dark-700 hidden z-50 animate-in">
-                            <div class="p-4 border-b border-dark-200 dark:border-dark-700">
-                                <div class="flex items-center justify-between">
-                                    <h3 class="font-semibold text-dark-900 dark:text-white">Notifications</h3>
-                                    @if($totalNotifications > 0)
-                                        <button class="text-xs text-primary-600 hover:text-primary-700">Mark all as read</button>
-                                    @endif
-                                </div>
-                            </div>
-                            <div class="max-h-80 overflow-y-auto">
+                    <!-- Notification Dropdown -->
+                    <div id="notificationDropdown" class="dropdown">
+                        <div class="dropdown-header">
+                            <div class="flex items-center justify-between">
+                                <h3 class="font-semibold text-dark-900 dark:text-white">Notifications</h3>
                                 @if($totalNotifications > 0)
-                                    <!-- Notification Items -->
-                                    @if($newMessages > 0)
-                                        <a href="{{ route('admin.contact-messages.index') }}" class="block p-3 border-b border-dark-100 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-700 transition">
-                                            <div class="flex items-start gap-3">
-                                                <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-envelope text-sm"></i>
-                                                </div>
-                                                <div class="flex-1">
-                                                    <p class="text-sm text-dark-900 dark:text-white font-medium">{{ $newMessages }} new message(s)</p>
-                                                    <p class="text-xs text-dark-500 dark:text-dark-400 mt-1">Check contact messages</p>
-                                                </div>
-                                                <span class="text-xs text-dark-400 dark:text-dark-500">Now</span>
-                                            </div>
-                                        </a>
-                                    @endif
-                                    
-                                    @if($pendingVendors > 0)
-                                        <a href="{{ route('admin.vendors.pending') }}" class="block p-3 border-b border-dark-100 dark:border-dark-700 hover:bg-dark-50 dark:hover:bg-dark-700 transition">
-                                            <div class="flex items-start gap-3">
-                                                <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-store text-sm"></i>
-                                                </div>
-                                                <div class="flex-1">
-                                                    <p class="text-sm text-dark-900 dark:text-white font-medium">{{ $pendingVendors }} vendor application(s)</p>
-                                                    <p class="text-xs text-dark-500 dark:text-dark-400 mt-1">Pending review</p>
-                                                </div>
-                                                <span class="text-xs text-dark-400 dark:text-dark-500">Now</span>
-                                            </div>
-                                        </a>
-                                    @endif
-                                    
-                                    @if($pendingDisputes > 0)
-                                        <a href="{{ route('admin.disputes.index') }}" class="block p-3 hover:bg-dark-50 dark:hover:bg-dark-700 transition">
-                                            <div class="flex items-start gap-3">
-                                                <div class="w-8 h-8 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg flex items-center justify-center">
-                                                    <i class="fas fa-exclamation-triangle text-sm"></i>
-                                                </div>
-                                                <div class="flex-1">
-                                                    <p class="text-sm text-dark-900 dark:text-white font-medium">{{ $pendingDisputes }} open dispute(s)</p>
-                                                    <p class="text-xs text-dark-500 dark:text-dark-400 mt-1">Requires attention</p>
-                                                </div>
-                                                <span class="text-xs text-dark-400 dark:text-dark-500">Now</span>
-                                            </div>
-                                        </a>
-                                    @endif
-                                @else
-                                    <div class="p-8 text-center">
-                                        <div class="w-12 h-12 bg-dark-100 dark:bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-3">
-                                            <i class="fas fa-bell-slash text-dark-400 dark:text-dark-500"></i>
-                                        </div>
-                                        <p class="text-dark-500 dark:text-dark-400">No new notifications</p>
-                                    </div>
+                                    <button class="text-sm text-primary-600 hover:text-primary-700">Mark all read</button>
                                 @endif
                             </div>
+                        </div>
+                        <div class="max-h-80 overflow-y-auto">
                             @if($totalNotifications > 0)
-                                <div class="p-3 border-t border-dark-200 dark:border-dark-700">
-                                    <a href="#" class="block text-center text-sm text-primary-600 hover:text-primary-700 font-medium">
-                                        View all notifications
+                                @if($newMessages > 0)
+                                    <a href="{{ route('admin.contact-messages.index') }}" class="dropdown-item">
+                                        <div class="w-8 h-8 bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-envelope"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">{{ $newMessages }} new message(s)</p>
+                                            <p class="text-sm text-dark-500 dark:text-dark-400">Check contact messages</p>
+                                        </div>
                                     </a>
+                                @endif
+                                
+                                @if($pendingVendors > 0)
+                                    <a href="{{ route('admin.vendors.pending') }}" class="dropdown-item">
+                                        <div class="w-8 h-8 bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-store"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">{{ $pendingVendors }} vendor application(s)</p>
+                                            <p class="text-sm text-dark-500 dark:text-dark-400">Pending review</p>
+                                        </div>
+                                    </a>
+                                @endif
+                                
+                                @if($pendingDisputes > 0)
+                                    <a href="{{ route('admin.disputes.index') }}" class="dropdown-item">
+                                        <div class="w-8 h-8 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 rounded-lg flex items-center justify-center">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">{{ $pendingDisputes }} open dispute(s)</p>
+                                            <p class="text-sm text-dark-500 dark:text-dark-400">Requires attention</p>
+                                        </div>
+                                    </a>
+                                @endif
+                            @else
+                                <div class="p-8 text-center">
+                                    <div class="w-12 h-12 bg-dark-100 dark:bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                                        <i class="fas fa-bell-slash text-dark-400 dark:text-dark-500"></i>
+                                    </div>
+                                    <p class="text-dark-500 dark:text-dark-400">No new notifications</p>
                                 </div>
                             @endif
                         </div>
+                        @if($totalNotifications > 0)
+                            <div class="border-t border-dark-200 dark:border-dark-700">
+                                <a href="#" class="block text-center py-3 text-sm text-primary-600 hover:text-primary-700 font-medium">
+                                    View all notifications
+                                </a>
+                            </div>
+                        @endif
                     </div>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="relative">
+                    <button id="userMenuButton" class="user-menu-btn">
+                        <div class="user-menu-avatar">
+                            {{ substr(Auth::user()->name, 0, 1) }}
+                        </div>
+                        <div class="user-menu-info">
+                            <div class="user-menu-name">{{ Auth::user()->name }}</div>
+                            <div class="user-menu-role">{{ ucfirst(Auth::user()->role) }}</div>
+                        </div>
+                        <i class="fas fa-chevron-down text-sm"></i>
+                    </button>
                     
-                    <!-- User Menu -->
-                    <div class="relative">
-                        <button id="userMenuButton" class="flex items-center gap-2 p-2 rounded-lg hover:bg-dark-100 dark:hover:bg-dark-800 transition">
-                            <div class="w-8 h-8 bg-gradient-to-br from-primary-500 to-indigo-600 text-white rounded-lg flex items-center justify-center font-semibold">
-                                {{ substr(Auth::user()->name, 0, 1) }}
-                            </div>
-                            <div class="hidden md:block text-left">
-                                <div class="text-sm font-medium text-dark-900 dark:text-white">{{ Auth::user()->name }}</div>
-                                <div class="text-xs text-dark-500 dark:text-dark-400">{{ ucfirst(Auth::user()->role) }}</div>
-                            </div>
-                            <i class="fas fa-chevron-down text-dark-400 dark:text-dark-500 text-xs"></i>
-                        </button>
-                        
-                        <!-- User Dropdown -->
-                        <div id="userDropdown" class="absolute right-0 mt-2 w-48 bg-white dark:bg-dark-800 rounded-xl shadow-xl border border-dark-200 dark:border-dark-700 hidden z-50 animate-in">
-                            <div class="p-4 border-b border-dark-200 dark:border-dark-700">
-                                <div class="font-medium text-dark-900 dark:text-white">{{ Auth::user()->name }}</div>
-                                <div class="text-xs text-dark-500 dark:text-dark-400">{{ Auth::user()->email }}</div>
-                            </div>
-                            <div class="p-2">
-                                <a href="{{ route('admin.profile.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-dark-700 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition">
-                                    <i class="fas fa-user w-4 text-dark-400 dark:text-dark-500"></i>
-                                    <span>My Profile</span>
-                                </a>
-                                <a href="{{ route('admin.settings.index') }}" class="flex items-center gap-2 px-3 py-2 text-sm text-dark-700 dark:text-dark-300 hover:bg-dark-100 dark:hover:bg-dark-700 rounded-lg transition">
-                                    <i class="fas fa-cog w-4 text-dark-400 dark:text-dark-500"></i>
-                                    <span>Settings</span>
-                                </a>
-                            </div>
+                    <!-- User Dropdown -->
+                    <div id="userDropdown" class="dropdown" style="min-width: 200px;">
+                        <div class="dropdown-header">
+                            <div class="font-medium">{{ Auth::user()->name }}</div>
+                            <div class="text-sm text-dark-500 dark:text-dark-400">{{ Auth::user()->email }}</div>
+                        </div>
+                        <div>
+                            <a href="{{ route('admin.profile.index') }}" class="dropdown-item">
+                                <i class="fas fa-user text-dark-400 dark:text-dark-500"></i>
+                                <span>My Profile</span>
+                            </a>
+                            <a href="{{ route('admin.settings.index') }}" class="dropdown-item">
+                                <i class="fas fa-cog text-dark-400 dark:text-dark-500"></i>
+                                <span>Settings</span>
+                            </a>
+                            <form action="{{ route('logout') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="dropdown-item w-full text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Sign Out</span>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </header>
-
+        
         <!-- Breadcrumb -->
         @hasSection('breadcrumb')
         <div class="px-6 py-3 bg-gradient-to-r from-dark-50 to-white dark:from-dark-900 dark:to-dark-800 border-b border-dark-200 dark:border-dark-700">
@@ -1104,14 +1280,14 @@
             </div>
         </div>
         @endif
-
-        <!-- Main Content Area -->
-        <main class="p-4 sm:p-6 animate-in">
+        
+        <!-- Main Content -->
+        <div class="content-wrapper" id="mainContentScroll">
             @yield('content')
-        </main>
-
+        </div>
+        
         <!-- Footer -->
-        <footer class="mt-8 px-6 py-4 border-t border-dark-200 dark:border-dark-700">
+        <footer class="main-footer glass dark:bg-dark-800">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div class="text-sm text-dark-500 dark:text-dark-400">
                     © {{ date('Y') }} {{ config('app.name') }}. All rights reserved.
@@ -1121,18 +1297,18 @@
                         <div class="w-2 h-2 bg-success rounded-full animate-pulse"></div>
                         <span>System: <span class="font-medium text-success">Operational</span></span>
                     </div>
-                    <div class="hidden md:block">
-                        <span class="font-mono">{{ now()->format('Y-m-d H:i:s') }}</span>
+                    <div class="hidden md:block font-mono">
+                        {{ now()->format('Y-m-d H:i:s') }}
                     </div>
                 </div>
             </div>
         </footer>
     </div>
-
+    
     <!-- JavaScript -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // DOM Elements
+            // Elements
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
             const toggleBtn = document.getElementById('toggleSidebar');
@@ -1143,20 +1319,21 @@
             const notificationDropdown = document.getElementById('notificationDropdown');
             const userMenuBtn = document.getElementById('userMenuButton');
             const userDropdown = document.getElementById('userDropdown');
+            const sidebarNav = document.getElementById('sidebarNav');
+            const mainContentScroll = document.getElementById('mainContentScroll');
             
-            // Sidebar state
+            // State
             let isSidebarCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
-            let isMobileSidebarOpen = false;
+            let isMobileOpen = false;
             
-            // Initialize sidebar state
+            // Initialize sidebar
             function initSidebar() {
                 if (window.innerWidth < 1024) {
-                    // Mobile: always start collapsed
-                    sidebar.classList.add('collapsed');
-                    mainContent.classList.add('expanded');
+                    // Mobile - sidebar hidden by default
+                    collapseSidebar();
                     isSidebarCollapsed = true;
                 } else {
-                    // Desktop: restore saved state
+                    // Desktop - restore saved state
                     if (isSidebarCollapsed) {
                         collapseSidebar();
                     } else {
@@ -1164,12 +1341,67 @@
                     }
                 }
             }
+
+            
+if (sidebarNav) {
+    sidebarNav.addEventListener('wheel', function(e) {
+        // If the sidebar has scrollable content and we're at the top/bottom
+        const isScrollingUp = e.deltaY < 0;
+        const isScrollingDown = e.deltaY > 0;
+        
+        const isAtTop = sidebarNav.scrollTop === 0;
+        const isAtBottom = sidebarNav.scrollTop + sidebarNav.clientHeight >= sidebarNav.scrollHeight - 1;
+        
+        // If we're at the top and scrolling up, or at bottom and scrolling down
+        // don't prevent default to allow main page scroll
+        if ((isAtTop && isScrollingUp) || (isAtBottom && isScrollingDown)) {
+            return;
+        }
+        
+        // Otherwise, prevent the event from bubbling to main content
+        e.stopPropagation();
+    });
+}
+
+// Also add touch event handling for mobile
+if (sidebarNav) {
+    let startY = 0;
+    let scrolling = false;
+    
+    sidebarNav.addEventListener('touchstart', function(e) {
+        startY = e.touches[0].clientY;
+        scrolling = true;
+    }, { passive: true });
+    
+    sidebarNav.addEventListener('touchmove', function(e) {
+        if (!scrolling) return;
+        
+        const currentY = e.touches[0].clientY;
+        const deltaY = startY - currentY;
+        
+        const isScrollingUp = deltaY < 0;
+        const isScrollingDown = deltaY > 0;
+        
+        const isAtTop = sidebarNav.scrollTop === 0;
+        const isAtBottom = sidebarNav.scrollTop + sidebarNav.clientHeight >= sidebarNav.scrollHeight - 1;
+        
+        // If we're at the boundary and trying to scroll further, allow page scroll
+        if ((isAtTop && isScrollingUp) || (isAtBottom && isScrollingDown)) {
+            scrolling = false;
+        }
+    }, { passive: true });
+    
+    sidebarNav.addEventListener('touchend', function() {
+        scrolling = false;
+    }, { passive: true });
+}
+
             
             // Collapse sidebar
             function collapseSidebar() {
                 sidebar.classList.add('collapsed');
                 mainContent.classList.add('expanded');
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
                 localStorage.setItem('sidebarCollapsed', 'true');
                 isSidebarCollapsed = true;
             }
@@ -1178,7 +1410,7 @@
             function expandSidebar() {
                 sidebar.classList.remove('collapsed');
                 mainContent.classList.remove('expanded');
-                toggleBtn.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
+                toggleBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
                 localStorage.setItem('sidebarCollapsed', 'false');
                 isSidebarCollapsed = false;
             }
@@ -1195,20 +1427,20 @@
             // Mobile sidebar functions
             function openMobileSidebar() {
                 sidebar.classList.add('mobile-open');
-                mobileOverlay.classList.add('active');
+                mobileOverlay.style.display = 'block';
                 document.body.style.overflow = 'hidden';
-                isMobileSidebarOpen = true;
+                isMobileOpen = true;
             }
             
             function closeMobileSidebar() {
                 sidebar.classList.remove('mobile-open');
-                mobileOverlay.classList.remove('active');
+                mobileOverlay.style.display = 'none';
                 document.body.style.overflow = '';
-                isMobileSidebarOpen = false;
+                isMobileOpen = false;
             }
             
             function toggleMobileSidebar() {
-                if (isMobileSidebarOpen) {
+                if (isMobileOpen) {
                     closeMobileSidebar();
                 } else {
                     openMobileSidebar();
@@ -1218,9 +1450,7 @@
             // Theme toggle
             function toggleTheme() {
                 const html = document.documentElement;
-                const isDark = html.classList.contains('dark');
-                
-                if (isDark) {
+                if (html.classList.contains('dark')) {
                     html.classList.remove('dark');
                     localStorage.setItem('theme', 'light');
                     themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
@@ -1231,83 +1461,63 @@
                 }
             }
             
-            // Load saved theme
+            // Initialize theme
             function initTheme() {
                 const savedTheme = localStorage.getItem('theme') || 'light';
-                const html = document.documentElement;
-                
                 if (savedTheme === 'dark') {
-                    html.classList.add('dark');
+                    document.documentElement.classList.add('dark');
                     themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
                 } else {
-                    html.classList.remove('dark');
+                    document.documentElement.classList.remove('dark');
                     themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
                 }
             }
             
             // Close dropdowns
             function closeAllDropdowns() {
-                notificationDropdown.classList.add('hidden');
-                userDropdown.classList.add('hidden');
+                notificationDropdown.style.display = 'none';
+                userDropdown.style.display = 'none';
             }
             
-            // Event Listeners
+            // Event listeners
             toggleBtn.addEventListener('click', toggleSidebar);
             mobileMenuBtn.addEventListener('click', toggleMobileSidebar);
             mobileOverlay.addEventListener('click', closeMobileSidebar);
             themeToggle.addEventListener('click', toggleTheme);
             
-            // Notification dropdown
+            // Notifications dropdown
             notificationBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                userDropdown.classList.add('hidden');
-                notificationDropdown.classList.toggle('hidden');
+                userDropdown.style.display = 'none';
+                notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
             });
             
             // User menu dropdown
             userMenuBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                notificationDropdown.classList.add('hidden');
-                userDropdown.classList.toggle('hidden');
+                notificationDropdown.style.display = 'none';
+                userDropdown.style.display = userDropdown.style.display === 'block' ? 'none' : 'block';
             });
             
             // Close dropdowns when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!notificationBtn.contains(e.target) && !notificationDropdown.contains(e.target)) {
-                    notificationDropdown.classList.add('hidden');
-                }
-                if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-                    userDropdown.classList.add('hidden');
-                }
+            document.addEventListener('click', function() {
+                closeAllDropdowns();
             });
             
-            // Set active nav item
-            function setActiveNavItem() {
-                const currentPath = window.location.pathname;
-                const navLinks = document.querySelectorAll('.nav-link');
-                
-                navLinks.forEach(link => {
-                    link.classList.remove('active');
-                    const href = link.getAttribute('href');
-                    
-                    if (href === currentPath || 
-                        (href !== '/' && currentPath.startsWith(href))) {
-                        link.classList.add('active');
-                    }
+            // Prevent dropdown close when clicking inside
+            [notificationDropdown, userDropdown].forEach(dropdown => {
+                dropdown.addEventListener('click', function(e) {
+                    e.stopPropagation();
                 });
-            }
+            });
             
             // Handle window resize
             function handleResize() {
                 if (window.innerWidth >= 1024) {
-                    // Desktop: close mobile sidebar if open
                     closeMobileSidebar();
                     initSidebar();
                 } else {
-                    // Mobile: always collapsed
-                    sidebar.classList.add('collapsed');
-                    mainContent.classList.add('expanded');
-                    isSidebarCollapsed = true;
+                    collapseSidebar();
                 }
             }
             
@@ -1319,10 +1529,10 @@
                     toggleSidebar();
                 }
                 
-                // Escape to close dropdowns and mobile sidebar
+                // Escape to close everything
                 if (e.key === 'Escape') {
                     closeAllDropdowns();
-                    if (window.innerWidth < 1024 && isMobileSidebarOpen) {
+                    if (window.innerWidth < 1024 && isMobileOpen) {
                         closeMobileSidebar();
                     }
                 }
@@ -1331,42 +1541,31 @@
             // Initialize
             initTheme();
             initSidebar();
-            setActiveNavItem();
             window.addEventListener('resize', handleResize);
             
-            // Auto-close notifications after 5 seconds
+            // Auto-hide notifications after 5 seconds
             setTimeout(() => {
-                notificationDropdown.classList.add('hidden');
+                notificationDropdown.style.display = 'none';
             }, 5000);
             
-            // Add loading animation to form buttons (EXCLUDING LOGOUT)
-document.querySelectorAll('form button[type="submit"]').forEach(button => {
-    // Skip logout forms
-    const form = button.closest('form');
-    if (form && form.action.includes('logout')) {
-        return; // Skip logout buttons
-    }
-    
-    button.addEventListener('click', function() {
-        const originalText = this.innerHTML;
-        this.innerHTML = `
-            <span class="flex items-center justify-center gap-2">
-                <i class="fas fa-spinner fa-spin"></i>
-                Processing...
-            </span>
-        `;
-        this.disabled = true;
-        
-        // Revert after 1 seconds (fallback)
-        setTimeout(() => {
-            this.innerHTML = originalText;
-            this.disabled = false;
-        }, 1000);
-    });
-});
+            // Loading animation for forms (excluding logout)
+            document.querySelectorAll('form').forEach(form => {
+                if (!form.action.includes('logout')) {
+                    form.addEventListener('submit', function() {
+                        const submitBtn = this.querySelector('button[type="submit"]');
+                        if (submitBtn) {
+                            submitBtn.innerHTML = `
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    Processing...
+                                </span>
+                            `;
+                            submitBtn.disabled = true;
+                        }
+                    });
+                }
+            });
         });
-
-        
     </script>
     
     @yield('scripts')

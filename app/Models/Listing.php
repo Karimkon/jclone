@@ -161,4 +161,19 @@ class Listing extends Model
     {
         return $this->hasMany(\App\Models\ProductAnalytic::class);
     }
+
+    /**
+     * Get the user that owns this listing through the vendor profile
+     */
+    public function user()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            VendorProfile::class,
+            'id',           // Foreign key on vendor_profiles table (vendor_profile.id)
+            'id',           // Foreign key on users table (user.id) 
+            'vendor_profile_id', // Local key on listings table (listing.vendor_profile_id)
+            'user_id'       // Local key on vendor_profiles table (vendor_profile.user_id)
+        );
+    }
 }

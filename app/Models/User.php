@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\BuyerWallet;
@@ -11,7 +12,7 @@ use App\Models\Message;
 
 class User extends Authenticatable
 {
-    use HasApiTokens;
+    use HasApiTokens, Notifiable; 
 
     protected $fillable = [
         'name', 'phone', 'email', 'password', 'role', 'is_active', 'meta'
@@ -243,6 +244,76 @@ public function getOrCreateDefaultAddress()
     }
     
     return $default;
+}
+
+/**
+ * Check if user is an admin
+ * 
+ * @return bool
+ */
+public function isAdmin()
+{
+    return $this->role === 'admin';
+}
+
+/**
+ * Check if user is a CEO
+ * 
+ * @return bool
+ */
+public function isCEO()
+{
+    return $this->role === 'ceo';
+}
+
+/**
+ * Check if user has administrative privileges (admin or CEO)
+ * 
+ * @return bool
+ */
+public function hasAdminAccess()
+{
+    return in_array($this->role, ['admin', 'ceo']);
+}
+
+/**
+ * Check if user is in logistics role
+ * 
+ * @return bool
+ */
+public function isLogistics()
+{
+    return $this->role === 'logistics';
+}
+
+/**
+ * Check if user is in finance role
+ * 
+ * @return bool
+ */
+public function isFinance()
+{
+    return $this->role === 'finance';
+}
+
+/**
+ * Get the appropriate dashboard route for this user's role
+ * 
+ * @return string
+ */
+public function getDashboardRoute()
+{
+    $routes = [
+        'admin' => 'admin.dashboard',
+        'ceo' => 'ceo.dashboard',
+        'vendor_local' => 'vendor.dashboard',
+        'vendor_international' => 'vendor.dashboard',
+        'logistics' => 'logistics.dashboard',
+        'finance' => 'finance.dashboard',
+        'buyer' => 'welcome',
+    ];
+    
+    return $routes[$this->role] ?? 'welcome';
 }
 
 }

@@ -181,53 +181,53 @@
         </div>
         
         <!-- Order Summary -->
-        <div class="lg:col-span-1">
-            <div class="bg-white rounded-lg shadow p-6 sticky top-4">
-                <h2 class="text-xl font-bold mb-4">Order Summary</h2>
-                
-                <div class="space-y-3 mb-6">
-                    <div class="flex justify-between text-gray-600">
-                        <span>Subtotal</span>
-                        <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 2) }}</span>
-                    </div>
-                    <div class="flex justify-between text-gray-600">
-                        <span>Shipping</span>
-                        <span id="cart-shipping">UGX {{ number_format($cart->shipping, 2) }}</span>
-                    </div>
-                    <div class="flex justify-between text-gray-600">
-                        <span>Tax (18%)</span>
-                        <span id="cart-tax">UGX {{ number_format($cart->tax, 2) }}</span>
-                    </div>
-                    <div class="pt-3 border-t">
-                        <div class="flex justify-between font-bold text-lg">
-                            <span>Total</span>
-                            <span class="text-primary" id="cart-total">UGX {{ number_format($cart->total, 2) }}</span>
-                        </div>
-                    </div>
+<div class="lg:col-span-1">
+    <div class="bg-white rounded-lg shadow p-6 sticky top-4">
+        <h2 class="text-xl font-bold mb-4">Order Summary</h2>
+        
+        <div class="space-y-3 mb-6">
+            <div class="flex justify-between text-gray-600">
+                <span>Subtotal</span>
+                <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 2) }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Shipping</span>
+                <span id="cart-shipping">UGX {{ number_format($cart->shipping, 2) }}</span>
+            </div>
+            <div class="flex justify-between text-gray-600">
+                <span>Tax (18%)</span>
+                <span id="cart-tax">UGX {{ number_format($cart->tax, 2) }}</span>
+            </div>
+            <div class="pt-3 border-t">
+                <div class="flex justify-between font-bold text-lg">
+                    <span>Total</span>
+                    <span class="text-primary" id="cart-total">UGX {{ number_format($cart->total, 2) }}</span>
                 </div>
-                
-                <a href="{{ route('buyer.orders.checkout') }}" 
-                   class="block w-full bg-primary text-white text-center py-3 rounded-lg font-semibold hover:bg-indigo-700 transition mb-3">
-                    <i class="fas fa-lock mr-2"></i> Proceed to Checkout
-                </a>
-                
-                <a href="{{ route('marketplace.index') }}" 
-                   class="block w-full text-center py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition">
-                    <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
-                </a>
-                
-                <div class="mt-6 pt-6 border-t">
-                    <div class="flex items-start space-x-2 text-sm text-gray-600">
-                        <i class="fas fa-shield-alt text-green-600 mt-1"></i>
-                        <div>
-                            <p class="font-medium text-gray-800">Secure Checkout</p>
-                            <p>Your payment is protected by escrow</p>
-                        </div>
-                    </div>
+            </div>
+        </div>
+        
+        <a href="{{ route('buyer.orders.checkout') }}" 
+           class="block w-full text-white text-center py-3 rounded-lg font-bold transition mb-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+           style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;">
+            <i class="fas fa-lock mr-2"></i> Proceed to Checkout
+        </a>
+        
+        <a href="{{ route('marketplace.index') }}" 
+           class="block w-full text-center py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-semibold">
+            <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
+        </a>
+        
+        <div class="mt-6 pt-6 border-t">
+            <div class="flex items-start space-x-2 text-sm text-gray-600">
+                <i class="fas fa-shield-alt text-green-600 mt-1"></i>
+                <div>
+                    <p class="font-medium text-gray-800">Secure Checkout</p>
+                    <p>Your payment is protected by escrow</p>
                 </div>
             </div>
         </div>
     </div>
+</div>
     
     @else
     <!-- Empty Cart -->

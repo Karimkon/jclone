@@ -33,9 +33,9 @@
                     <span class="text-sm font-medium">Account</span>
                 </a>
                 @else
-                <a href="{{ route('login') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
+                <a href="{{ route('login') }}" class="hidden sm:flex items-center gap-2 text-gray-600 hover:text-brand-600 transition p-2">
                     <i class="fas fa-user text-lg"></i>
-                    <span class="text-sm font-medium">Login</span>
+                    <span class="text-sm font-medium text-gray-800">Login</span>
                 </a>
                 @endauth
                 

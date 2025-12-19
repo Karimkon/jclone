@@ -19,10 +19,36 @@ class CheckVendorStatus
     {
         // Check if user is authenticated
         if (!Auth::check()) {
-            return redirect()->route('login')->with('error', 'Please login to access vendor dashboard.');
+            return redirect()->route('login')
+                ->with('error', 'Please login to access vendor dashboard.');
         }
 
         $user = Auth::user();
+        
+        // ============================================================
+        // Admins should NEVER be redirected to vendor onboarding pages
+        // ============================================================
+        if (in_array($user->role, ['admin', 'ceo'])) {
+            return $next($request);
+        }
+        
+        // Also allow logistics and finance to bypass (they have their own dashboards)
+        if (in_array($user->role, ['logistics', 'finance'])) {
+            return $next($request);
+        }
+        
+        // ============================================================
+        // For non-vendor roles (buyer, etc.), redirect appropriately
+        // ============================================================
+        if (!in_array($user->role, ['vendor_local', 'vendor_international'])) {
+            // User is not a vendor type - redirect to home
+            return redirect()->route('welcome')
+                ->with('error', 'Vendor access required for this section.');
+        }
+        
+        // ============================================================
+        // Vendor-specific checks below this point
+        // ============================================================
         
         // Check if user has a vendor profile
         if (!$user->vendorProfile) {
@@ -48,7 +74,7 @@ class CheckVendorStatus
             return $next($request);
         }
 
-        // Unknown status
+        // Unknown status - redirect to status page for clarity
         return redirect()->route('vendor.onboard.status')
             ->with('error', 'Unable to determine your vendor status. Please contact support.');
     }

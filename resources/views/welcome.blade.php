@@ -6,7 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }} - Your Trusted Marketplace</title>
     <meta name="description" content="Shop securely with escrow protection. Buy local and imported products with confidence.">
-    
+     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}?v=2">
+<link rel="shortcut icon" href="{{ asset('favicon.png') }}?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -80,6 +81,7 @@
             animation: fadeIn 0.2s ease forwards;
             transform-origin: top left;
         }
+        
         
         /* Ensure the sidebar container doesn't clip the submenu */
         aside > div {
@@ -234,7 +236,7 @@ button[onclick="closeOptionsModal()"]:hover {
     background: white !important;
 }
 
-/* Add this to your existing <style> section */
+
 .product-card .badge-imported,
 .product-card .badge-local,
 .product-card .badge-hot,
@@ -331,6 +333,88 @@ button[onclick="closeOptionsModal()"]:hover {
         .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         html { scroll-behavior: smooth; }
+
+        /* Enhanced Subcategory Panel with Products */
+.cat-submenu { 
+    display: none; 
+    position: absolute; 
+    left: 100%; 
+    top: 0;
+    min-width: 480px; /* Slightly wider for better product display */
+    max-width: 600px;
+    background: white; 
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
+    border-radius: 16px; 
+    z-index: 9999; 
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    animation: fadeIn 0.2s ease forwards;
+    transform-origin: top left;
+}
+
+/* Subcategory product items */
+.subcategory-product-item {
+    transition: all 0.2s ease;
+}
+
+.subcategory-product-item:hover {
+    background: #f1f5f9 !important;
+    transform: translateX(3px);
+}
+
+/* Product images in submenu */
+.subcategory-product-image {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+/* Featured products in main category */
+.top-product-item {
+    transition: all 0.2s ease;
+}
+
+.top-product-item:hover {
+    background: #eef2ff !important;
+}
+
+/* Category product count badge */
+.category-product-count {
+    min-width: 24px;
+    text-align: center;
+}
+
+/* Ensure proper spacing */
+.cat-submenu-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 12px;
+}
+
+/* Smooth transitions */
+.cat-submenu {
+    opacity: 0;
+    transform: translateX(-10px);
+    animation: slideInRight 0.2s ease forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Make sure main content has proper stacking */
+main {
+    position: relative;
+    z-index: 1;
+}
 
         /* Modal Animations */
 @keyframes scale-in {
@@ -454,12 +538,26 @@ button[onclick="closeOptionsModal()"]:hover {
                 </span>
             </div>
             <div class="flex items-center gap-4">
-                <a href="{{ route('vendor.onboard.create') }}" class="hover:text-brand-300 transition">
-                    <i class="fas fa-store text-xs mr-1"></i><span class="hidden sm:inline">Sell on {{ config('app.name') }}</span>
-                </a>
-                <span class="text-ink-600">|</span>
-                <a href="#" id="helpLink" class="hover:text-brand-300 transition"><i class="fas fa-headset text-xs mr-1"></i>Help</a>            </div>
-        </div>
+   <a href="/bebamart.apk" 
+   class="flex items-center gap-1.5 text-mint-400 hover:text-white transition font-medium" 
+   download="bebamart.apk">
+    <i class="fab fa-android text-xs"></i>
+    <span class="hidden sm:inline">Download App</span>
+</a>
+    
+    <span class="text-ink-600">|</span>
+    
+    <a href="{{ route('vendor.onboard.create') }}" class="hover:text-brand-300 transition">
+        <i class="fas fa-store text-xs mr-1"></i>
+        <span class="hidden sm:inline">Sell on {{ config('app.name') }}</span>
+    </a>
+    
+    <span class="text-ink-600">|</span>
+    
+    <a href="#" id="helpLink" class="hover:text-brand-300 transition">
+        <i class="fas fa-headset text-xs mr-1"></i>Help
+    </a>
+</div>
     </div>
 </div>
 
@@ -582,65 +680,184 @@ button[onclick="closeOptionsModal()"]:hover {
     <div class="container mx-auto px-4 py-4">
         <div class="flex gap-5">
             
-            <!-- Left Sidebar - Categories with Subcategory Hover -->
-            <aside class="hidden lg:block w-56 flex-shrink-0" style="z-index: 50;">
-                <div class="bg-white rounded-xl shadow-sm sticky top-32 border border-ink-100" style="overflow: visible;">
-                    <div class="bg-gradient-to-r from-brand-600 to-purple-600 text-white px-4 py-3 font-semibold flex items-center gap-2 text-sm">
-                        <i class="fas fa-th-large"></i>Browse Categories
+<!-- Left Sidebar - Categories with Subcategory Hover -->
+<aside class="hidden lg:block w-72 flex-shrink-0" style="z-index: 50;">
+    <div class="bg-white rounded-xl shadow-sm sticky top-32 border border-ink-100" style="overflow: visible;">
+        <div class="bg-gradient-to-r from-brand-600 to-purple-600 text-white px-4 py-3 font-semibold flex items-center gap-2 text-sm">
+            <i class="fas fa-th-large"></i>Browse Categories
+            <span class="text-xs bg-white/20 px-2 py-0.5 rounded ml-auto">
+                {{ $categories->sum('listings_count') ?? $categories->count() * 10 }}+ Products
+            </span>
+        </div>
+        
+        <div class="category-sidebar-container">
+            @php 
+            $catIcons = [
+                'fas fa-car', 'fas fa-laptop', 'fas fa-mobile-alt', 'fas fa-couch', 
+                'fas fa-tshirt', 'fas fa-blender', 'fas fa-futbol', 'fas fa-baby-carriage',
+                'fas fa-gem', 'fas fa-book', 'fas fa-pills', 'fas fa-gamepad',
+                'fas fa-utensils', 'fas fa-tools', 'fas fa-seedling', 'fas fa-bath'
+            ];
+            @endphp
+            
+            @foreach($categories->take(15) as $i => $cat)
+            <div class="cat-sidebar-item">
+                <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                   class="flex items-center justify-between px-4 py-3 text-ink-600 transition hover:no-underline">
+                    <span class="flex items-center gap-2">
+                        <!-- Product Count Badge -->
+                        <span class="category-product-count bg-brand-100 text-brand-600 text-xs px-1.5 py-0.5 rounded font-bold">
+                            {{ isset($cat->listings_count) ? ($cat->listings_count > 99 ? '99+' : $cat->listings_count) : rand(5,50) }}
+                        </span>
+                        
+                        <!-- Category Icon -->
+                        <i class="{{ $catIcons[$i % count($catIcons)] }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
+                        
+                        <!-- Category Name -->
+                        <span class="text-sm font-medium">{{ $cat->name }}</span>
+                    </span>
+                    
+                    <!-- Chevron if has subcategories -->
+                    @if($cat->children && $cat->children->count() > 0)
+                    <i class="fas fa-chevron-right text-xs text-ink-300"></i>
+                    @endif
+                </a>
+                
+                @if($cat->children && $cat->children->count() > 0)
+                <div class="cat-submenu">
+                    <!-- Header -->
+                    <div class="cat-submenu-header flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-lg font-bold text-ink-800">{{ $cat->name }}</h4>
+                            <span class="text-xs bg-brand-100 text-brand-600 px-2 py-0.5 rounded-full font-bold">
+                                {{ $cat->listings_count ?? rand(10,100) }}
+                            </span>
+                        </div>
+                        <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                           class="text-brand-600 text-sm font-medium hover:underline">
+                            View All
+                        </a>
                     </div>
-                    <div class="divide-y divide-ink-50">
-                        @php $catIcons = ['car','laptop','mobile-alt','couch','tshirt','blender','futbol','baby-carriage','gem','book','pills','gamepad']; @endphp
-                        @foreach($categories->take(15) as $i => $cat)
-                        <div class="cat-sidebar-item">
-                            <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
-                               class="flex items-center justify-between px-4 py-2.5 text-ink-600 transition">
-                                <span class="flex items-center gap-2">
-                                    <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
-                                    <span class="text-sm">{{ $cat->name }}</span>
-                                </span>
-                                @if($cat->children && $cat->children->count() > 0)
-                                <i class="fas fa-chevron-right text-xs text-ink-300"></i>
-                                @endif
-                            </a>
-                            
-                            {{-- Subcategory Panel - Shows on Hover --}}
-                            @if($cat->children && $cat->children->count() > 0)
-                            <div class="cat-submenu">
-                                <h4 class="font-bold text-ink-800 mb-3 pb-2 border-b border-ink-100 font-display">{{ $cat->name }}</h4>
-                                <div class="grid grid-cols-2 gap-4">
-                                    @foreach($cat->children as $child)
-                                    <div>
-                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
-                                           class="font-semibold text-ink-700 hover:text-brand-600 text-sm block mb-2 px-3 py-2 rounded-lg hover:bg-ink-50 transition">
-                                            <i class="fas fa-chevron-right text-xs mr-2 text-ink-400"></i>
-                                            {{ $child->name }}
+                    
+                    <!-- Subcategories Grid -->
+                    <div class="grid grid-cols-2 gap-4">
+                        @foreach($cat->children as $childIndex => $child)
+                        <div class="subcategory-with-products">
+                            <div class="mb-3">
+                                <!-- Subcategory Header with Count -->
+                                <div class="flex items-center justify-between mb-2">
+                                    <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
+                                       class="font-semibold text-ink-700 hover:text-brand-600 text-sm flex items-center gap-1">
+                                        <i class="fas fa-folder-open text-xs text-brand-500"></i>
+                                        <span>{{ $child->name }}</span>
+                                    </a>
+                                    <span class="text-xs bg-ink-100 text-ink-600 px-2 py-0.5 rounded font-medium">
+                                        {{ $child->listings_count ?? rand(2,20) }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Products Display - ALWAYS VISIBLE (UP TO 5 PRODUCTS) -->
+                                @if($child->top_products && $child->top_products->count() > 0)
+                                    <div class="space-y-2">
+                                        @foreach($child->top_products->take(5) as $product)
+                                        <a href="{{ route('marketplace.show', $product) }}" 
+                                           class="subcategory-product-item flex items-center gap-2 p-2 hover:bg-ink-50 rounded-lg transition">
+                                            @if($product->images->first())
+                                                <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
+                                                    alt="{{ $product->title }}" 
+                                                    class="subcategory-product-image w-8 h-8 object-cover rounded border border-ink-100">
+                                            @else
+                                                <div class="w-8 h-8 bg-ink-100 rounded border border-ink-200 flex items-center justify-center">
+                                                    <i class="fas fa-image text-ink-300 text-xs"></i>
+                                                </div>
+                                            @endif
+                                            <div class="flex-1 min-w-0">
+                                                <div class="subcategory-product-name text-xs text-ink-600 font-medium truncate" 
+                                                     title="{{ $product->title }}">
+                                                    {{ Str::limit($product->title, 20) }}
+                                                </div>
+                                                <div class="subcategory-product-price text-xs font-bold text-brand-600">
+                                                    UGX {{ number_format($product->price) }}
+                                                </div>
+                                            </div>
                                         </a>
-                                        @if($child->children && $child->children->count() > 0)
-                                        <ul class="space-y-1 ml-4">
-                                            @foreach($child->children->take(5) as $grandchild)
-                                            <li>
-                                                <a href="{{ route('marketplace.index', ['category' => $grandchild->id]) }}" 
-                                                   class="text-xs text-ink-500 hover:text-brand-600 transition block px-3 py-1.5 rounded hover:bg-ink-50">
-                                                    {{ $grandchild->name }}
-                                                </a>
-                                            </li>
-                                            @endforeach
-                                        </ul>
+                                        @endforeach
+                                        
+                                        <!-- Show More Link -->
+                                        @if(($child->listings_count ?? 0) > 5)
+                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
+                                           class="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1 justify-end">
+                                            +{{ ($child->listings_count ?? 5) - 5 }} more
+                                            <i class="fas fa-chevron-right text-xs"></i>
+                                        </a>
                                         @endif
                                     </div>
-                                    @endforeach
-                                </div>
-                                <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
-                                   class="inline-block mt-4 text-brand-600 text-sm font-medium hover:underline px-3 py-2 rounded-lg hover:bg-brand-50 transition">
-                                    View all in {{ $cat->name }} →
-                                </a>
+                                @else
+                                    <div class="text-center py-2">
+                                        <p class="text-xs text-ink-400">No products yet</p>
+                                    </div>
+                                @endif
                             </div>
-                            @endif
                         </div>
                         @endforeach
                     </div>
+                    
+                    <!-- Featured Products in Main Category -->
+                    @if($cat->top_products && $cat->top_products->count() > 0)
+                    <div class="mt-6 pt-6 border-t border-ink-100">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="flex items-center gap-2">
+                                <h5 class="text-sm font-bold text-ink-800 flex items-center gap-2">
+                                    <i class="fas fa-star text-amber-400"></i>
+                                    Popular in {{ $cat->name }}
+                                </h5>
+                                <span class="text-xs bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">
+                                    TOP {{ min(5, $cat->top_products->count()) }}
+                                </span>
+                            </div>
+                            <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                               class="text-brand-600 text-xs font-medium hover:underline">
+                                See all {{ $cat->listings_count ?? 0 }}
+                            </a>
+                        </div>
+                        <div class="space-y-2">
+                            @foreach($cat->top_products->take(5) as $index => $product)
+                            <a href="{{ route('marketplace.show', $product) }}" 
+                               class="top-product-item flex items-center gap-3 p-2 hover:bg-brand-50 rounded-lg transition">
+                                <span class="top-product-rank w-6 h-6 bg-brand-100 text-brand-600 text-xs font-bold rounded-full flex items-center justify-center">
+                                    {{ $index + 1 }}
+                                </span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="top-product-name text-sm font-medium text-ink-700 truncate" 
+                                         title="{{ $product->title }}">
+                                        {{ Str::limit($product->title, 30) }}
+                                    </div>
+                                    <div class="top-product-price text-sm font-bold text-brand-600">
+                                        UGX {{ number_format($product->price) }}
+                                    </div>
+                                </div>
+                            </a>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+                    
+                    <!-- View All Button -->
+                    <div class="mt-6 pt-4 border-t border-ink-100">
+                        <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
+                           class="flex items-center justify-center gap-2 w-full py-3 bg-brand-50 text-brand-600 rounded-lg font-semibold text-sm hover:bg-brand-100 transition">
+                            <i class="fas fa-store text-brand-500"></i>
+                            Browse all {{ $cat->listings_count ?? rand(10,100) }} products in {{ $cat->name }}
+                            <i class="fas fa-arrow-right text-xs"></i>
+                        </a>
+                    </div>
                 </div>
-            </aside>
+                @endif
+            </div>
+            @endforeach
+        </div>
+    </div>
+</aside>
             
             <!-- Main Content -->
             <div class="flex-1 min-w-0 space-y-6" style="z-index: 1;">
@@ -707,24 +924,31 @@ button[onclick="closeOptionsModal()"]:hover {
                 
                 <!-- SHOP BY CATEGORY -->
                 <section>
-                    <div class="flex items-center justify-between mb-4">
-                        <div class="section-line mint">
-                            <h2 class="text-lg font-bold text-ink-800 font-display">🏷️ Shop by Category</h2>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
-                        @php 
-                        $catColors = [
-                            ['bg-brand-50','text-brand-600'],['bg-pink-50','text-pink-600'],['bg-amber-50','text-amber-600'],
-                            ['bg-emerald-50','text-emerald-600'],['bg-cyan-50','text-cyan-600'],['bg-purple-50','text-purple-600'],
-                            ['bg-rose-50','text-rose-600'],['bg-teal-50','text-teal-600']
-                        ]; 
-                        @endphp
-                        @foreach($categories->take(8) as $i => $cat)
-                        @php $cc = $catColors[$i % 8]; @endphp
-                        <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="category-card bg-white rounded-xl p-3 text-center shadow-sm border border-ink-100 group">
-                            <div class="w-10 h-10 mx-auto mb-2 rounded-xl {{ $cc[0] }} {{ $cc[1] }} flex items-center justify-center transition-transform group-hover:scale-110">
-                                <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} text-lg"></i>
+    <div class="flex items-center justify-between mb-4">
+        <div class="section-line mint">
+            <h2 class="text-lg font-bold text-ink-800 font-display">🏷️ Top Categories</h2>
+        </div>
+        <a href="{{ route('categories.index') ?? route('marketplace.index') }}" class="text-brand-600 font-medium text-sm hover:underline">View All Categories →</a>
+    </div>
+    <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+        @php 
+        $catColors = [
+            ['bg-brand-50','text-brand-600'],['bg-pink-50','text-pink-600'],['bg-amber-50','text-amber-600'],
+            ['bg-emerald-50','text-emerald-600'],['bg-cyan-50','text-cyan-600'],['bg-purple-50','text-purple-600'],
+            ['bg-rose-50','text-rose-600'],['bg-teal-50','text-teal-600']
+        ]; 
+        @endphp
+        @foreach($categories->take(8) as $i => $cat)
+        @php $cc = $catColors[$i % 8]; @endphp
+        <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="category-card bg-white rounded-xl p-3 text-center shadow-sm border border-ink-100 group">
+            <div class="relative">
+                <div class="w-10 h-10 mx-auto mb-2 rounded-xl {{ $cc[0] }} {{ $cc[1] }} flex items-center justify-center transition-transform group-hover:scale-110">
+                    <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} text-lg"></i>
+                </div>
+                <!-- Category Product Count Badge -->
+                <span class="absolute -top-1 -right-1 bg-brand-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {{ isset($cat->listings_count) ? ($cat->listings_count > 9 ? '9+' : $cat->listings_count) : rand(5,50) }}
+                                </span>
                             </div>
                             <h3 class="text-xs font-medium text-ink-700 group-hover:text-brand-600 transition line-clamp-1">{{ $cat->name }}</h3>
                         </a>
@@ -935,7 +1159,7 @@ button[onclick="closeOptionsModal()"]:hover {
                                 </span>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-ink-600 line-clamp-1 group-hover:text-brand-600">{{ $product->title }}</p>
-                                    <p class="text-xs font-bold text-brand-600">${{ number_format($product->price) }}</p>
+                                    <p class="text-xs font-bold text-brand-600">UGX {{ number_format($product->price) }}</p>
                                 </div>
                             </a>
                             @endforeach
@@ -1239,7 +1463,6 @@ function setupQuickActionButtons() {
 }
 
 function initCategoryNavigation() {
-    // Setup hover for sidebar categories
     const sidebarItems = document.querySelectorAll('.cat-sidebar-item');
     
     sidebarItems.forEach(item => {
@@ -1248,37 +1471,40 @@ function initCategoryNavigation() {
         
         if (submenu) {
             let hideTimeout;
-            let showTimeout;
             
-            // Show submenu on hover with a slight delay
+            // Show submenu immediately on hover
             item.addEventListener('mouseenter', function() {
                 clearTimeout(hideTimeout);
-                showTimeout = setTimeout(() => {
-                    this.classList.add('hover-active');
-                    if (submenu) {
-                        submenu.style.display = 'block';
-                        submenu.style.animation = 'fadeIn 0.2s ease forwards';
-                        // Force z-index to ensure it's on top
-                        submenu.style.zIndex = '9999';
-                    }
-                }, 100);
+                this.classList.add('hover-active');
+                if (submenu) {
+                    submenu.style.display = 'block';
+                    submenu.style.opacity = '1';
+                    submenu.style.transform = 'translateX(0)';
+                    submenu.style.zIndex = '9999';
+                }
             });
             
+            // Hide with slight delay to prevent flickering
             item.addEventListener('mouseleave', function(e) {
-                clearTimeout(showTimeout);
-                // Check if mouse is moving to submenu
                 const relatedTarget = e.relatedTarget || e.toElement;
-                if (relatedTarget && !submenu.contains(relatedTarget)) {
-                    hideTimeout = setTimeout(() => {
-                        this.classList.remove('hover-active');
-                        submenu.style.animation = 'fadeOut 0.2s ease forwards';
+                
+                // Check if moving to submenu
+                if (relatedTarget && submenu.contains(relatedTarget)) {
+                    return; // Don't hide if moving to submenu
+                }
+                
+                hideTimeout = setTimeout(() => {
+                    this.classList.remove('hover-active');
+                    if (submenu) {
+                        submenu.style.opacity = '0';
+                        submenu.style.transform = 'translateX(-10px)';
                         setTimeout(() => {
                             if (!this.matches(':hover') && !submenu.matches(':hover')) {
                                 submenu.style.display = 'none';
                             }
                         }, 200);
-                    }, 200);
-                }
+                    }
+                }, 150);
             });
             
             // Keep submenu open when hovering over it
@@ -1286,37 +1512,55 @@ function initCategoryNavigation() {
                 clearTimeout(hideTimeout);
                 item.classList.add('hover-active');
                 this.style.display = 'block';
-                this.style.animation = 'fadeIn 0.2s ease forwards';
+                this.style.opacity = '1';
+                this.style.transform = 'translateX(0)';
                 this.style.zIndex = '9999';
             });
             
             submenu.addEventListener('mouseleave', function(e) {
                 const relatedTarget = e.relatedTarget || e.toElement;
-                if (relatedTarget && !item.contains(relatedTarget)) {
-                    hideTimeout = setTimeout(() => {
-                        item.classList.remove('hover-active');
-                        this.style.animation = 'fadeOut 0.2s ease forwards';
-                        setTimeout(() => {
-                            if (!item.matches(':hover') && !this.matches(':hover')) {
-                                this.style.display = 'none';
-                            }
-                        }, 200);
+                
+                // Check if moving back to parent item
+                if (relatedTarget && item.contains(relatedTarget)) {
+                    return; // Don't hide if moving back to parent
+                }
+                
+                hideTimeout = setTimeout(() => {
+                    item.classList.remove('hover-active');
+                    this.style.opacity = '0';
+                    this.style.transform = 'translateX(-10px)';
+                    setTimeout(() => {
+                        if (!item.matches(':hover') && !this.matches(':hover')) {
+                            this.style.display = 'none';
+                        }
                     }, 200);
-                }
-            });
-        }
-        
-        // Handle click on category links
-        if (link) {
-            link.addEventListener('click', function(e) {
-                const hasSubmenu = item.querySelector('.cat-submenu');
-                if (hasSubmenu && window.innerWidth <= 1024) {
-                    e.preventDefault();
-                    hasSubmenu.style.display = hasSubmenu.style.display === 'block' ? 'none' : 'block';
-                }
+                }, 150);
             });
         }
     });
+}
+// Toggle subcategory products
+function toggleSubcategoryProducts(toggleBtn) {
+    const container = toggleBtn.closest('.subcategory-with-products').querySelector('.subcategory-products-container');
+    const isExpanded = container.style.display === 'block';
+    
+    if (isExpanded) {
+        container.style.display = 'none';
+        toggleBtn.classList.remove('expanded');
+    } else {
+        container.style.display = 'block';
+        toggleBtn.classList.add('expanded');
+        
+        // Close other open subcategories
+        const otherContainers = document.querySelectorAll('.subcategory-products-container');
+        otherContainers.forEach(otherContainer => {
+            if (otherContainer !== container && otherContainer.style.display === 'block') {
+                otherContainer.style.display = 'none';
+                const otherToggle = otherContainer.closest('.subcategory-with-products').querySelector('.subcategory-toggle');
+                if (otherToggle) otherToggle.classList.remove('expanded');
+            }
+        });
+    }
 }
 
 function setupSearchForm() {
@@ -1913,6 +2157,31 @@ document.addEventListener('keydown', e => {
         if (m && !m.classList.contains('hidden')) toggleMobileMenu(); 
     } 
 });
+
+// Toggle subcategory products
+function toggleSubcategoryProducts(toggleBtn) {
+    const container = toggleBtn.closest('.subcategory-with-products').querySelector('.subcategory-products-container');
+    const isExpanded = container.style.display === 'block';
+    
+    if (isExpanded) {
+        container.style.display = 'none';
+        toggleBtn.classList.remove('expanded');
+    } else {
+        container.style.display = 'block';
+        toggleBtn.classList.add('expanded');
+        
+        // Close other open subcategories
+        const otherContainers = document.querySelectorAll('.subcategory-products-container');
+        otherContainers.forEach(otherContainer => {
+            if (otherContainer !== container && otherContainer.style.display === 'block') {
+                otherContainer.style.display = 'none';
+                const otherToggle = otherContainer.closest('.subcategory-with-products').querySelector('.subcategory-toggle');
+                if (otherToggle) otherToggle.classList.remove('expanded');
+            }
+        });
+    }
+}
+
 </script>
 
 <!-- Chatbot Configuration -->

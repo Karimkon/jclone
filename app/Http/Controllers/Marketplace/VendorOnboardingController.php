@@ -288,18 +288,47 @@ class VendorOnboardingController extends Controller
         }
     }
 
-    /**
-     * Show vendor onboarding status
-     * Requires authentication
-     */
-    public function show()
+
+ public function show()
 {
     // Check if user is logged in
     if (!Auth::check()) {
-        return redirect()->route('login')->with('error', 'Please login to view your application status.');
+        return redirect()->route('login')
+            ->with('error', 'Please login to view your application status.');
     }
     
-    $vendorProfile = Auth::user()->vendorProfile;
+    $user = Auth::user();
+    
+    // ============================================================
+    // This prevents admins and other roles from seeing this page
+    // ============================================================
+    $roleRedirects = [
+        'admin' => 'admin.dashboard',
+        'ceo' => 'ceo.dashboard',
+        'finance' => 'finance.dashboard',
+        'logistics' => 'logistics.dashboard',
+        'buyer' => 'welcome',
+    ];
+    
+    if (isset($roleRedirects[$user->role])) {
+        $routeName = $roleRedirects[$user->role];
+        $message = $user->role === 'admin' 
+            ? 'Welcome back, Admin!' 
+            : 'You have been redirected to your dashboard.';
+            
+        return redirect()->route($routeName)->with('info', $message);
+    }
+    
+    // Only vendor-type roles should see this page
+    if (!in_array($user->role, ['vendor_local', 'vendor_international'])) {
+        return redirect()->route('welcome')
+            ->with('error', 'This page is only for vendor accounts.');
+    }
+    
+    // ============================================================
+    // Vendor-specific logic below
+    // ============================================================
+    $vendorProfile = $user->vendorProfile;
     
     if (!$vendorProfile) {
         return redirect()->route('vendor.onboard.create')

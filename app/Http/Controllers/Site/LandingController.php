@@ -8,30 +8,21 @@ use App\Models\Listing;
 use App\Models\Promotion;
 use App\Models\ContactMessage; 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 
 class LandingController extends Controller
 {
     /**
-     * Display homepage
+     * Display homepage with enhanced category data
      */
- public function index()
+    public function index()
     {
-        // Get categories with children and listing counts
-        $categories = Category::where('is_active', true)
-            ->whereNull('parent_id')
-            ->with(['children' => function($query) {
-                $query->where('is_active', true)
-                    ->with(['children' => function($q) {
-                        $q->where('is_active', true);
-                    }]);
-            }])
-            ->orderBy('name')
-            ->get();
-
-        // Add total listings count to each category (includes descendants)
-        $categories->each(function($category) {
-            $category->listings_count = $category->total_listings_count;
+        // Get categories with children, listing counts, and top products
+        // Cache for 10 minutes to improve performance
+        $categories = Cache::remember('homepage_categories', 600, function() {
+            return $this->getCategoriesWithEnhancedData();
         });
 
         // Featured products (you can add a 'is_featured' column later)
@@ -63,11 +54,20 @@ class LandingController extends Controller
             ->take(10)
             ->get();
 
-        // Top selling
-        $topSelling = Listing::where('is_active', true)
-            ->with(['images', 'category'])
+        // Top selling - using subquery for order count
+        $topSelling = Listing::select('listings.*')
+            ->selectSub(function ($query) {
+                $query->selectRaw('COUNT(*)')
+                    ->from('order_items')
+                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
+                    ->whereColumn('order_items.listing_id', 'listings.id')
+                    ->where('orders.status', '!=', 'cancelled');
+            }, 'order_count')
+            ->where('is_active', true)
             ->where('stock', '>', 0)
-            ->inRandomOrder()
+            ->with(['images', 'category'])
+            ->orderByDesc('order_count')
+            ->orderByDesc('created_at')
             ->take(5)
             ->get();
 
@@ -96,105 +96,199 @@ class LandingController extends Controller
             'localProducts'
         ));
     }
+
+    /**
+     * Get categories with enhanced data including:
+     * - Total product count (including descendants)
+     * - Top 5 products in each category
+     * - Children with their own counts and top products
+     * - Sorted by product count (descending)
+     */
+    private function getCategoriesWithEnhancedData()
+    {
+        // Get all parent categories
+        $categories = Category::where('is_active', true)
+            ->whereNull('parent_id')
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true);
+                    }]);
+            }])
+            ->get();
+
+        // Enhance each category with counts and top products
+        $categories->each(function($category) {
+            $this->enhanceCategoryData($category);
+        });
+
+        // Sort by total listings count (descending) - categories with most products first
+        $sortedCategories = $categories->sortByDesc('listings_count')->values();
+
+        return $sortedCategories;
+    }
+
+    /**
+     * Enhance a category with listing count and top products
+     */
+    private function enhanceCategoryData($category)
+    {
+        // Get all descendant IDs for this category
+        $descendantIds = $this->getAllDescendantIds($category);
+        
+        // Get total listings count
+        $category->listings_count = Listing::whereIn('category_id', $descendantIds)
+            ->where('is_active', true)
+            ->count();
+
+        // Get direct listings count (only this category, not children)
+        $category->direct_listings_count = Listing::where('category_id', $category->id)
+            ->where('is_active', true)
+            ->count();
+
+        // Get top 5 products for this category (most viewed/recent)
+        $category->top_products = Listing::whereIn('category_id', $descendantIds)
+            ->where('is_active', true)
+            ->select('id', 'title', 'price')
+            ->orderByDesc('created_at')
+            ->take(5)
+            ->get();
+
+        // Process children recursively
+        if ($category->children && $category->children->count() > 0) {
+            $category->children->each(function($child) {
+                $this->enhanceCategoryData($child);
+            });
+
+            // Sort children by listings count
+            $category->children = $category->children->sortByDesc('listings_count')->values();
+        }
+    }
+
+    /**
+     * Get all descendant category IDs (including the category itself)
+     */
+    private function getAllDescendantIds($category)
+    {
+        $ids = [$category->id];
+        
+        if ($category->children) {
+            foreach ($category->children as $child) {
+                $ids = array_merge($ids, $this->getAllDescendantIds($child));
+            }
+        }
+        
+        return $ids;
+    }
+
+    /**
+     * Clear category cache (call this when categories or listings are updated)
+     */
+    public static function clearCategoryCache()
+    {
+        Cache::forget('homepage_categories');
+    }
+
     /**
      * Display vendor benefits page
      */
-public function vendorBenefits()
-{
-    $benefits = [
-        [
-            'icon' => 'fas fa-users',
-            'title' => 'Large Customer Base',
-            'description' => 'Access thousands of active buyers on our platform.'
-        ],
-        [
-            'icon' => 'fas fa-shield-alt',
-            'title' => 'Escrow Protection',
-            'description' => 'Secure payments with our escrow system.'
-        ],
-        [
-            'icon' => 'fas fa-plane',
-            'title' => 'Import Assistance',
-            'description' => 'We handle shipping and customs for imports.'
-        ],
-        [
-            'icon' => 'fas fa-chart-line',
-            'title' => 'Sales Analytics',
-            'description' => 'Detailed insights into your sales performance.'
-        ],
-        [
-            'icon' => 'fas fa-truck',
-            'title' => 'Logistics Support',
-            'description' => 'Warehousing and delivery services available.'
-        ],
-        [
-            'icon' => 'fas fa-headset',
-            'title' => '24/7 Support',
-            'description' => 'Dedicated support team for vendors.'
-        ],
-    ];
+    public function vendorBenefits()
+    {
+        $benefits = [
+            [
+                'icon' => 'fas fa-users',
+                'title' => 'Large Customer Base',
+                'description' => 'Access thousands of active buyers on our platform.'
+            ],
+            [
+                'icon' => 'fas fa-shield-alt',
+                'title' => 'Escrow Protection',
+                'description' => 'Secure payments with our escrow system.'
+            ],
+            [
+                'icon' => 'fas fa-plane',
+                'title' => 'Import Assistance',
+                'description' => 'We handle shipping and customs for imports.'
+            ],
+            [
+                'icon' => 'fas fa-chart-line',
+                'title' => 'Sales Analytics',
+                'description' => 'Detailed insights into your sales performance.'
+            ],
+            [
+                'icon' => 'fas fa-truck',
+                'title' => 'Logistics Support',
+                'description' => 'Warehousing and delivery services available.'
+            ],
+            [
+                'icon' => 'fas fa-headset',
+                'title' => '24/7 Support',
+                'description' => 'Dedicated support team for vendors.'
+            ],
+        ];
 
-    $stats = [
-        ['value' => '10,000+', 'label' => 'Active Buyers'],
-        ['value' => '95%', 'label' => 'Secure Transactions'],
-        ['value' => '24h', 'label' => 'Average Support Response'],
-        ['value' => '15%', 'label' => 'Average Commission'],
-    ];
+        $stats = [
+            ['value' => '10,000+', 'label' => 'Active Buyers'],
+            ['value' => '95%', 'label' => 'Secure Transactions'],
+            ['value' => '24h', 'label' => 'Average Support Response'],
+            ['value' => '15%', 'label' => 'Average Commission'],
+        ];
 
-    return view('site.vendor-benefits', compact('benefits', 'stats'));
-}
+        return view('site.vendor-benefits', compact('benefits', 'stats'));
+    }
 
 
-/**
- * Display FAQ page
- */
-public function faq()
-{
-    $faqs = [
-        [
-            'question' => 'What is ' . config('app.name') . '?',
-            'answer' => config('app.name') . ' is a secure online marketplace with escrow protection. We connect buyers and sellers while ensuring safe transactions through our escrow system.'
-        ],
-        [
-            'question' => 'How does escrow work?',
-            'answer' => 'When you buy a product, your payment is held securely in escrow. The seller ships your order, and you have time to inspect it. Once you confirm receipt, the payment is released to the seller.'
-        ],
-        [
-            'question' => 'How do I become a vendor?',
-            'answer' => 'Click "Become a Vendor" in the navigation menu or visit the vendor registration page. You\'ll need to provide business information, ID verification, and agree to our terms. Once approved, you can start listing products.'
-        ],
-        [
-            'question' => 'How long does shipping take?',
-            'answer' => 'Shipping times vary: Local products: 1-3 days, Imported products: 7-14 days. You\'ll receive tracking information once your order is shipped.'
-        ],
-        [
-            'question' => 'What payment methods do you accept?',
-            'answer' => 'We accept mobile money, credit/debit cards, and bank transfers. All payments are processed securely through our escrow system.'
-        ],
-        [
-            'question' => 'Can I return a product?',
-            'answer' => 'Yes, we have a 30-day return policy for most items. Products must be in original condition with packaging. Some items (perishable, custom-made) may not be returnable.'
-        ],
-        [
-            'question' => 'How do I track my order?',
-            'answer' => 'After your order ships, you\'ll receive a tracking number via email/SMS. You can also check order status in your account dashboard.'
-        ],
-        [
-            'question' => 'What if I don\'t receive my order?',
-            'answer' => 'If your order doesn\'t arrive within the estimated time, contact our support team. Since payments are held in escrow, you won\'t lose your money.'
-        ],
-        [
-            'question' => 'Are there any seller fees?',
-            'answer' => 'We charge a small commission on successful sales. There are no listing fees or monthly subscriptions. Detailed commission rates are available in the vendor dashboard.'
-        ],
-        [
-            'question' => 'How do I contact customer support?',
-            'answer' => 'You can reach us via: Email: support@' . parse_url(config('app.url'), PHP_URL_HOST) . ', Live Chat: Available on our website, Phone: +256 XXX XXX XXX'
-        ]
-    ];
-    
-    return view('site.faq', compact('faqs'));
-}
+    /**
+     * Display FAQ page
+     */
+    public function faq()
+    {
+        $faqs = [
+            [
+                'question' => 'What is ' . config('app.name') . '?',
+                'answer' => config('app.name') . ' is a secure online marketplace with escrow protection. We connect buyers and sellers while ensuring safe transactions through our escrow system.'
+            ],
+            [
+                'question' => 'How does escrow work?',
+                'answer' => 'When you buy a product, your payment is held securely in escrow. The seller ships your order, and you have time to inspect it. Once you confirm receipt, the payment is released to the seller.'
+            ],
+            [
+                'question' => 'How do I become a vendor?',
+                'answer' => 'Click "Become a Vendor" in the navigation menu or visit the vendor registration page. You\'ll need to provide business information, ID verification, and agree to our terms. Once approved, you can start listing products.'
+            ],
+            [
+                'question' => 'How long does shipping take?',
+                'answer' => 'Shipping times vary: Local products: 1-3 days, Imported products: 7-14 days. You\'ll receive tracking information once your order is shipped.'
+            ],
+            [
+                'question' => 'What payment methods do you accept?',
+                'answer' => 'We accept mobile money, credit/debit cards, and bank transfers. All payments are processed securely through our escrow system.'
+            ],
+            [
+                'question' => 'Can I return a product?',
+                'answer' => 'Yes, we have a 30-day return policy for most items. Products must be in original condition with packaging. Some items (perishable, custom-made) may not be returnable.'
+            ],
+            [
+                'question' => 'How do I track my order?',
+                'answer' => 'After your order ships, you\'ll receive a tracking number via email/SMS. You can also check order status in your account dashboard.'
+            ],
+            [
+                'question' => 'What if I don\'t receive my order?',
+                'answer' => 'If your order doesn\'t arrive within the estimated time, contact our support team. Since payments are held in escrow, you won\'t lose your money.'
+            ],
+            [
+                'question' => 'Are there any seller fees?',
+                'answer' => 'We charge a small commission on successful sales. There are no listing fees or monthly subscriptions. Detailed commission rates are available in the vendor dashboard.'
+            ],
+            [
+                'question' => 'How do I contact customer support?',
+                'answer' => 'You can reach us via: Email: support@' . parse_url(config('app.url'), PHP_URL_HOST) . ', Live Chat: Available on our website, Phone: +256 XXX XXX XXX'
+            ]
+        ];
+        
+        return view('site.faq', compact('faqs'));
+    }
+
     /**
      * Display how it works page
      */
@@ -219,10 +313,10 @@ public function faq()
         return view('site.how-it-works', compact('buyerSteps', 'vendorSteps'));
     }
 
-     /**
+    /**
      * Display contact page
      */
-   public function contact()
+    public function contact()
     {
         return view('site.contact');
     }
@@ -251,5 +345,29 @@ public function faq()
         ]);
 
         return back()->with('success', 'Thank you for your message. We will get back to you soon!');
+    }
+
+    /**
+     * Display about page
+     */
+    public function about()
+    {
+        return view('site.about');
+    }
+
+    /**
+     * Display terms page
+     */
+    public function terms()
+    {
+        return view('site.terms');
+    }
+
+    /**
+     * Display privacy page
+     */
+    public function privacy()
+    {
+        return view('site.privacy');
     }
 }

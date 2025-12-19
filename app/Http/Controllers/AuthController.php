@@ -147,34 +147,39 @@ class AuthController extends Controller
     }
 
     /**
-     * Handle admin login
-     */
-    public function adminLogin(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+ * Handle admin login
+ */
+public function adminLogin(Request $request)
+{
+    $credentials = $request->validate([
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        if (Auth::attempt($credentials)) {
-            $user = Auth::user();
-            
-            // Check if user is admin
-            if (!$user->isAdmin() && $user->role !== 'ceo') {
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => 'Access denied. Admin privileges required.',
-                ])->onlyInput('email');
-            }
-
-            $request->session()->regenerate();
-            return redirect()->route('admin.dashboard');
+    // Add role to credentials to ensure only admins can login
+    $credentials['role'] = 'admin';
+    
+    if (Auth::attempt($credentials)) {
+        $user = Auth::user();
+        
+        // Check if user is admin
+        if ($user->role !== 'admin' && $user->role !== 'ceo') {
+            Auth::logout();
+            return back()->withErrors([
+                'email' => 'Access denied. Admin privileges required.',
+            ])->onlyInput('email');
         }
 
-        return back()->withErrors([
-            'email' => 'Invalid credentials.',
-        ])->onlyInput('email');
+        $request->session()->regenerate();
+        
+        // Force redirect to admin dashboard
+        return redirect()->route('admin.dashboard')->with('success', 'Welcome back, Admin!');
     }
+
+    return back()->withErrors([
+        'email' => 'Invalid admin credentials.',
+    ])->onlyInput('email');
+}
 
     /**
      * Handle vendor login
@@ -322,30 +327,43 @@ class AuthController extends Controller
     
 
     /**
-     * Redirect user based on role
-     */
-    private function redirectBasedOnRole($user)
-    {
-        switch ($user->role) {
-            case 'admin':
-                return redirect()->route('admin.dashboard');
-            case 'vendor_local':
-            case 'vendor_international':
-                if ($user->vendorProfile && $user->vendorProfile->vetting_status === 'approved') {
+ * Redirect user based on role
+ */
+private function redirectBasedOnRole($user)
+{
+    switch ($user->role) {
+        case 'admin':
+            // Force admin to dashboard, not vendor status
+            return redirect()->route('admin.dashboard')->with('success', 'Welcome back, Admin!');
+            
+        case 'ceo':
+            return redirect()->route('ceo.dashboard');
+            
+        case 'vendor_local':
+        case 'vendor_international':
+            // Check if vendor has a profile and is approved
+            if ($user->vendorProfile) {
+                if ($user->vendorProfile->vetting_status === 'approved') {
                     return redirect()->route('vendor.dashboard');
                 } else {
-                    return redirect()->route('vendor.onboard.create');
+                    // Pending or rejected vendors go to status page
+                    return redirect()->route('vendor.onboard.status');
                 }
-            case 'logistics':
-                return redirect()->route('logistics.dashboard');
-            case 'finance':
-                return redirect()->route('finance.dashboard');
-            case 'ceo':
-                return redirect()->route('ceo.dashboard');
-            default: // buyer
-                return redirect()->intended('/');
-        }
+            } else {
+                // No vendor profile, go to onboarding
+                return redirect()->route('vendor.onboard.create');
+            }
+            
+        case 'logistics':
+            return redirect()->route('logistics.dashboard');
+            
+        case 'finance':
+            return redirect()->route('finance.dashboard');
+            
+        default: // buyer or any other role
+            return redirect()->intended('/');
     }
+}
 
     /**
      * Show forgot password form
