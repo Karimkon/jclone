@@ -116,31 +116,57 @@ Route::post('/register', function (Request $request) {
     ], 201);
 });
 
-// Categories for mobile
+// Categories for mobile - ONLY parent categories (parent_id IS NULL) with children nested
 Route::get('/categories', function () {
     try {
+        // IMPORTANT: Only fetch categories where parent_id IS NULL (top-level/main categories)
         $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->limit(20)
-            ->get(['id', 'name', 'slug', 'description', 'icon'])
+            ->whereNull('parent_id')  // ONLY parent categories
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->orderBy('order');
+            }])
+            ->orderBy('order')
+            ->get()
             ->map(function ($category) {
+                $listingsCount = $category->total_listings_count;
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => $category->slug,
                     'description' => $category->description,
                     'icon' => $category->icon ?? 'category',
+                    'parent_id' => null,  // Always null for parent categories
+                    'is_parent' => true,  // Explicit flag
+                    'listings_count' => $listingsCount,
+                    'children' => $category->children->map(function ($child) {
+                        return [
+                            'id' => $child->id,
+                            'name' => $child->name,
+                            'slug' => $child->slug,
+                            'description' => $child->description,
+                            'icon' => $child->icon ?? 'category',
+                            'parent_id' => $child->parent_id,
+                            'is_parent' => false,
+                            'listings_count' => $child->total_listings_count,
+                        ];
+                    })->values()->toArray(),
                 ];
-            });
+            })
+            ->sortByDesc('listings_count')
+            ->values();
 
         return response()->json([
             'success' => true,
             'data' => $categories,
+            'count' => $categories->count(),
+            'message' => 'Parent categories only (with children nested)',
         ]);
     } catch (\Exception $e) {
+        \Log::error('Categories API error: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => 'Failed to load categories',
+            'message' => 'Failed to load categories: ' . $e->getMessage(),
             'data' => []
         ], 500);
     }

@@ -691,15 +691,7 @@ main {
         </div>
         
         <div class="category-sidebar-container">
-            @php 
-            $catIcons = [
-                'fas fa-car', 'fas fa-laptop', 'fas fa-mobile-alt', 'fas fa-couch', 
-                'fas fa-tshirt', 'fas fa-blender', 'fas fa-futbol', 'fas fa-baby-carriage',
-                'fas fa-gem', 'fas fa-book', 'fas fa-pills', 'fas fa-gamepad',
-                'fas fa-utensils', 'fas fa-tools', 'fas fa-seedling', 'fas fa-bath'
-            ];
-            @endphp
-            
+           
             @foreach($categories->take(15) as $i => $cat)
             <div class="cat-sidebar-item">
                 <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
@@ -711,7 +703,7 @@ main {
                         </span>
                         
                         <!-- Category Icon -->
-                        <i class="{{ $catIcons[$i % count($catIcons)] }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
+                        <i class="fas fa-{{ $cat->icon ?? 'tag' }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
                         
                         <!-- Category Name -->
                         <span class="text-sm font-medium">{{ $cat->name }}</span>
@@ -2199,6 +2191,9 @@ function toggleSubcategoryProducts(toggleBtn) {
 <style>
     #chatWindow {
         animation: slideUp 0.3s ease-out;
+        /* Ensure the window doesn't overflow on small screens */
+        max-width: 95vw; 
+        max-height: 80vh;
     }
 
     #chatMessages {
@@ -2227,6 +2222,32 @@ function toggleSubcategoryProducts(toggleBtn) {
     .quick-question:hover {
         transform: translateY(-1px);
     }
+
+    /* MOBILE FIXES */
+@media (max-width: 768px) {
+    #chatWindow {
+        position: fixed;
+        bottom: 80px; /* Position above the mobile navigation bar if present */
+        right: 10px;
+        left: 10px;
+        width: auto !important;
+        height: 70vh !important;
+        max-width: none;
+        z-index: 9999;
+        border-radius: 1rem;
+    }
+
+    /* Adjust the message area height for mobile */
+    #chatMessages {
+        height: calc(100% - 130px) !important; 
+    }
+
+    /* Make the common question buttons easier to tap on mobile */
+    .quick-question {
+        padding: 10px !important;
+        font-size: 0.85rem !important;
+    }
+}
 
     @keyframes slideUp {
         from {

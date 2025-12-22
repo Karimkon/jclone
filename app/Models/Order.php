@@ -38,6 +38,8 @@ class Order extends Model
         'delivery_score' => 'decimal:2',
     ];
 
+    protected $appends = ['shipping_address'];
+
     public function items()
     {
         return $this->hasMany(OrderItem::class);
@@ -63,27 +65,20 @@ class Order extends Model
         return $this->hasOne(Escrow::class);
     }
 
-    // Add this method to get shipping address from meta
     public function getShippingAddressAttribute()
     {
         $meta = $this->meta ?? [];
         
-        // Check if we have shipping_address in meta
         if (isset($meta['shipping_address']) && is_array($meta['shipping_address'])) {
-            return (object) $meta['shipping_address'];
+            return $meta['shipping_address'];
         }
         
-        // Fallback: create a dummy object
-        return (object) [
+        // Fallback so the Flutter app doesn't crash on null
+        return [
             'recipient_name' => 'N/A',
             'recipient_phone' => 'N/A',
-            'address_line_1' => 'N/A',
-            'address_line_2' => '',
+            'address_line_1' => 'Address not available',
             'city' => 'N/A',
-            'state_region' => '',
-            'postal_code' => '',
-            'country' => 'N/A',
-            'delivery_instructions' => '',
             'full_address' => 'Address not available'
         ];
     }
