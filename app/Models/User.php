@@ -15,13 +15,63 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable; 
 
     protected $fillable = [
-        'name', 'phone', 'email', 'password', 'role', 'is_active', 'meta'
+        'name', 'phone', 'email', 'password', 'role', 'is_active', 'meta',
+        'otp_code', 'otp_expires_at', 'is_verified', 'google_id', 'avatar'
     ];
 
     protected $casts = [
         'meta' => 'array',
         'is_active' => 'boolean',
+        'is_verified' => 'boolean',
+        'otp_expires_at' => 'datetime',
     ];
+
+    protected $hidden = [
+        'password', 'otp_code', 'remember_token',
+    ];
+
+    /**
+     * Generate OTP code for email verification
+     */
+    public function generateOtp()
+    {
+        $this->otp_code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $this->otp_expires_at = now()->addMinutes(10); // OTP valid for 10 minutes
+        $this->save();
+
+        return $this->otp_code;
+    }
+
+    /**
+     * Verify OTP code
+     */
+    public function verifyOtp($code)
+    {
+        if ($this->otp_code !== $code) {
+            return false;
+        }
+
+        if ($this->otp_expires_at && $this->otp_expires_at->isPast()) {
+            return false;
+        }
+
+        // Clear OTP and mark as verified
+        $this->otp_code = null;
+        $this->otp_expires_at = null;
+        $this->is_verified = true;
+        $this->email_verified_at = now();
+        $this->save();
+
+        return true;
+    }
+
+    /**
+     * Check if OTP is expired
+     */
+    public function isOtpExpired()
+    {
+        return $this->otp_expires_at && $this->otp_expires_at->isPast();
+    }
 
     public function vendorProfile()
     {

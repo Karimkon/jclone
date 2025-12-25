@@ -364,6 +364,14 @@ class LandingController extends Controller
     }
 
     /**
+     * Display returns and refunds policy page
+     */
+    public function returns()
+    {
+        return view('site.returns');
+    }
+
+    /**
      * Display privacy page
      */
     public function privacy()

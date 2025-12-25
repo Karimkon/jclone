@@ -537,15 +537,25 @@ main {
                     <span>Free Shipping $50+</span>
                 </span>
             </div>
-            <div class="flex items-center gap-4">
-   <a href="/bebamart.apk" 
-   class="flex items-center gap-1.5 text-mint-400 hover:text-white transition font-medium" 
-   download="bebamart.apk">
-    <i class="fab fa-android text-xs"></i>
-    <span class="hidden sm:inline">Download App</span>
-</a>
+<div class="flex items-center gap-3">
+    <!-- App Download Buttons - More Visible -->
+    <div class="flex items-center gap-2">
+        <span class="hidden lg:inline text-ink-400 text-xs">Get the App:</span>
+        <a href="/bebamart.apk" 
+           class="flex items-center gap-1.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-1.5 rounded-full transition font-medium text-xs shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-105 transform" 
+           download="bebamart.apk">
+            <i class="fab fa-android text-sm"></i>
+            <span class="hidden sm:inline">Android</span>
+        </a>
+        <a href="#" 
+           class="flex items-center gap-1.5 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white px-3 py-1.5 rounded-full transition font-medium text-xs shadow-lg shadow-gray-500/25 hover:shadow-gray-500/40 hover:scale-105 transform"
+           id="iosDownloadBtn">
+            <i class="fab fa-apple text-sm"></i>
+            <span class="hidden sm:inline">iOS</span>
+        </a>
+    </div>
     
-    <span class="text-ink-600">|</span>
+    <span class="text-ink-700 hidden sm:inline">|</span>
     
     <a href="{{ route('vendor.onboard.create') }}" class="hover:text-brand-300 transition">
         <i class="fas fa-store text-xs mr-1"></i>
@@ -1206,7 +1216,7 @@ main {
                     <li><a href="{{ route('site.faq') }}" class="text-ink-400 hover:text-white transition">FAQ</a></li>
                     <li><a href="#" class="text-ink-400 hover:text-white transition">Help Center</a></li>
                     <li><a href="#" class="text-ink-400 hover:text-white transition">Shipping Info</a></li>
-                    <li><a href="#" class="text-ink-400 hover:text-white transition">Returns & Refunds</a></li>
+                    <li><a href="{{ route('site.returns') }}" class="text-ink-400 hover:text-white transition">Returns & Refunds</a></li>
                 </ul>
             </div>
             

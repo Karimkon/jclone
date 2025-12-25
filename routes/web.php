@@ -53,6 +53,65 @@ Route::get('/marketplace/{listing}', [ListingController::class, 'showPublic'])->
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::get('/categories/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
 
+// Account Deletion Request (Google Play Store requirement)
+Route::get('/delete-account', function () {
+    return view('auth.delete-account');
+})->name('delete-account');
+
+Route::post('/delete-account', function (\Illuminate\Http\Request $request) {
+    $request->validate([
+        'email' => 'required|email',
+        'confirm' => 'required|accepted',
+    ]);
+
+    $user = \App\Models\User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return back()->with('error', 'No account found with this email address.');
+    }
+
+    // Check if there's already a pending deletion request
+    $existingRequest = \DB::table('account_deletion_requests')
+        ->where('user_id', $user->id)
+        ->where('status', 'pending')
+        ->first();
+
+    if ($existingRequest) {
+        return back()->with('error', 'A deletion request is already pending for this account. You will receive an email once processed.');
+    }
+
+    // Create deletion request
+    \DB::table('account_deletion_requests')->insert([
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'reason' => $request->reason,
+        'comments' => $request->comments,
+        'status' => 'pending',
+        'requested_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    // Send confirmation email
+    try {
+        \Mail::raw(
+            "Dear {$user->name},\n\n" .
+            "We have received your request to delete your BebaMart account.\n\n" .
+            "Your request will be processed within 30 days. You will receive a confirmation email once your account and data have been deleted.\n\n" .
+            "If you did not make this request, please contact us immediately at support@bebamart.com.\n\n" .
+            "Thank you for using BebaMart.\n\n" .
+            "Best regards,\nThe BebaMart Team",
+            function ($message) use ($user) {
+                $message->to($user->email)
+                    ->subject('BebaMart - Account Deletion Request Received');
+            }
+        );
+    } catch (\Exception $e) {
+        \Log::error('Failed to send deletion confirmation email: ' . $e->getMessage());
+    }
+
+    return back()->with('success', 'Your account deletion request has been submitted. You will receive an email confirmation shortly. Your account will be deleted within 30 days.');
+})->name('delete-account.request');
 
 // Jobs
 Route::prefix('jobs')->name('jobs.')->group(function () {
@@ -188,6 +247,7 @@ Route::get('/terms', [LandingController::class, 'terms'])->name('site.terms');
 Route::get('/privacy', [LandingController::class, 'privacy'])->name('site.privacy');
 Route::get('/vendor-benefits', [LandingController::class, 'vendorBenefits'])->name('site.vendorBenefits');
 Route::get('/how-it-works', [LandingController::class, 'howItWorks'])->name('site.howItWorks');
+Route::get('/returns-policy', [LandingController::class, 'returns'])->name('site.returns');
 
 
 // ====================
