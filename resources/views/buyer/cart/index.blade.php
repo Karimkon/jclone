@@ -3,8 +3,8 @@
 @section('title', 'Shopping Cart - ' . config('app.name'))
 
 @section('content')
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8">Shopping Cart</h1>
+<div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8 pb-20 sm:pb-8">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-8">Shopping Cart</h1>
     
     @if(session('success'))
     <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
@@ -19,18 +19,18 @@
     @endif
     
     @if($cart && !empty($cart->items))
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
         <!-- Cart Items -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow overflow-hidden">
-                <div class="p-6 border-b bg-gray-50">
+                <div class="p-3 sm:p-6 border-b bg-gray-50">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold">Cart Items ({{ $cart->item_count }})</h2>
+                        <h2 class="text-base sm:text-xl font-bold">Cart Items ({{ $cart->item_count }})</h2>
                         <form action="{{ route('buyer.cart.clear') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear your cart?')">
                             @csrf
                             @method('POST')
-                            <button type="submit" class="text-red-600 hover:text-red-800 text-sm font-medium">
-                                <i class="fas fa-trash mr-1"></i> Clear Cart
+                            <button type="submit" class="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium">
+                                <i class="fas fa-trash mr-1"></i> <span class="hidden sm:inline">Clear Cart</span><span class="sm:hidden">Clear</span>
                             </button>
                         </form>
                     </div>
@@ -58,27 +58,42 @@
     $unitPrice = $item['unit_price'] ?? ($variant['display_price'] ?? ($variant['price'] ?? 0));
 @endphp
 
-<div class="p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}" data-item-key="{{ $itemKey }}">
-    <div class="flex space-x-4">
-        <!-- Product Image -->
-        <div class="w-24 h-24 flex-shrink-0">
-            @if($item['image'])
-            <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}" 
-                 class="w-full h-full object-cover rounded-lg">
-            @elseif(isset($item['listing']['images'][0]))
-            <img src="{{ asset('storage/' . $item['listing']['images'][0]['path']) }}" 
-                 alt="{{ $item['title'] }}" 
-                 class="w-full h-full object-cover rounded-lg">
-            @else
-            <div class="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
-                <i class="fas fa-image text-gray-400 text-2xl"></i>
+<div class="p-3 sm:p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}" data-item-key="{{ $itemKey }}">
+    <div class="flex flex-col sm:flex-row sm:space-x-4">
+        <!-- Product Image & Remove (Mobile: side by side, Desktop: image only) -->
+        <div class="flex items-start gap-3 sm:block mb-3 sm:mb-0">
+            <div class="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
+                @if($item['image'])
+                <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}"
+                     class="w-full h-full object-cover rounded-lg">
+                @elseif(isset($item['listing']['images'][0]))
+                <img src="{{ asset('storage/' . $item['listing']['images'][0]['path']) }}"
+                     alt="{{ $item['title'] }}"
+                     class="w-full h-full object-cover rounded-lg">
+                @else
+                <div class="w-full h-full bg-gray-200 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-image text-gray-400 text-xl"></i>
+                </div>
+                @endif
             </div>
-            @endif
+            <!-- Mobile: Title next to image -->
+            <div class="flex-1 sm:hidden">
+                <h3 class="font-bold text-sm leading-tight mb-1">{{ $item['title'] }}</h3>
+                <p class="text-xs text-gray-600 mb-1">
+                    <i class="fas fa-store mr-1"></i> {{ $item['vendor_name'] ?? ($item['listing']['vendor']['business_name'] ?? 'Vendor') }}
+                </p>
+                <div class="text-sm font-bold text-blue-600">UGX {{ number_format($unitPrice, 0) }}</div>
+            </div>
+            <!-- Mobile remove button -->
+            <button onclick="removeFromCart({{ $item['listing_id'] }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
+                    class="sm:hidden text-red-500 p-1">
+                <i class="fas fa-trash text-lg"></i>
+            </button>
         </div>
-        
-        <!-- Product Details -->
+
+        <!-- Product Details (Desktop) -->
         <div class="flex-1">
-            <div class="flex justify-between">
+            <div class="hidden sm:flex justify-between">
                 <div>
                     <h3 class="font-bold text-lg mb-1">{{ $item['title'] }}</h3>
                     <p class="text-sm text-gray-600 mb-2">
@@ -133,40 +148,52 @@
                 </button>
             </div>
             
+            <!-- Mobile: Variations display -->
+            @if(($variant || $displayColor || $displaySize) && ($displayColor || $displaySize))
+            <div class="sm:hidden flex flex-wrap gap-2 mb-3">
+                @if($displayColor)
+                <span class="px-2 py-1 bg-gray-100 rounded text-xs"><strong>Color:</strong> {{ $displayColor }}</span>
+                @endif
+                @if($displaySize)
+                <span class="px-2 py-1 bg-gray-100 rounded text-xs"><strong>Size:</strong> {{ $displaySize }}</span>
+                @endif
+            </div>
+            @endif
+
             <!-- Quantity and Price -->
-            <div class="mt-4 flex items-center justify-between">
-                <div class="flex items-center space-x-3">
-                    <span class="text-sm text-gray-600">Quantity:</span>
+            <div class="mt-2 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div class="flex items-center justify-between sm:justify-start sm:space-x-3">
+                    <span class="text-sm text-gray-600">Qty:</span>
                     <div class="flex items-center border border-gray-300 rounded-lg">
-                        <button type="button" 
+                        <button type="button"
                                 onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] - 1 }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
-                                class="px-3 py-1 hover:bg-gray-100"
+                                class="px-2 sm:px-3 py-1 hover:bg-gray-100"
                                 {{ $item['quantity'] <= 1 ? 'disabled' : '' }}>
-                            <i class="fas fa-minus text-sm"></i>
+                            <i class="fas fa-minus text-xs sm:text-sm"></i>
                         </button>
-                        <input type="number" 
+                        <input type="number"
                                id="qty-{{ $itemKey }}"
-                               value="{{ $item['quantity'] }}" 
-                               min="1" 
+                               value="{{ $item['quantity'] }}"
+                               min="1"
                                max="{{ $stock }}"
-                               class="w-16 text-center border-0 focus:ring-0 py-1"
+                               class="w-12 sm:w-16 text-center border-0 focus:ring-0 py-1 text-sm"
                                onchange="updateQuantity({{ $item['listing_id'] }}, this.value, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')">
-                        <button type="button" 
+                        <button type="button"
                                 onclick="updateQuantity({{ $item['listing_id'] }}, {{ $item['quantity'] + 1 }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
-                                class="px-3 py-1 hover:bg-gray-100"
+                                class="px-2 sm:px-3 py-1 hover:bg-gray-100"
                                 {{ $item['quantity'] >= $stock ? 'disabled' : '' }}>
-                            <i class="fas fa-plus text-sm"></i>
+                            <i class="fas fa-plus text-xs sm:text-sm"></i>
                         </button>
                     </div>
                     @if($stock)
-                    <span class="text-xs text-gray-500">({{ $stock }} available)</span>
+                    <span class="text-xs text-gray-500 hidden sm:inline">({{ $stock }} available)</span>
                     @endif
                 </div>
-                
-                <div class="text-right">
-                    <div class="text-sm text-gray-600">UGX {{ number_format($unitPrice, 2) }} each</div>
-                    <div class="text-lg font-bold text-primary item-total" id="total-{{ $itemKey }}">
-                        UGX {{ number_format($item['total'] ?? ($unitPrice * $item['quantity']), 2) }}
+
+                <div class="flex items-center justify-between sm:block sm:text-right border-t sm:border-0 pt-2 sm:pt-0">
+                    <div class="text-xs sm:text-sm text-gray-600">UGX {{ number_format($unitPrice, 0) }} each</div>
+                    <div class="text-base sm:text-lg font-bold text-primary item-total" id="total-{{ $itemKey }}">
+                        UGX {{ number_format($item['total'] ?? ($unitPrice * $item['quantity']), 0) }}
                     </div>
                 </div>
             </div>
@@ -182,42 +209,42 @@
         
         <!-- Order Summary -->
 <div class="lg:col-span-1">
-    <div class="bg-white rounded-lg shadow p-6 sticky top-4">
-        <h2 class="text-xl font-bold mb-4">Order Summary</h2>
-        
-        <div class="space-y-3 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 sm:p-6 sticky top-4">
+        <h2 class="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Order Summary</h2>
+
+        <div class="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
             <div class="flex justify-between text-gray-600">
                 <span>Subtotal</span>
-                <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 2) }}</span>
+                <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 0) }}</span>
             </div>
             <div class="flex justify-between text-gray-600">
                 <span>Shipping</span>
-                <span id="cart-shipping">UGX {{ number_format($cart->shipping, 2) }}</span>
+                <span id="cart-shipping">UGX {{ number_format($cart->shipping, 0) }}</span>
             </div>
             <div class="flex justify-between text-gray-600">
                 <span>Tax (18%)</span>
-                <span id="cart-tax">UGX {{ number_format($cart->tax, 2) }}</span>
+                <span id="cart-tax">UGX {{ number_format($cart->tax, 0) }}</span>
             </div>
-            <div class="pt-3 border-t">
-                <div class="flex justify-between font-bold text-lg">
+            <div class="pt-2 sm:pt-3 border-t">
+                <div class="flex justify-between font-bold text-base sm:text-lg">
                     <span>Total</span>
-                    <span class="text-primary" id="cart-total">UGX {{ number_format($cart->total, 2) }}</span>
+                    <span class="text-primary" id="cart-total">UGX {{ number_format($cart->total, 0) }}</span>
                 </div>
             </div>
         </div>
-        
-        <a href="{{ route('buyer.orders.checkout') }}" 
-           class="block w-full text-white text-center py-3 rounded-lg font-bold transition mb-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+
+        <a href="{{ route('buyer.orders.checkout') }}"
+           class="block w-full text-white text-center py-2.5 sm:py-3 rounded-lg font-bold transition mb-2 sm:mb-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
            style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;">
             <i class="fas fa-lock mr-2"></i> Proceed to Checkout
         </a>
-        
-        <a href="{{ route('marketplace.index') }}" 
-           class="block w-full text-center py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-semibold">
+
+        <a href="{{ route('marketplace.index') }}"
+           class="block w-full text-center py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-semibold text-sm sm:text-base">
             <i class="fas fa-shopping-bag mr-2"></i> Continue Shopping
         </a>
-        
-        <div class="mt-6 pt-6 border-t">
+
+        <div class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t hidden sm:block">
             <div class="flex items-start space-x-2 text-sm text-gray-600">
                 <i class="fas fa-shield-alt text-green-600 mt-1"></i>
                 <div>
@@ -231,14 +258,14 @@
     
     @else
     <!-- Empty Cart -->
-    <div class="bg-white rounded-lg shadow p-12 text-center">
-        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
-            <i class="fas fa-shopping-cart text-gray-400 text-4xl"></i>
+    <div class="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
+        <div class="mx-auto w-16 h-16 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4 sm:mb-6">
+            <i class="fas fa-shopping-cart text-gray-400 text-2xl sm:text-4xl"></i>
         </div>
-        <h2 class="text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
-        <p class="text-gray-600 mb-6">Add some products to get started!</p>
-        <a href="{{ route('marketplace.index') }}" 
-           class="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
+        <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Your cart is empty</h2>
+        <p class="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">Add some products to get started!</p>
+        <a href="{{ route('marketplace.index') }}"
+           class="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 bg-primary text-white rounded-lg font-semibold hover:bg-indigo-700 transition text-sm sm:text-base">
             <i class="fas fa-shopping-bag mr-2"></i> Start Shopping
         </a>
     </div>
@@ -277,10 +304,7 @@ function updateQuantity(listingId, quantity, variantId = null, color = null, siz
             // Update item total
             const itemTotalElement = document.getElementById(`total-${itemKey}`);
             if (itemTotalElement) {
-                itemTotalElement.textContent = 'UGX ' + data.item_total.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                });
+                itemTotalElement.textContent = 'UGX ' + Math.round(data.item_total).toLocaleString('en-US');
             }
             
             // Update cart summary
@@ -369,40 +393,28 @@ function updateCartSummary(data) {
     if (data.subtotal !== undefined) {
         const subtotalElement = document.getElementById('cart-subtotal');
         if (subtotalElement) {
-            subtotalElement.textContent = 'UGX ' + data.subtotal.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            subtotalElement.textContent = 'UGX ' + Math.round(data.subtotal).toLocaleString('en-US');
         }
     }
-    
+
     if (data.shipping !== undefined) {
         const shippingElement = document.getElementById('cart-shipping');
         if (shippingElement) {
-            shippingElement.textContent = 'UGX ' + data.shipping.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            shippingElement.textContent = 'UGX ' + Math.round(data.shipping).toLocaleString('en-US');
         }
     }
-    
+
     if (data.tax !== undefined) {
         const taxElement = document.getElementById('cart-tax');
         if (taxElement) {
-            taxElement.textContent = 'UGX ' + data.tax.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            taxElement.textContent = 'UGX ' + Math.round(data.tax).toLocaleString('en-US');
         }
     }
-    
+
     if (data.cart_total !== undefined) {
         const totalElement = document.getElementById('cart-total');
         if (totalElement) {
-            totalElement.textContent = 'UGX ' + data.cart_total.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
+            totalElement.textContent = 'UGX ' + Math.round(data.cart_total).toLocaleString('en-US');
         }
     }
 }

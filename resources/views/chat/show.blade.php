@@ -7,9 +7,16 @@
 <style>
     .chat-container {
         height: calc(100vh - 200px);
-        min-height: 500px;
+        min-height: 400px;
         display: flex;
         flex-direction: column;
+    }
+
+    @media (max-width: 768px) {
+        .chat-container {
+            height: calc(100vh - 180px);
+            min-height: 300px;
+        }
     }
     
     .messages-area {

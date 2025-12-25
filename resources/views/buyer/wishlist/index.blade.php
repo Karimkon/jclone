@@ -102,18 +102,18 @@
                 <!-- Price -->
                 <div class="mb-4">
                     <div class="text-2xl font-bold text-primary">
-                        ${{ number_format($item->listing->price, 2) }}
+                        UGX {{ number_format($item->listing->price, 2) }}
                     </div>
                     @if(isset($item->meta['price_when_added']) && $item->meta['price_when_added'] != $item->listing->price)
                         @if($item->listing->price < $item->meta['price_when_added'])
                         <div class="text-xs text-green-600">
                             <i class="fas fa-arrow-down mr-1"></i>
-                            Price decreased by ${{ number_format($item->meta['price_when_added'] - $item->listing->price, 2) }}
+                            Price decreased by UGX {{ number_format($item->meta['price_when_added'] - $item->listing->price, 2) }}
                         </div>
                         @else
                         <div class="text-xs text-red-600">
                             <i class="fas fa-arrow-up mr-1"></i>
-                            Price increased by ${{ number_format($item->listing->price - $item->meta['price_when_added'], 2) }}
+                            Price increased by UGX {{ number_format($item->listing->price - $item->meta['price_when_added'], 2) }}
                         </div>
                         @endif
                     @endif

@@ -6,10 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Buyer Dashboard - BebaMart')</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
     <style>
         .buyer-sidebar {
             width: 240px;
@@ -20,15 +20,18 @@
             left: 0;
             top: 0;
             overflow-y: auto;
+            z-index: 50;
+            transition: transform 0.3s ease;
         }
-        
+
         .buyer-content {
             margin-left: 240px;
             padding: 20px;
             min-height: 100vh;
             background: #f8fafc;
+            padding-bottom: 80px;
         }
-        
+
         .nav-section-title {
             font-size: 11px;
             text-transform: uppercase;
@@ -37,7 +40,7 @@
             padding: 12px 20px 6px;
             margin-top: 8px;
         }
-        
+
         .nav-item {
             display: flex;
             align-items: center;
@@ -45,17 +48,17 @@
             transition: all 0.2s;
             border-left: 3px solid transparent;
         }
-        
+
         .nav-item:hover {
             background: rgba(255,255,255,0.1);
             border-left-color: rgba(255,255,255,0.5);
         }
-        
+
         .nav-item.active {
             background: rgba(255,255,255,0.15);
             border-left-color: #fff;
         }
-        
+
         .nav-badge {
             margin-left: auto;
             min-width: 20px;
@@ -68,21 +71,162 @@
             align-items: center;
             justify-content: center;
         }
-        
+
         .wallet-badge {
             background: linear-gradient(135deg, #10b981, #059669);
         }
-        
+
+        /* Mobile sidebar overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 40;
+        }
+
+        /* Mobile bottom navigation */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 30;
+            padding: 8px 0;
+            padding-bottom: env(safe-area-inset-bottom, 8px);
+        }
+
+        .mobile-bottom-nav a {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 4px;
+            color: #6b7280;
+            font-size: 10px;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .mobile-bottom-nav a.active {
+            color: #1e40af;
+        }
+
+        .mobile-bottom-nav a i {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        .mobile-bottom-nav .nav-badge-mobile {
+            position: absolute;
+            top: 2px;
+            right: 50%;
+            transform: translateX(12px);
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #ef4444;
+            color: white;
+        }
+
+        /* Mobile header */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 35;
+            padding: 12px 16px;
+        }
+
         @media (max-width: 768px) {
-            .buyer-sidebar { width: 100%; height: auto; position: relative; }
-            .buyer-content { margin-left: 0; }
+            .buyer-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .buyer-sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.open {
+                display: block;
+            }
+
+            .buyer-content {
+                margin-left: 0;
+                padding: 16px;
+                padding-top: 70px;
+                padding-bottom: 90px;
+            }
+
+            .mobile-bottom-nav {
+                display: flex;
+            }
+
+            .mobile-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .desktop-header {
+                display: none;
+            }
         }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+        <button onclick="toggleSidebar()" class="p-2 text-gray-600 hover:text-blue-600">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+
+        <a href="{{ route('buyer.dashboard') }}" class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <i class="fas fa-shopping-bag text-white text-sm"></i>
+            </div>
+            <span class="font-bold text-gray-800">BebaMart</span>
+        </a>
+
+        <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-gray-600 hover:text-blue-600">
+            <i class="fas fa-shopping-cart text-xl"></i>
+            @php $cartCount = Auth::user()->cart ? count(Auth::user()->cart->items ?? []) : 0; @endphp
+            @if($cartCount > 0)
+            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center cart-count">
+                {{ $cartCount }}
+            </span>
+            @endif
+        </a>
+    </div>
+
+    <!-- Sidebar Overlay -->
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        <div class="buyer-sidebar">
+        <div class="buyer-sidebar" id="sidebar">
+            <!-- Close button for mobile -->
+            <button onclick="toggleSidebar()" class="md:hidden absolute top-4 right-4 text-white p-2">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+
             <!-- Header -->
             <div class="p-5 border-b border-blue-800">
                 <div class="flex items-center gap-3">
@@ -95,7 +239,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- User Info & Wallet -->
             <div class="p-4 border-b border-blue-800">
                 <div class="flex items-center gap-3 mb-3">
@@ -107,7 +251,7 @@
                         <div class="text-xs opacity-75">Buyer Account</div>
                     </div>
                 </div>
-                
+
                 @php
                     $wallet = Auth::user()->buyerWallet;
                     $balance = $wallet ? $wallet->balance : 0;
@@ -118,47 +262,46 @@
                     <a href="{{ route('buyer.wallet.index') }}" class="text-xs hover:underline">Add Funds →</a>
                 </div>
             </div>
-            
+
             <!-- Navigation -->
             <nav class="py-4">
                 <a href="{{ route('buyer.dashboard') }}" class="nav-item {{ request()->routeIs('buyer.dashboard') ? 'active' : '' }}">
                     <i class="fas fa-tachometer-alt w-5 mr-3"></i> Dashboard
                 </a>
-                
+
                 <a href="{{ route('marketplace.index') }}" class="nav-item">
                     <i class="fas fa-store w-5 mr-3"></i> Marketplace
                 </a>
-                
+
                 <!-- Shopping Section -->
                 <div class="nav-section-title">Shopping</div>
-                
+
                 <a href="{{ route('buyer.cart.index') }}" class="nav-item {{ request()->routeIs('buyer.cart.*') ? 'active' : '' }}">
                     <i class="fas fa-shopping-cart w-5 mr-3"></i> Cart
-                    @php $cartCount = Auth::user()->cart ? count(Auth::user()->cart->items ?? []) : 0; @endphp
                     @if($cartCount > 0)
                     <span class="nav-badge bg-red-500">{{ $cartCount }}</span>
                     @endif
                 </a>
-                
+
                 <a href="{{ route('buyer.orders.index') }}" class="nav-item {{ request()->routeIs('buyer.orders.*') ? 'active' : '' }}">
                     <i class="fas fa-shopping-bag w-5 mr-3"></i> My Orders
                 </a>
-                
+
                 <a href="{{ route('buyer.wishlist.index') }}" class="nav-item {{ request()->routeIs('buyer.wishlist.*') ? 'active' : '' }}">
                     <i class="fas fa-heart w-5 mr-3"></i> Wishlist
                 </a>
-                
+
                 <!-- Jobs & Services Section -->
                 <div class="nav-section-title">Jobs & Services</div>
-                
+
                 <a href="{{ route('jobs.index') }}" class="nav-item {{ request()->is('jobs') ? 'active' : '' }}">
                     <i class="fas fa-briefcase w-5 mr-3"></i> Browse Jobs
                 </a>
-                
+
                 <a href="{{ route('services.index') }}" class="nav-item {{ request()->is('services') ? 'active' : '' }}">
                     <i class="fas fa-tools w-5 mr-3"></i> Browse Services
                 </a>
-                
+
                 <a href="{{ route('buyer.applications.index') }}" class="nav-item {{ request()->is('buyer/my-applications*') ? 'active' : '' }}">
                     <i class="fas fa-file-alt w-5 mr-3"></i> My Applications
                     @php
@@ -169,7 +312,7 @@
                     <span class="nav-badge bg-blue-500">{{ $activeApps }}</span>
                     @endif
                 </a>
-                
+
                 <a href="{{ route('buyer.service-requests.index') }}" class="nav-item {{ request()->is('buyer/service-requests*') ? 'active' : '' }}">
                     <i class="fas fa-clipboard-list w-5 mr-3"></i> Service Requests
                     @php
@@ -180,39 +323,39 @@
                     <span class="nav-badge bg-green-500">{{ $activeRequests }}</span>
                     @endif
                 </a>
-                
+
                 <!-- Account Section -->
                 <div class="nav-section-title">Account</div>
-                
+
                 <a href="{{ route('chat.index') }}" class="nav-item {{ request()->is('chat*') ? 'active' : '' }}">
                     <i class="fas fa-comments w-5 mr-3"></i> Messages
                     <span id="chatBadge" class="nav-badge bg-red-500 hidden">0</span>
                 </a>
-                
+
                 <a href="{{ route('buyer.wallet.index') }}" class="nav-item {{ request()->routeIs('buyer.wallet.*') ? 'active' : '' }}">
                     <i class="fas fa-wallet w-5 mr-3"></i> Wallet
                 </a>
-                
+
                 <a href="{{ route('buyer.disputes.index') }}" class="nav-item {{ request()->routeIs('buyer.disputes.*') ? 'active' : '' }}">
                     <i class="fas fa-exclamation-triangle w-5 mr-3"></i> Disputes
                 </a>
-                
+
                 <a href="{{ route('buyer.profile') }}" class="nav-item {{ request()->routeIs('buyer.profile') ? 'active' : '' }}">
                     <i class="fas fa-user-circle w-5 mr-3"></i> Profile
                 </a>
-                
+
                 <!-- Quick Links -->
                 <div class="nav-section-title">Quick Links</div>
-                
+
                 <a href="{{ route('categories.index') }}" class="nav-item text-sm">
                     <i class="fas fa-tags w-5 mr-3"></i> Categories
                 </a>
-                
+
                 <a href="{{ route('vendor.onboard.create') }}" class="nav-item text-sm">
                     <i class="fas fa-store-alt w-5 mr-3"></i> Become a Seller
                 </a>
             </nav>
-            
+
             <!-- Footer -->
             <div class="p-4 border-t border-blue-800 mt-auto">
                 <form action="{{ route('logout') }}" method="POST">
@@ -223,32 +366,32 @@
                 </form>
             </div>
         </div>
-        
+
         <!-- Main Content -->
         <div class="buyer-content flex-1">
-            <!-- Top Bar -->
-            <header class="bg-white shadow-sm rounded-lg mb-6 p-4">
+            <!-- Desktop Top Bar -->
+            <header class="desktop-header bg-white shadow-sm rounded-lg mb-6 p-4">
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="text-xl font-bold text-gray-800">@yield('page_title', 'Dashboard')</h1>
                         <p class="text-sm text-gray-600">@yield('page_description', '')</p>
                     </div>
-                    
+
                     <div class="flex items-center gap-4">
                         <!-- Search -->
                         <form action="{{ route('marketplace.index') }}" method="GET" class="flex">
-                            <input type="text" name="search" placeholder="Search products..." 
+                            <input type="text" name="search" placeholder="Search products..."
                                    class="px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64 text-sm">
                             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700">
                                 <i class="fas fa-search"></i>
                             </button>
                         </form>
-                        
+
                         <!-- Quick Cart -->
                         <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-gray-600 hover:text-blue-600">
                             <i class="fas fa-shopping-cart text-xl"></i>
                             @if($cartCount > 0)
-                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center cart-count">
                                 {{ $cartCount }}
                             </span>
                             @endif
@@ -256,26 +399,26 @@
                     </div>
                 </div>
             </header>
-            
+
             <!-- Alerts -->
             @if(session('success'))
             <div class="mb-6 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
                 {{ session('success') }}
             </div>
             @endif
-            
+
             @if(session('error'))
             <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 {{ session('error') }}
             </div>
             @endif
-            
+
             @if(session('info'))
             <div class="mb-6 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded">
                 {{ session('info') }}
             </div>
             @endif
-            
+
             @if($errors->any())
             <div class="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                 <ul class="list-disc list-inside">
@@ -285,13 +428,65 @@
                 </ul>
             </div>
             @endif
-            
+
             <!-- Page Content -->
             @yield('content')
         </div>
     </div>
-    
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+        <a href="{{ route('buyer.dashboard') }}" class="{{ request()->routeIs('buyer.dashboard') ? 'active' : '' }}">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="{{ route('marketplace.index') }}" class="{{ request()->routeIs('marketplace.*') ? 'active' : '' }}">
+            <i class="fas fa-store"></i>
+            <span>Shop</span>
+        </a>
+        <a href="{{ route('buyer.cart.index') }}" class="relative {{ request()->routeIs('buyer.cart.*') ? 'active' : '' }}">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+            @if($cartCount > 0)
+            <span class="nav-badge-mobile cart-count">{{ $cartCount }}</span>
+            @endif
+        </a>
+        <a href="{{ route('buyer.wishlist.index') }}" class="{{ request()->routeIs('buyer.wishlist.*') ? 'active' : '' }}">
+            <i class="fas fa-heart"></i>
+            <span>Wishlist</span>
+        </a>
+        <a href="{{ route('buyer.orders.index') }}" class="{{ request()->routeIs('buyer.orders.*') ? 'active' : '' }}">
+            <i class="fas fa-shopping-bag"></i>
+            <span>Orders</span>
+        </a>
+        <a href="{{ route('buyer.profile') }}" class="{{ request()->routeIs('buyer.profile') ? 'active' : '' }}">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </nav>
+
     <script>
+    // Toggle sidebar
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.querySelector('.sidebar-overlay');
+
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+
+        // Prevent body scroll when sidebar is open
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+
+    // Close sidebar when clicking a link (mobile)
+    document.querySelectorAll('.buyer-sidebar .nav-item').forEach(link => {
+        link.addEventListener('click', function() {
+            if (window.innerWidth <= 768) {
+                toggleSidebar();
+            }
+        });
+    });
+
     document.addEventListener('DOMContentLoaded', function() {
         updateChatBadge();
         setInterval(updateChatBadge, 30000);
@@ -317,7 +512,7 @@
         }
     }
     </script>
-    
+
     @yield('scripts')
     @stack('scripts')
 </body>
