@@ -68,4 +68,19 @@ return [
         'notification_id' => env('PESAPAL_NOTIFICATION_ID'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | EgoSMS Configuration (SMS OTP Verification)
+    |--------------------------------------------------------------------------
+    |
+    | EgoSMS is used for sending SMS OTP codes for phone verification.
+    | Get your credentials from: https://www.egosms.co
+    |
+    */
+    'egosms' => [
+        'username' => env('EGOSMS_USERNAME'),
+        'password' => env('EGOSMS_PASSWORD'),
+        'sender_id' => env('EGOSMS_SENDER_ID', 'BEBAMART'),
+    ],
+
 ];

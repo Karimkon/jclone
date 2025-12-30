@@ -88,7 +88,7 @@ Route::post('/register', function (Request $request) {
         'name' => 'required|string|max:255',
         'email' => 'required|string|email|max:255|unique:users',
         'password' => 'required|string|min:8|confirmed',
-        'phone' => 'nullable|string|max:20',
+        'phone' => 'required|string|max:20',
         'role' => 'nullable|in:buyer,vendor_local,vendor_international',
     ]);
 
@@ -96,19 +96,34 @@ Route::post('/register', function (Request $request) {
         'name' => $request->name,
         'email' => $request->email,
         'password' => Hash::make($request->password),
-        'phone' => $request->phone ?? '',
+        'phone' => $request->phone,
         'role' => $request->role ?? 'buyer',
         'is_verified' => false,
+        'phone_verified' => false,
     ]);
 
-    // Generate and send OTP
-    $otp = $user->generateOtp();
+    // Generate phone OTP
+    $otp = $user->generatePhoneOtp();
 
-    // Send OTP email
+    // Send OTP via SMS
+    $smsSent = false;
+    try {
+        $smsService = new \App\Services\EgoSmsService();
+        $result = $smsService->sendOtp($user->phone, $otp);
+        $smsSent = $smsService->isSuccess($result);
+
+        if (!$smsSent) {
+            \Log::warning('SMS OTP send failed', ['phone' => $user->phone, 'result' => $result]);
+        }
+    } catch (\Exception $e) {
+        \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
+    }
+
+    // Also send OTP email as backup
     try {
         \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
             $message->to($user->email)
-                    ->subject('BebaMart - Email Verification Code');
+                    ->subject('BebaMart - Verification Code');
         });
     } catch (\Exception $e) {
         \Log::error('Failed to send OTP email: ' . $e->getMessage());
@@ -116,10 +131,14 @@ Route::post('/register', function (Request $request) {
 
     return response()->json([
         'success' => true,
-        'message' => 'Registration successful. Please verify your email with the OTP sent.',
+        'message' => $smsSent
+            ? 'Registration successful. Please verify with the OTP sent to your phone.'
+            : 'Registration successful. Please verify with the OTP sent to your email.',
         'requires_verification' => true,
+        'verification_type' => $smsSent ? 'sms' : 'email',
         'user_id' => $user->id,
         'email' => $user->email,
+        'phone' => $user->phone,
     ], 201);
 });
 
@@ -193,14 +212,21 @@ Route::post('/auth/google', function (Request $request) {
     ]);
 });
 
-// Verify OTP
+// Verify OTP (supports both email and phone verification)
 Route::post('/verify-otp', function (Request $request) {
     $request->validate([
-        'email' => 'required|email',
+        'email' => 'required_without:phone|email',
+        'phone' => 'required_without:email|string',
         'otp' => 'required|string|size:6',
     ]);
 
-    $user = User::where('email', $request->email)->first();
+    // Find user by email or phone
+    $user = null;
+    if ($request->email) {
+        $user = User::where('email', $request->email)->first();
+    } elseif ($request->phone) {
+        $user = User::where('phone', $request->phone)->first();
+    }
 
     if (!$user) {
         return response()->json([
@@ -209,34 +235,62 @@ Route::post('/verify-otp', function (Request $request) {
         ], 404);
     }
 
-    if ($user->is_verified) {
+    if ($user->is_verified && $user->phone_verified) {
         return response()->json([
             'success' => false,
-            'message' => 'Email already verified',
+            'message' => 'Account already verified',
         ], 400);
     }
 
-    if ($user->isOtpExpired()) {
+    // Try phone OTP first (primary verification method)
+    if ($user->phone_otp_code) {
+        if ($user->isPhoneOtpExpired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired. Please request a new one.',
+                'expired' => true,
+            ], 400);
+        }
+
+        if (!$user->verifyPhoneOtp($request->otp)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP code',
+            ], 400);
+        }
+    }
+    // Fallback to email OTP
+    elseif ($user->otp_code) {
+        if ($user->isOtpExpired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP has expired. Please request a new one.',
+                'expired' => true,
+            ], 400);
+        }
+
+        if (!$user->verifyOtp($request->otp)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP code',
+            ], 400);
+        }
+    } else {
         return response()->json([
             'success' => false,
-            'message' => 'OTP has expired. Please request a new one.',
-            'expired' => true,
+            'message' => 'No OTP found. Please request a new one.',
         ], 400);
     }
 
-    if (!$user->verifyOtp($request->otp)) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Invalid OTP code',
-        ], 400);
-    }
+    // Load vendor profile
+    $user->load('vendorProfile');
 
     // Create auth token
     $token = $user->createToken('mobile-app')->plainTextToken;
 
     return response()->json([
         'success' => true,
-        'message' => 'Email verified successfully',
+        'message' => 'Account verified successfully',
         'token' => $token,
         'user' => [
             'id' => $user->id,
@@ -244,11 +298,13 @@ Route::post('/verify-otp', function (Request $request) {
             'email' => $user->email,
             'phone' => $user->phone,
             'role' => $user->role,
-            'avatar' => $user->avatar,
+            'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
             'is_verified' => $user->is_verified,
+            'phone_verified' => $user->phone_verified,
             'created_at' => $user->created_at,
             'vendor_profile' => $user->vendorProfile ? [
                 'id' => $user->vendorProfile->id,
+                'user_id' => $user->vendorProfile->user_id,
                 'business_name' => $user->vendorProfile->business_name,
                 'vetting_status' => $user->vendorProfile->vetting_status,
             ] : null,
@@ -256,13 +312,21 @@ Route::post('/verify-otp', function (Request $request) {
     ]);
 });
 
-// Resend OTP
+// Resend OTP (supports SMS and email)
 Route::post('/resend-otp', function (Request $request) {
     $request->validate([
-        'email' => 'required|email',
+        'email' => 'required_without:phone|email',
+        'phone' => 'required_without:email|string',
+        'type' => 'nullable|in:sms,email',
     ]);
 
-    $user = User::where('email', $request->email)->first();
+    // Find user by email or phone
+    $user = null;
+    if ($request->email) {
+        $user = User::where('email', $request->email)->first();
+    } elseif ($request->phone) {
+        $user = User::where('phone', $request->phone)->first();
+    }
 
     if (!$user) {
         return response()->json([
@@ -271,37 +335,63 @@ Route::post('/resend-otp', function (Request $request) {
         ], 404);
     }
 
-    if ($user->is_verified) {
+    if ($user->is_verified && $user->phone_verified) {
         return response()->json([
             'success' => false,
-            'message' => 'Email already verified',
+            'message' => 'Account already verified',
         ], 400);
     }
 
-    // Generate new OTP
-    $otp = $user->generateOtp();
+    // Generate new phone OTP
+    $otp = $user->generatePhoneOtp();
 
-    // Send OTP email
+    // Determine verification type
+    $sendViaSms = $request->type === 'sms' || (!$request->type && $user->phone);
+    $smsSent = false;
+
+    // Send OTP via SMS if requested
+    if ($sendViaSms && $user->phone) {
+        try {
+            $smsService = new \App\Services\EgoSmsService();
+            $result = $smsService->sendOtp($user->phone, $otp);
+            $smsSent = $smsService->isSuccess($result);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
+        }
+    }
+
+    // Send OTP email (as primary if SMS not requested, or as backup)
+    $emailSent = false;
     try {
         \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
             $message->to($user->email)
-                    ->subject('BebaMart - Email Verification Code');
+                    ->subject('BebaMart - Verification Code');
         });
+        $emailSent = true;
+    } catch (\Exception $e) {
+        \Log::error('Failed to send OTP email: ' . $e->getMessage());
+    }
+
+    if ($smsSent || $emailSent) {
+        $message = $smsSent
+            ? 'OTP sent to your phone via SMS'
+            : 'OTP sent to your email';
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP sent successfully',
+            'message' => $message,
+            'verification_type' => $smsSent ? 'sms' : 'email',
         ]);
-    } catch (\Exception $e) {
-        \Log::error('Failed to send OTP email: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to send OTP. Please try again.',
-        ], 500);
     }
+
+    return response()->json([
+        'success' => false,
+        'message' => 'Failed to send OTP. Please try again.',
+    ], 500);
 });
 
 // Google Sign-In (for mobile apps)
+// Now requires phone verification for new users
 Route::post('/auth/google', function (Request $request) {
     $request->validate([
         'id_token' => 'required_without:access_token|string',
@@ -310,11 +400,14 @@ Route::post('/auth/google', function (Request $request) {
         'name' => 'required|string',
         'google_id' => 'required|string',
         'avatar' => 'nullable|string',
+        'phone' => 'nullable|string|max:20', // Phone is now accepted for new users
     ]);
 
     try {
         // Check if user already exists with this Google ID
         $user = User::where('google_id', $request->google_id)->first();
+        $isNewUser = false;
+        $requiresPhoneVerification = false;
 
         if (!$user) {
             // Check if user exists with this email
@@ -328,18 +421,46 @@ Route::post('/auth/google', function (Request $request) {
                 $user->email_verified_at = now();
                 $user->save();
             } else {
-                // Create new user
+                // Create new user - now requires phone verification
+                $isNewUser = true;
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
                     'google_id' => $request->google_id,
                     'avatar' => $request->avatar,
-                    'phone' => '',
+                    'phone' => $request->phone ?? '',
                     'role' => 'buyer',
-                    'is_verified' => true, // Google already verified the email
-                    'email_verified_at' => now(),
-                    'password' => Hash::make(\Str::random(32)), // Random password for Google users
+                    'is_verified' => false, // Require phone verification
+                    'phone_verified' => false,
+                    'password' => Hash::make(\Str::random(32)),
                 ]);
+
+                // If phone provided, send SMS OTP
+                if ($request->phone) {
+                    $otp = $user->generatePhoneOtp();
+                    $requiresPhoneVerification = true;
+
+                    try {
+                        $smsService = new \App\Services\EgoSmsService();
+                        $result = $smsService->sendOtp($user->phone, $otp);
+
+                        if (!$smsService->isSuccess($result)) {
+                            \Log::warning('Google sign-in SMS OTP failed', ['result' => $result]);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Google sign-in SMS error: ' . $e->getMessage());
+                    }
+
+                    // Also send email backup
+                    try {
+                        \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
+                            $message->to($user->email)
+                                    ->subject('BebaMart - Verification Code');
+                        });
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send OTP email: ' . $e->getMessage());
+                    }
+                }
             }
         } else {
             // Update avatar if changed
@@ -349,7 +470,35 @@ Route::post('/auth/google', function (Request $request) {
             }
         }
 
-        // Create auth token
+        // If new user without phone, return requiring phone input
+        if ($isNewUser && !$request->phone) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Please provide your phone number to complete registration',
+                'requires_phone' => true,
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'name' => $user->name,
+            ]);
+        }
+
+        // If requires phone verification, don't provide token yet
+        if ($requiresPhoneVerification) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Please verify your phone number with the OTP sent',
+                'requires_verification' => true,
+                'verification_type' => 'sms',
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'phone' => $user->phone,
+            ]);
+        }
+
+        // Load vendor profile
+        $user->load('vendorProfile');
+
+        // Create auth token for existing/verified users
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
@@ -364,14 +513,16 @@ Route::post('/auth/google', function (Request $request) {
                 'role' => $user->role,
                 'avatar' => $user->avatar,
                 'is_verified' => $user->is_verified,
+                'phone_verified' => $user->phone_verified ?? false,
                 'created_at' => $user->created_at,
                 'vendor_profile' => $user->vendorProfile ? [
                     'id' => $user->vendorProfile->id,
+                    'user_id' => $user->vendorProfile->user_id,
                     'business_name' => $user->vendorProfile->business_name,
                     'vetting_status' => $user->vendorProfile->vetting_status,
                 ] : null,
             ],
-            'is_new_user' => $user->wasRecentlyCreated,
+            'is_new_user' => $isNewUser,
         ]);
     } catch (\Exception $e) {
         \Log::error('Google sign-in error: ' . $e->getMessage());
@@ -380,6 +531,67 @@ Route::post('/auth/google', function (Request $request) {
             'message' => 'Google sign-in failed. Please try again.',
         ], 500);
     }
+});
+
+// Complete Google sign-in with phone number (for new users)
+Route::post('/auth/google/complete', function (Request $request) {
+    $request->validate([
+        'email' => 'required|email',
+        'phone' => 'required|string|max:20',
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User not found',
+        ], 404);
+    }
+
+    if (!$user->google_id) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This endpoint is only for Google sign-in users',
+        ], 400);
+    }
+
+    // Update phone number
+    $user->phone = $request->phone;
+    $user->save();
+
+    // Generate and send OTP
+    $otp = $user->generatePhoneOtp();
+
+    $smsSent = false;
+    try {
+        $smsService = new \App\Services\EgoSmsService();
+        $result = $smsService->sendOtp($user->phone, $otp);
+        $smsSent = $smsService->isSuccess($result);
+    } catch (\Exception $e) {
+        \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
+    }
+
+    // Send email backup
+    try {
+        \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
+            $message->to($user->email)
+                    ->subject('BebaMart - Verification Code');
+        });
+    } catch (\Exception $e) {
+        \Log::error('Failed to send OTP email: ' . $e->getMessage());
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => $smsSent
+            ? 'OTP sent to your phone. Please verify to complete registration.'
+            : 'OTP sent to your email. Please verify to complete registration.',
+        'requires_verification' => true,
+        'verification_type' => $smsSent ? 'sms' : 'email',
+        'email' => $user->email,
+        'phone' => $user->phone,
+    ]);
 });
 
 // Categories for mobile - ONLY parent categories (parent_id IS NULL) with children nested
@@ -741,6 +953,31 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load('vendorProfile');
+
+        $vendorProfileData = null;
+        if ($user->vendorProfile) {
+            $vp = $user->vendorProfile;
+            $vendorProfileData = [
+                'id' => $vp->id,
+                'user_id' => $vp->user_id,
+                'business_name' => $vp->business_name,
+                'business_description' => $vp->business_description,
+                'business_address' => $vp->address,
+                'phone' => $vp->business_phone,
+                'email' => $vp->email ?? $user->email,
+                'logo' => $vp->logo,
+                'banner' => $vp->banner,
+                'vendor_type' => $vp->vendor_type,
+                'vetting_status' => $vp->vetting_status,
+                'country' => $vp->country,
+                'city' => $vp->city,
+                'rating' => $vp->rating ?? 0,
+                'total_sales' => $vp->total_sales ?? 0,
+                'created_at' => $vp->created_at,
+                'updated_at' => $vp->updated_at,
+            ];
+        }
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -750,12 +987,11 @@ Route::middleware('auth:sanctum')->group(function () {
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
-                'vendor_profile' => $user->vendorProfile ? [
-                    'id' => $user->vendorProfile->id,
-                    'user_id' => $user->vendorProfile->user_id,
-                    'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
-                    'vetting_status' => $user->vendorProfile->vetting_status,
-                ] : null,
+                'is_verified' => $user->is_verified,
+                'phone_verified' => $user->phone_verified ?? false,
+                'created_at' => $user->created_at,
+                'updated_at' => $user->updated_at,
+                'vendor_profile' => $vendorProfileData,
             ],
         ]);
     });
@@ -978,6 +1214,9 @@ Route::middleware('auth:sanctum')->group(function () {
             $user->save();
         }
 
+        // Reload vendor to get fresh data with accessors
+        $vendor->refresh();
+
         return response()->json([
             'success' => true,
             'message' => 'Profile updated successfully',
@@ -985,6 +1224,11 @@ Route::middleware('auth:sanctum')->group(function () {
                 'id' => $vendor->id,
                 'business_name' => $vendor->business_name,
                 'vetting_status' => $vendor->vetting_status,
+                'logo' => $vendor->logo,
+                'banner' => $vendor->banner,
+                'business_description' => $vendor->business_description,
+                'business_phone' => $vendor->business_phone,
+                'address' => $vendor->address,
             ],
             'user' => [
                 'id' => $user->id,

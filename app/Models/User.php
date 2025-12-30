@@ -16,18 +16,22 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name', 'phone', 'email', 'password', 'role', 'is_active', 'meta',
-        'otp_code', 'otp_expires_at', 'is_verified', 'google_id', 'avatar'
+        'otp_code', 'otp_expires_at', 'is_verified', 'google_id', 'avatar',
+        'phone_otp_code', 'phone_otp_expires_at', 'phone_verified', 'phone_verified_at'
     ];
 
     protected $casts = [
         'meta' => 'array',
         'is_active' => 'boolean',
         'is_verified' => 'boolean',
+        'phone_verified' => 'boolean',
         'otp_expires_at' => 'datetime',
+        'phone_otp_expires_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
     ];
 
     protected $hidden = [
-        'password', 'otp_code', 'remember_token',
+        'password', 'otp_code', 'phone_otp_code', 'remember_token',
     ];
 
     /**
@@ -71,6 +75,61 @@ class User extends Authenticatable
     public function isOtpExpired()
     {
         return $this->otp_expires_at && $this->otp_expires_at->isPast();
+    }
+
+    /**
+     * Generate OTP code for phone verification (SMS)
+     */
+    public function generatePhoneOtp()
+    {
+        $this->phone_otp_code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $this->phone_otp_expires_at = now()->addMinutes(10);
+        $this->save();
+
+        return $this->phone_otp_code;
+    }
+
+    /**
+     * Verify phone OTP code
+     */
+    public function verifyPhoneOtp($code)
+    {
+        if ($this->phone_otp_code !== $code) {
+            return false;
+        }
+
+        if ($this->phone_otp_expires_at && $this->phone_otp_expires_at->isPast()) {
+            return false;
+        }
+
+        // Clear OTP and mark phone as verified
+        $this->phone_otp_code = null;
+        $this->phone_otp_expires_at = null;
+        $this->phone_verified = true;
+        $this->phone_verified_at = now();
+
+        // Also mark user as verified (since phone is now primary verification)
+        $this->is_verified = true;
+        $this->email_verified_at = now();
+        $this->save();
+
+        return true;
+    }
+
+    /**
+     * Check if phone OTP is expired
+     */
+    public function isPhoneOtpExpired()
+    {
+        return $this->phone_otp_expires_at && $this->phone_otp_expires_at->isPast();
+    }
+
+    /**
+     * Check if phone is verified
+     */
+    public function isPhoneVerified()
+    {
+        return $this->phone_verified === true;
     }
 
     public function vendorProfile()

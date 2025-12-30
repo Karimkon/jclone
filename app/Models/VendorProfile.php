@@ -77,6 +77,72 @@ class VendorProfile extends Model
         return $this->meta['guarantor'] ?? null;
     }
 
+    /**
+     * Get vendor logo from meta
+     */
+    public function getLogoAttribute()
+    {
+        $logo = $this->meta['logo'] ?? null;
+        if ($logo && !str_starts_with($logo, 'http')) {
+            return asset('storage/' . $logo);
+        }
+        return $logo;
+    }
+
+    /**
+     * Get vendor banner from meta
+     */
+    public function getBannerAttribute()
+    {
+        $banner = $this->meta['banner'] ?? null;
+        if ($banner && !str_starts_with($banner, 'http')) {
+            return asset('storage/' . $banner);
+        }
+        return $banner;
+    }
+
+    /**
+     * Get business description from meta
+     */
+    public function getBusinessDescriptionAttribute()
+    {
+        return $this->meta['description'] ?? null;
+    }
+
+    /**
+     * Get business phone from meta
+     */
+    public function getBusinessPhoneAttribute()
+    {
+        return $this->meta['phone'] ?? null;
+    }
+
+    /**
+     * Get rating attribute (alias for average_rating)
+     */
+    public function getRatingAttribute()
+    {
+        return $this->average_rating;
+    }
+
+    /**
+     * Get total sales (total delivered orders)
+     */
+    public function getTotalSalesAttribute()
+    {
+        return Order::where('vendor_profile_id', $this->id)
+            ->where('status', 'delivered')
+            ->count();
+    }
+
+    /**
+     * Get reviews count attribute
+     */
+    public function getReviewsCountAttribute()
+    {
+        return $this->total_reviews;
+    }
+
 public function balance()
 {
     return $this->hasOne(VendorBalance::class);
