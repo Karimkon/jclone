@@ -40,12 +40,16 @@ class VendorProfileController extends Controller
             'phone' => 'required|string|max:20',
             'address' => 'required|string|max:500',
             'description' => 'nullable|string|max:1000',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
         ]);
 
         // Update vendor profile
         $vendor->update([
             'business_name' => $request->business_name,
             'address' => $request->address,
+            'latitude' => $request->latitude,
+            'longitude' => $request->longitude,
             'meta' => array_merge($vendor->meta ?? [], [
                 'description' => $request->description,
                 'updated_at' => now()->toDateTimeString(),

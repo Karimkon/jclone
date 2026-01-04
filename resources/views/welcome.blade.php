@@ -1135,6 +1135,73 @@ main {
             <!-- Right Sidebar - SMALLER -->
             <aside class="hidden xl:block w-44 flex-shrink-0">
                 <div class="sticky top-32 space-y-4">
+                    <!-- Advertisements Carousel -->
+                    @if(isset($advertisements) && $advertisements->count() > 0)
+                    <div class="bg-white rounded-xl shadow-sm border border-ink-100 overflow-hidden relative group" id="adCarousel">
+                         @foreach($advertisements as $index => $ad)
+                            <div class="ad-slide transition-opacity duration-500 {{ $index === 0 ? 'block' : 'hidden' }}" data-index="{{ $index }}">
+                                <a href="{{ $ad->link ?? '#' }}" {{ $ad->link ? 'target="_blank"' : '' }} class="block relative aspect-[4/5]">
+                                    @if($ad->media_type == 'image')
+                                        <img src="{{ Storage::url($ad->media_path) }}" alt="{{ $ad->title }}" class="w-full h-full object-cover">
+                                    @else
+                                        <video src="{{ Storage::url($ad->media_path) }}" class="w-full h-full object-cover" autoplay muted loop playsinline></video>
+                                    @endif
+                                    
+                                    <!-- Optional Title Overlay -->
+                                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
+                                        <p class="text-xs font-bold line-clamp-1">{{ $ad->title }}</p>
+                                    </div>
+                                </a>
+                            </div>
+                         @endforeach
+                         
+                         <!-- Indicators -->
+                         @if($advertisements->count() > 1)
+                         <div class="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+                             @foreach($advertisements as $index => $ad)
+                                <button class="w-1.5 h-1.5 rounded-full {{ $index === 0 ? 'bg-white' : 'bg-white/50' }} transition-colors" onclick="showAd({{ $index }})"></button>
+                             @endforeach
+                         </div>
+                         @endif
+                    </div>
+
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const slides = document.querySelectorAll('.ad-slide');
+                            const dots = document.querySelectorAll('#adCarousel button');
+                            let currentAd = 0;
+                            const totalAds = slides.length;
+                            
+                            if (totalAds <= 1) return;
+
+                            function showAd(index) {
+                                slides.forEach(s => s.classList.add('hidden'));
+                                slides[index].classList.remove('hidden');
+                                
+                                if (dots.length) {
+                                    dots.forEach((d, i) => {
+                                        if (i === index) {
+                                            d.classList.remove('bg-white/50');
+                                            d.classList.add('bg-white');
+                                        } else {
+                                            d.classList.add('bg-white/50');
+                                            d.classList.remove('bg-white');
+                                        }
+                                    });
+                                }
+                                currentAd = index;
+                            }
+                            
+                            // Expose to window for onclick
+                            window.showAd = showAd;
+
+                            setInterval(() => {
+                                let next = (currentAd + 1) % totalAds;
+                                showAd(next);
+                            }, 5000); // 5 seconds
+                        });
+                    </script>
+                    @endif
                     <!-- New User Promo -->
                     <div class="promo-gradient rounded-xl p-4 text-white text-center">
                         <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">

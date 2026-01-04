@@ -17,7 +17,10 @@ class VendorProfile extends Model
         'preferred_currency',
         'vetting_status',
         'vetting_notes',
+        'vetting_notes',
         'meta',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [

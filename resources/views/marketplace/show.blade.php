@@ -1359,6 +1359,13 @@ button[onclick="closeOptionsModal()"]:hover {
                 <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
                 @endif
             </p>
+            @if($listing->vendor && $listing->vendor->latitude && $listing->vendor->longitude)
+            <a href="https://www.google.com/maps/search/?api=1&query={{ $listing->vendor->latitude }},{{ $listing->vendor->longitude }}" 
+               target="_blank" 
+               class="text-xs text-primary hover:text-indigo-700 block mt-1 font-medium hover:underline">
+                <i class="fas fa-location-dot mr-1"></i>View Store Location
+            </a>
+            @endif
         </div>
     </div>
     

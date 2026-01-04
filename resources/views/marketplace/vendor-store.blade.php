@@ -15,6 +15,7 @@
 @endphp
 
 @push('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <style>
     .vendor-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -394,6 +395,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Store Location Map -->
+                        @if($vendor->latitude && $vendor->longitude)
+                        <div class="stats-card">
+                            <h4 class="font-semibold text-gray-900 mb-3">Store Location</h4>
+                            <div id="storeMap" style="height: 200px; z-index: 1;" class="w-full rounded-lg border border-gray-200"></div>
+                            <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                                <span>{{ $vendor->city ?? 'Unknown City' }}, {{ $vendor->country }}</span>
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ $vendor->latitude }},{{ $vendor->longitude }}" 
+                                   target="_blank" 
+                                   class="text-primary hover:underline">
+                                    Get Directions
+                                </a>
+                            </div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -1230,5 +1247,56 @@
             console.error('Error checking existing conversations:', error);
         }
     }
+
 </script>
+
+    @if($vendor->latitude && $vendor->longitude)
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pass data safely using json_encode to avoid syntax errors
+        const mapData = @json([
+            'lat' => (float) $vendor->latitude,
+            'lng' => (float) $vendor->longitude,
+            'name' => $vendor->business_name,
+            'address' => $vendor->address
+        ]);
+
+        console.log('Initializing vendor store map with data:', mapData);
+        
+        if (typeof L === 'undefined') {
+            console.error('Leaflet library (L) is not loaded.');
+            return;
+        }
+
+        if (!document.getElementById('storeMap')) {
+            console.error('Map container element "storeMap" not found.');
+            return;
+        }
+        
+        try {
+            const map = L.map('storeMap', {
+                scrollWheelZoom: false
+            }).setView([mapData.lat, mapData.lng], 14);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            const popupContent = `<b>${mapData.name}</b><br>${mapData.address}`;
+            
+            L.marker([mapData.lat, mapData.lng]).addTo(map)
+                .bindPopup(popupContent)
+                .openPopup();
+                
+            setTimeout(function() {
+                map.invalidateSize();
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error creating Leaflet map:', error);
+        }
+    });
+    </script>
+    @endif
 @endpush

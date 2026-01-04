@@ -438,8 +438,12 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         
-        // User management
-        Route::resource('users', AdminUserController::class);
+        // Admin User Management Routes
+    Route::resource('users', App\Http\Controllers\Admin\UserController::class);
+    
+    // Advertisement Routes
+    Route::resource('advertisements', App\Http\Controllers\Admin\AdvertisementController::class);
+    Route::post('advertisements/{advertisement}/toggle', [App\Http\Controllers\Admin\AdvertisementController::class, 'toggleStatus'])->name('advertisements.toggle');
         Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
         

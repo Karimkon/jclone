@@ -85,6 +85,11 @@ class LandingController extends Controller
             ->take(8)
             ->get();
 
+        // Active Advertisements
+        $advertisements = \App\Models\Advertisement::where('is_active', true)
+            ->latest()
+            ->get();
+
         return view('welcome', compact(
             'categories',
             'featuredProducts',
@@ -93,7 +98,8 @@ class LandingController extends Controller
             'flashDeals',
             'topSelling',
             'importedProducts',
-            'localProducts'
+            'localProducts',
+            'advertisements'
         ));
     }
 

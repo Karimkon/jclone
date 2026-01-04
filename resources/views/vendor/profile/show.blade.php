@@ -75,6 +75,20 @@
                                           class="w-full border border-gray-300 rounded-lg p-3">{{ old('address', $vendor->address) }}</textarea>
                             </div>
 
+                            <!-- Location Map -->
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Business Location <span class="text-xs text-gray-500">(Click on map to set location)</span>
+                                </label>
+                                <div id="map" style="height: 300px;" class="w-full border border-gray-300 rounded-lg"></div>
+                                <input type="hidden" name="latitude" id="latitude" value="{{ old('latitude', $vendor->latitude) }}">
+                                <input type="hidden" name="longitude" id="longitude" value="{{ old('longitude', $vendor->longitude) }}">
+                                <div class="mt-2 flex gap-4 text-xs text-gray-500">
+                                    <span>Lat: <span id="lat_display">{{ old('latitude', $vendor->latitude) ?? 'Not Set' }}</span></span>
+                                    <span>Lng: <span id="lng_display">{{ old('longitude', $vendor->longitude) ?? 'Not Set' }}</span></span>
+                                </div>
+                            </div>
+
                             <!-- Description -->
                             <div class="md:col-span-2">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -234,3 +248,47 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Default to Kampala/Uganda center if not set
+        const defaultLat = {{ $vendor->latitude ?? 0.3476 }};
+        const defaultLng = {{ $vendor->longitude ?? 32.5825 }};
+        const zoomLevel = {{ $vendor->latitude ? 13 : 6 }};
+
+        const map = L.map('map').setView([defaultLat, defaultLng], zoomLevel);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker;
+
+        // If location exists, add marker
+        @if($vendor->latitude && $vendor->longitude)
+            marker = L.marker([defaultLat, defaultLng]).addTo(map);
+        @endif
+
+        // On map click, update marker and inputs
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            document.getElementById('lat_display').textContent = lat.toFixed(6);
+            document.getElementById('lng_display').textContent = lng.toFixed(6);
+        });
+    });
+</script>
+@endpush

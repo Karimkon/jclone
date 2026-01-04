@@ -1036,6 +1036,17 @@
                         <div class="nav-tooltip">Contact Messages</div>
                     </a>
                 </div>
+
+                <div class="nav-item">
+                    <a href="{{ route('admin.advertisements.index') }}" 
+                       class="nav-link {{ request()->routeIs('admin.advertisements.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <span class="nav-text">Advertisements</span>
+                        <div class="nav-tooltip">Advertisements</div>
+                    </a>
+                </div>
             </div>
             
             <!-- Finance -->
