@@ -15,6 +15,7 @@ use App\Models\AuditLog;
 use App\Models\NotificationQueue;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage; 
 
 class AdminVendorController extends Controller
 {
@@ -373,21 +374,55 @@ public function viewDocument($id)
 {
     $document = VendorDocument::findOrFail($id);
     
-    // Check if admin can view
-    if (!auth()->user()->role === 'admin') {
-        abort(403);
+    // Clean up the path - remove any double slashes or weird characters
+    $cleanPath = str_replace('\\', '/', $document->path);
+    $cleanPath = preg_replace('/\/+/', '/', $cleanPath); // Replace multiple slashes with single
+    
+    \Log::info('Clean path', ['original' => $document->path, 'clean' => $cleanPath]);
+    
+    // Try with Storage facade first (recommended)
+    if (Storage::disk('public')->exists($cleanPath)) {
+        \Log::info('Found via Storage facade (public disk)');
+        return Storage::disk('public')->response($cleanPath, null, [
+            'Content-Type' => $document->mime,
+            'Content-Disposition' => 'inline; filename="' . basename($cleanPath) . '"'
+        ]);
     }
     
-    $path = storage_path('app/' . $document->path);
-    
-    if (!file_exists($path)) {
-        abort(404);
+    // Try local disk
+    if (Storage::disk('local')->exists($cleanPath)) {
+        \Log::info('Found via Storage facade (local disk)');
+        return Storage::disk('local')->response($cleanPath, null, [
+            'Content-Type' => $document->mime,
+            'Content-Disposition' => 'inline; filename="' . basename($cleanPath) . '"'
+        ]);
     }
     
-    return response()->file($path, [
-        'Content-Type' => $document->mime,
-        'Content-Disposition' => 'inline; filename="' . basename($path) . '"'
+    // Try direct file path (fallback)
+    $paths = [
+        storage_path('app/public/' . $cleanPath),
+        storage_path('app/' . $cleanPath),
+        public_path('storage/' . $cleanPath),
+    ];
+    
+    foreach ($paths as $path) {
+        $path = str_replace('\\', '/', $path);
+        if (file_exists($path)) {
+            \Log::info('Found via direct file path', ['path' => $path]);
+            return response()->file($path, [
+                'Content-Type' => $document->mime,
+                'Content-Disposition' => 'inline; filename="' . basename($cleanPath) . '"'
+            ]);
+        }
+    }
+    
+    \Log::error('Document file not found', [
+        'document_id' => $id,
+        'path' => $document->path,
+        'clean_path' => $cleanPath
     ]);
+    
+    abort(404, 'Document file not found');
 }
     
     /**

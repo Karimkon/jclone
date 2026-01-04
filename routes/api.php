@@ -84,132 +84,189 @@ Route::post('/login', function (Request $request) {
 });
 
 Route::post('/register', function (Request $request) {
-    $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|string|email|max:255|unique:users',
-        'password' => 'required|string|min:8|confirmed',
-        'phone' => 'required|string|max:20',
-        'role' => 'nullable|in:buyer,vendor_local,vendor_international',
-    ]);
-
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'phone' => $request->phone,
-        'role' => $request->role ?? 'buyer',
-        'is_verified' => false,
-        'phone_verified' => false,
-    ]);
-
-    // Generate phone OTP
-    $otp = $user->generatePhoneOtp();
-
-    // Send OTP via SMS
-    $smsSent = false;
     try {
-        $smsService = new \App\Services\EgoSmsService();
-        $result = $smsService->sendOtp($user->phone, $otp);
-        $smsSent = $smsService->isSuccess($result);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8|confirmed',
+            'phone' => 'required|string|max:20|unique:users,phone',
+            'role' => 'nullable|in:buyer,vendor_local,vendor_international',
+        ], [
+            'email.unique' => 'This email is already registered. Please sign in instead.',
+            'phone.unique' => 'This phone number is already registered. Please sign in instead.',
+        ]);
 
-        if (!$smsSent) {
-            \Log::warning('SMS OTP send failed', ['phone' => $user->phone, 'result' => $result]);
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'phone' => $request->phone,
+            'role' => $request->role ?? 'buyer',
+            'is_verified' => false,
+        ]);
+
+        // Generate phone OTP
+        $otp = $user->generatePhoneOtp();
+
+        // Send OTP via SMS
+        $smsSent = false;
+        try {
+            $smsService = new \App\Services\EgoSmsService();
+            $result = $smsService->sendOtp($user->phone, $otp);
+            $smsSent = $smsService->isSuccess($result);
+
+            if (!$smsSent) {
+                \Log::warning('SMS OTP send failed', ['phone' => $user->phone, 'result' => $result]);
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
         }
-    } catch (\Exception $e) {
-        \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
-    }
 
-    // Also send OTP email as backup
-    try {
-        \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
-            $message->to($user->email)
-                    ->subject('BebaMart - Verification Code');
-        });
-    } catch (\Exception $e) {
-        \Log::error('Failed to send OTP email: ' . $e->getMessage());
-    }
+        // Also send OTP email as backup
+        try {
+            \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
+                $message->to($user->email)
+                        ->subject('BebaMart - Verification Code');
+            });
+        } catch (\Exception $e) {
+            \Log::error('Failed to send OTP email: ' . $e->getMessage());
+        }
 
-    return response()->json([
-        'success' => true,
-        'message' => $smsSent
-            ? 'Registration successful. Please verify with the OTP sent to your phone.'
-            : 'Registration successful. Please verify with the OTP sent to your email.',
-        'requires_verification' => true,
-        'verification_type' => $smsSent ? 'sms' : 'email',
-        'user_id' => $user->id,
-        'email' => $user->email,
-        'phone' => $user->phone,
-    ], 201);
+        return response()->json([
+            'success' => true,
+            'message' => $smsSent
+                ? 'Registration successful. Please verify with the OTP sent to your phone.'
+                : 'Registration successful. Please verify with the OTP sent to your email.',
+            'requires_verification' => true,
+            'verification_type' => $smsSent ? 'sms' : 'email',
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'phone' => $user->phone,
+        ], 201);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->errors()[array_key_first($e->errors())][0] ?? 'Validation failed',
+            'errors' => $e->errors(),
+        ], 422);
+    } catch (\Illuminate\Database\QueryException $e) {
+        \Log::error('Registration database error: ' . $e->getMessage());
+        // Check for duplicate entry
+        if (str_contains($e->getMessage(), 'Duplicate entry')) {
+            if (str_contains($e->getMessage(), 'email')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This email is already registered. Please sign in instead.',
+                ], 422);
+            }
+            if (str_contains($e->getMessage(), 'phone')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This phone number is already registered. Please sign in instead.',
+                ], 422);
+            }
+        }
+        return response()->json([
+            'success' => false,
+            'message' => 'Registration failed. Please try again.',
+        ], 500);
+    } catch (\Exception $e) {
+        \Log::error('Registration error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Registration failed. Please try again.',
+        ], 500);
+    }
 });
 
 // Google Authentication
 Route::post('/auth/google', function (Request $request) {
-    $request->validate([
-        'email' => 'required|email',
-        'name' => 'required|string|max:255',
-        'google_id' => 'required|string',
-        'avatar' => 'nullable|string',
-        'id_token' => 'nullable|string',
-        'access_token' => 'nullable|string',
-    ]);
-
-    // Find existing user or create new one
-    $user = User::where('email', $request->email)->first();
-
-    if (!$user) {
-        // Create new user
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make(\Str::random(32)), // Random password for Google users
-            'phone' => '',
-            'role' => 'buyer',
-            'is_verified' => true, // Google accounts are verified
-            'email_verified_at' => now(),
-            'google_id' => $request->google_id,
+    try {
+        $request->validate([
+            'email' => 'required|email',
+            'name' => 'required|string|max:255',
+            'google_id' => 'required|string',
+            'avatar' => 'nullable|string',
+            'id_token' => 'nullable|string',
+            'access_token' => 'nullable|string',
         ]);
-    } else {
-        // Update Google ID if not set
-        if (!$user->google_id) {
-            $user->google_id = $request->google_id;
-            $user->save();
+
+        // Find existing user by google_id first, then by email
+        $user = User::where('google_id', $request->google_id)->first();
+
+        if (!$user) {
+            $user = User::where('email', $request->email)->first();
         }
-        // Mark as verified if not already
-        if (!$user->email_verified_at) {
-            $user->email_verified_at = now();
-            $user->is_verified = true;
-            $user->save();
+
+        if (!$user) {
+            // Create new user with unique placeholder phone
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make(\Str::random(32)),
+                'phone' => 'google_' . $request->google_id, // Unique placeholder
+                'role' => 'buyer',
+                'is_verified' => true,
+                'email_verified_at' => now(),
+                'google_id' => $request->google_id,
+                'avatar' => $request->avatar,
+            ]);
+        } else {
+            // Update Google ID and avatar if not set
+            $updated = false;
+            if (!$user->google_id) {
+                $user->google_id = $request->google_id;
+                $updated = true;
+            }
+            if ($request->avatar && !$user->avatar) {
+                $user->avatar = $request->avatar;
+                $updated = true;
+            }
+            if (!$user->email_verified_at) {
+                $user->email_verified_at = now();
+                $user->is_verified = true;
+                $updated = true;
+            }
+            if ($updated) {
+                $user->save();
+            }
         }
+
+        // Load vendor profile
+        $user->load('vendorProfile');
+
+        // Create token
+        $token = $user->createToken('mobile-app')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Google sign-in successful',
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'avatar' => $user->avatar ?? $request->avatar,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at' => $user->created_at,
+                'vendor_profile' => $user->vendorProfile ? [
+                    'id' => $user->vendorProfile->id,
+                    'user_id' => $user->vendorProfile->user_id,
+                    'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
+                    'store_name' => $user->vendorProfile->store_name,
+                    'vetting_status' => $user->vendorProfile->vetting_status,
+                ] : null,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Google sign-in error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
+        return response()->json([
+            'success' => false,
+            'message' => 'Google sign-in failed: ' . $e->getMessage(),
+        ], 500);
     }
-
-    // Load vendor profile
-    $user->load('vendorProfile');
-
-    // Create token
-    $token = $user->createToken('mobile-app')->plainTextToken;
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Google sign-in successful',
-        'token' => $token,
-        'user' => [
-            'id' => $user->id,
-            'name' => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'role' => $user->role,
-            'avatar' => $request->avatar ?? ($user->avatar ? asset('storage/' . $user->avatar) : null),
-            'email_verified_at' => $user->email_verified_at,
-            'created_at' => $user->created_at,
-            'vendor_profile' => $user->vendorProfile ? [
-                'id' => $user->vendorProfile->id,
-                'user_id' => $user->vendorProfile->user_id,
-                'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
-                'store_name' => $user->vendorProfile->store_name,
-                'vetting_status' => $user->vendorProfile->vetting_status,
-            ] : null,
-        ],
-    ]);
 });
 
 // Verify OTP (supports both email and phone verification)
@@ -390,148 +447,7 @@ Route::post('/resend-otp', function (Request $request) {
     ], 500);
 });
 
-// Google Sign-In (for mobile apps)
-// Now requires phone verification for new users
-Route::post('/auth/google', function (Request $request) {
-    $request->validate([
-        'id_token' => 'required_without:access_token|string',
-        'access_token' => 'required_without:id_token|string',
-        'email' => 'required|email',
-        'name' => 'required|string',
-        'google_id' => 'required|string',
-        'avatar' => 'nullable|string',
-        'phone' => 'nullable|string|max:20', // Phone is now accepted for new users
-    ]);
-
-    try {
-        // Check if user already exists with this Google ID
-        $user = User::where('google_id', $request->google_id)->first();
-        $isNewUser = false;
-        $requiresPhoneVerification = false;
-
-        if (!$user) {
-            // Check if user exists with this email
-            $user = User::where('email', $request->email)->first();
-
-            if ($user) {
-                // Link Google account to existing user
-                $user->google_id = $request->google_id;
-                $user->avatar = $request->avatar;
-                $user->is_verified = true;
-                $user->email_verified_at = now();
-                $user->save();
-            } else {
-                // Create new user - now requires phone verification
-                $isNewUser = true;
-                $user = User::create([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'google_id' => $request->google_id,
-                    'avatar' => $request->avatar,
-                    'phone' => $request->phone ?? '',
-                    'role' => 'buyer',
-                    'is_verified' => false, // Require phone verification
-                    'phone_verified' => false,
-                    'password' => Hash::make(\Str::random(32)),
-                ]);
-
-                // If phone provided, send SMS OTP
-                if ($request->phone) {
-                    $otp = $user->generatePhoneOtp();
-                    $requiresPhoneVerification = true;
-
-                    try {
-                        $smsService = new \App\Services\EgoSmsService();
-                        $result = $smsService->sendOtp($user->phone, $otp);
-
-                        if (!$smsService->isSuccess($result)) {
-                            \Log::warning('Google sign-in SMS OTP failed', ['result' => $result]);
-                        }
-                    } catch (\Exception $e) {
-                        \Log::error('Google sign-in SMS error: ' . $e->getMessage());
-                    }
-
-                    // Also send email backup
-                    try {
-                        \Mail::raw("Your BebaMart verification code is: $otp\n\nThis code expires in 10 minutes.", function ($message) use ($user) {
-                            $message->to($user->email)
-                                    ->subject('BebaMart - Verification Code');
-                        });
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to send OTP email: ' . $e->getMessage());
-                    }
-                }
-            }
-        } else {
-            // Update avatar if changed
-            if ($request->avatar && $user->avatar !== $request->avatar) {
-                $user->avatar = $request->avatar;
-                $user->save();
-            }
-        }
-
-        // If new user without phone, return requiring phone input
-        if ($isNewUser && !$request->phone) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Please provide your phone number to complete registration',
-                'requires_phone' => true,
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'name' => $user->name,
-            ]);
-        }
-
-        // If requires phone verification, don't provide token yet
-        if ($requiresPhoneVerification) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Please verify your phone number with the OTP sent',
-                'requires_verification' => true,
-                'verification_type' => 'sms',
-                'user_id' => $user->id,
-                'email' => $user->email,
-                'phone' => $user->phone,
-            ]);
-        }
-
-        // Load vendor profile
-        $user->load('vendorProfile');
-
-        // Create auth token for existing/verified users
-        $token = $user->createToken('mobile-app')->plainTextToken;
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Google sign-in successful',
-            'token' => $token,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'phone' => $user->phone,
-                'role' => $user->role,
-                'avatar' => $user->avatar,
-                'is_verified' => $user->is_verified,
-                'phone_verified' => $user->phone_verified ?? false,
-                'created_at' => $user->created_at,
-                'vendor_profile' => $user->vendorProfile ? [
-                    'id' => $user->vendorProfile->id,
-                    'user_id' => $user->vendorProfile->user_id,
-                    'business_name' => $user->vendorProfile->business_name,
-                    'vetting_status' => $user->vendorProfile->vetting_status,
-                ] : null,
-            ],
-            'is_new_user' => $isNewUser,
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Google sign-in error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Google sign-in failed. Please try again.',
-        ], 500);
-    }
-});
+// NOTE: Duplicate /auth/google route removed - using the simpler version above
 
 // Complete Google sign-in with phone number (for new users)
 Route::post('/auth/google/complete', function (Request $request) {
@@ -1825,6 +1741,234 @@ Route::middleware('auth:sanctum')->group(function () {
                 'message' => 'Failed to place order: ' . $e->getMessage(),
             ], 500);
         }
+    });
+
+    // PESAPAL PAYMENT - Works for both Card and Mobile Money
+    Route::post('/orders/{order}/pay/pesapal', function (Request $request, Order $order) {
+        $request->validate([
+            'payment_type' => 'required|in:card,mobile_money',
+            'phone_number' => 'required_if:payment_type,mobile_money|nullable|string',
+            'mobile_money_provider' => 'required_if:payment_type,mobile_money|nullable|in:mtn,airtel',
+        ]);
+
+        $user = $request->user();
+
+        // Verify ownership
+        if ($order->buyer_id !== $user->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        // Check order status
+        if (!in_array($order->status, ['payment_pending', 'pending'])) {
+            return response()->json(['success' => false, 'message' => 'Order already processed'], 400);
+        }
+
+        try {
+            $pesapalService = app(\App\Services\PesapalService::class);
+            $txRef = 'BM-' . time() . '-' . $order->id;
+
+            // Get buyer info
+            $nameParts = explode(' ', $user->name ?? 'Buyer');
+            $firstName = $nameParts[0] ?? 'Buyer';
+            $lastName = $nameParts[1] ?? '';
+
+            // Prepare PesaPal order data
+            $orderData = [
+                'id' => $txRef,
+                'currency' => 'UGX',
+                'amount' => (float) $order->total,
+                'description' => "Payment for Order #{$order->order_number}",
+                'callback_url' => config('app.url') . '/api/payments/pesapal/callback',
+                'notification_id' => config('services.pesapal.notification_id'),
+                'billing_address' => [
+                    'email_address' => $user->email ?? 'buyer@bebamart.com',
+                    'phone_number' => $request->phone_number ?? $user->phone ?? '',
+                    'country_code' => 'UG',
+                    'first_name' => $firstName,
+                    'middle_name' => '',
+                    'last_name' => $lastName,
+                    'line_1' => 'Uganda',
+                    'city' => 'Kampala',
+                    'state' => 'Central',
+                    'postal_code' => '256',
+                    'zip_code' => '256',
+                ],
+            ];
+
+            \Log::info('Initiating Pesapal payment (API)', [
+                'order_id' => $order->id,
+                'payment_type' => $request->payment_type,
+                'amount' => $order->total,
+            ]);
+
+            // Submit to Pesapal
+            $result = $pesapalService->submitOrder($orderData);
+
+            if (isset($result['redirect_url'])) {
+                // Create payment record
+                \App\Models\Payment::create([
+                    'order_id' => $order->id,
+                    'provider' => 'pesapal',
+                    'provider_payment_id' => $txRef,
+                    'amount' => $order->total,
+                    'status' => 'pending',
+                    'meta' => [
+                        'payment_type' => $request->payment_type,
+                        'mobile_provider' => $request->mobile_money_provider,
+                        'phone_number' => $request->phone_number,
+                        'order_tracking_id' => $result['order_tracking_id'] ?? null,
+                        'merchant_reference' => $result['merchant_reference'] ?? $txRef,
+                        'initiated_at' => now()->toDateTimeString(),
+                    ]
+                ]);
+
+                // Update order meta
+                $currentMeta = $order->meta ?? [];
+                if (!is_array($currentMeta)) $currentMeta = [];
+                $order->update([
+                    'meta' => array_merge($currentMeta, ['payment_reference' => $txRef])
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'payment_url' => $result['redirect_url'],
+                    'tx_ref' => $txRef,
+                    'order_tracking_id' => $result['order_tracking_id'] ?? null,
+                    'message' => 'Redirect user to payment_url to complete payment',
+                ]);
+            }
+
+            $errorMessage = $result['error']['message'] ?? 'Failed to initialize payment';
+            \Log::error('Pesapal payment failed', ['result' => $result]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage,
+            ], 500);
+
+        } catch (\Exception $e) {
+            \Log::error('Pesapal payment error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment initialization failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    });
+
+    // Pesapal Callback (API) - handles redirect after payment
+    Route::get('/payments/pesapal/callback', function (Request $request) {
+        $orderTrackingId = $request->query('OrderTrackingId');
+        $orderMerchantReference = $request->query('OrderMerchantReference');
+
+        \Log::info('Pesapal API callback', [
+            'orderTrackingId' => $orderTrackingId,
+            'orderMerchantReference' => $orderMerchantReference,
+        ]);
+
+        if (!$orderTrackingId) {
+            return response()->json(['success' => false, 'message' => 'Missing tracking ID'], 400);
+        }
+
+        try {
+            $pesapalService = app(\App\Services\PesapalService::class);
+            $status = $pesapalService->getTransactionStatus($orderTrackingId);
+
+            $payment = \App\Models\Payment::where('provider_payment_id', $orderMerchantReference)
+                ->where('provider', 'pesapal')
+                ->first();
+
+            if (!$payment) {
+                return response()->json(['success' => false, 'message' => 'Payment not found'], 404);
+            }
+
+            if ($status && $pesapalService->isPaymentSuccessful($status)) {
+                // Update payment
+                $payment->update([
+                    'status' => 'completed',
+                    'meta' => array_merge($payment->meta ?? [], [
+                        'provider_response' => $status,
+                        'completed_at' => now()->toDateTimeString(),
+                    ])
+                ]);
+
+                // Update order
+                $payment->order->update(['status' => 'paid']);
+
+                // Create escrow
+                \App\Models\Escrow::create([
+                    'order_id' => $payment->order_id,
+                    'amount' => $payment->order->total,
+                    'status' => 'held',
+                    'release_at' => now()->addDays(7),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Payment completed successfully',
+                    'order_id' => $payment->order_id,
+                    'status' => 'completed',
+                ]);
+            }
+
+            $statusCode = $status['status_code'] ?? 0;
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not successful',
+                'status_code' => $statusCode,
+                'status' => $pesapalService->getStatusDescription($statusCode),
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Pesapal callback error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Verification failed'], 500);
+        }
+    })->withoutMiddleware(['auth:sanctum']);
+
+    // Check payment status
+    Route::get('/orders/{order}/payment-status', function (Request $request, Order $order) {
+        if ($order->buyer_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $payment = $order->payments()->where('provider', 'pesapal')->latest()->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => true,
+                'status' => 'no_payment',
+                'order_status' => $order->status,
+            ]);
+        }
+
+        // If pending, check with Pesapal
+        if ($payment->status === 'pending') {
+            $trackingId = $payment->meta['order_tracking_id'] ?? null;
+            if ($trackingId) {
+                try {
+                    $pesapalService = app(\App\Services\PesapalService::class);
+                    $status = $pesapalService->getTransactionStatus($trackingId);
+
+                    if ($status && $pesapalService->isPaymentSuccessful($status)) {
+                        $payment->update(['status' => 'completed']);
+                        $order->update(['status' => 'paid']);
+
+                        return response()->json([
+                            'success' => true,
+                            'status' => 'completed',
+                            'message' => 'Payment completed',
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Payment status check error: ' . $e->getMessage());
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'status' => $payment->status,
+            'order_status' => $order->status,
+        ]);
     });
 
     // ADDRESSES

@@ -58,6 +58,8 @@ Route::get('/delete-account', function () {
     return view('auth.delete-account');
 })->name('delete-account');
 
+Route::get('/vendors/{vendor}', [App\Http\Controllers\Marketplace\VendorController::class, 'showStore'])->name('vendor.store.show');
+
 Route::post('/delete-account', function (\Illuminate\Http\Request $request) {
     $request->validate([
         'email' => 'required|email',

@@ -317,123 +317,114 @@
                 </div>
             </div>
 
-           <!-- Enhanced Media Section -->
-<div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Product Media</h2>
-    
-    <div class="mb-6">
-        <!-- Upload Zone -->
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-            Upload Images & Videos *
-        </label>
-        <div id="uploadZone" 
-             class="border-3 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-primary transition cursor-pointer bg-gray-50 hover:bg-gray-100">
-            <div class="flex flex-col items-center justify-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                    <i class="fas fa-photo-video text-primary text-2xl"></i>
+            <!-- Enhanced Images Section -->
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Product Images</h2>
+                
+                <div class="mb-6">
+                    <!-- Upload Zone -->
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Upload Images *
+                    </label>
+                    <div id="uploadZone" 
+                         class="border-3 border-dashed border-gray-300 rounded-xl p-10 text-center hover:border-primary transition cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                                <i class="fas fa-images text-primary text-2xl"></i>
+                            </div>
+                            <p class="text-xl font-medium text-gray-700 mb-2">Drag & Drop Images Here</p>
+                            <p class="text-sm text-gray-500 mb-4">Or click to browse your computer</p>
+                            <div class="flex items-center gap-4 mb-4">
+                                <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> Up to 5 images
+                                </span>
+                                <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> 2MB max each
+                                </span>
+                                <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i> JPG, PNG, WebP
+                                </span>
+                            </div>
+                            <button type="button" onclick="document.getElementById('images').click()" 
+                                    class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2">
+                                <i class="fas fa-folder-open"></i>
+                                Browse Files
+                            </button>
+                        </div>
+                        <input type="file" name="images[]" id="images" multiple accept="image/*" 
+                               class="hidden" onchange="handleFileSelect(this)">
+                    </div>
+                    
+                    <p class="mt-4 text-sm text-gray-500 flex items-center justify-center gap-2">
+                        <i class="fas fa-lightbulb text-yellow-500"></i>
+                        <span>Tip: First image will be the main product thumbnail</span>
+                    </p>
+                    @error('images')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
-                <p class="text-xl font-medium text-gray-700 mb-2">Drag & Drop Images & Videos Here</p>
-                <p class="text-sm text-gray-500 mb-4">Or click to browse your computer</p>
-                <div class="flex items-center gap-4 mb-4 flex-wrap justify-center">
-                    <span class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> Up to 5 files total
-                    </span>
-                    <span class="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> Images: 2MB max
-                    </span>
-                    <span class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> Videos: 20MB max
-                    </span>
-                    <span class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
-                        <i class="fas fa-check-circle mr-1"></i> JPG, PNG, MP4, MOV
-                    </span>
-                </div>
-                <button type="button" onclick="document.getElementById('media_files').click()" 
-                        class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center gap-2">
-                    <i class="fas fa-folder-open"></i>
-                    Browse Files
-                </button>
-            </div>
-            <!-- CHANGED: Accept both images and videos -->
-            <input type="file" name="media_files[]" id="media_files" multiple 
-                   accept="image/*,video/*" 
-                   class="hidden" onchange="handleFileSelect(this)">
-        </div>
-        
-        <p class="mt-4 text-sm text-gray-500 flex items-center justify-center gap-2">
-            <i class="fas fa-lightbulb text-yellow-500"></i>
-            <span>Tip: First image/video will be the main product thumbnail</span>
-        </p>
-        @error('media_files')
-            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-        @enderror
-    </div>
 
-    <!-- Media Preview Gallery -->
-    <div id="mediaPreview" class="hidden">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-md font-bold text-gray-900">Media Gallery</h3>
-            <div class="flex items-center gap-2">
-                <button type="button" onclick="selectAllMedia()" 
-                        class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <i class="fas fa-check-square mr-1"></i> Select All
-                </button>
-                <button type="button" onclick="clearAllMedia()" 
-                        class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
-                    <i class="fas fa-trash mr-1"></i> Clear All
-                </button>
-            </div>
-        </div>
-        
-        <!-- Media Counter -->
-        <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-sm font-medium text-blue-700">
-                        <span id="selectedCount">0</span> of 5 files selected
-                    </span>
-                    <span id="fileSizeInfo" class="text-xs text-blue-600"></span>
-                    <span id="fileTypeInfo" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                        <i class="fas fa-image mr-1"></i><span id="imageCount">0</span> images
-                        <i class="fas fa-video ml-3 mr-1"></i><span id="videoCount">0</span> videos
-                    </span>
+                <!-- Image Preview Gallery -->
+                <div id="imagePreview" class="hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-md font-bold text-gray-900">Image Gallery</h3>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="selectAllImages()" 
+                                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+                                <i class="fas fa-check-square mr-1"></i> Select All
+                            </button>
+                            <button type="button" onclick="clearAllImages()" 
+                                    class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-red-50 text-red-600">
+                                <i class="fas fa-trash mr-1"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Image Counter -->
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-blue-700">
+                                    <span id="selectedCount">0</span> of 5 images selected
+                                </span>
+                                <span id="fileSizeInfo" class="text-xs text-blue-600"></span>
+                            </div>
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-arrows-alt mr-1"></i> Drag to reorder
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Sortable Image Grid -->
+                    <div id="newImagesSortable" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
+                        <!-- Images will be added here dynamically -->
+                    </div>
+                    
+                    <!-- Batch Actions -->
+                    <div id="batchActions" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-2">
+                            <i class="fas fa-check-circle text-green-500"></i>
+                            <span class="text-sm font-medium text-gray-700">
+                                <span id="batchCount">0</span> images selected
+                            </span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="setAsMain()" 
+                                    class="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary hover:text-white transition">
+                                <i class="fas fa-star mr-1"></i> Set as Main
+                            </button>
+                            <button type="button" onclick="removeSelected()" 
+                                    class="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition">
+                                <i class="fas fa-trash mr-1"></i> Remove Selected
+                            </button>
+                            <button type="button" onclick="clearSelection()" 
+                                    class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition">
+                                <i class="fas fa-times mr-1"></i> Clear Selection
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-sm text-gray-500">
-                    <i class="fas fa-arrows-alt mr-1"></i> Drag to reorder
-                </div>
             </div>
-        </div>
-        
-        <!-- Sortable Media Grid -->
-        <div id="newMediaSortable" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-4">
-            <!-- Media files will be added here dynamically -->
-        </div>
-        
-        <!-- Batch Actions -->
-        <div id="batchActions" class="hidden flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-check-circle text-green-500"></i>
-                <span class="text-sm font-medium text-gray-700">
-                    <span id="batchCount">0</span> files selected
-                </span>
-            </div>
-            <div class="flex gap-2">
-                <button type="button" onclick="setAsMain()" 
-                        class="px-4 py-2 bg-primary/10 text-primary text-sm font-medium rounded-lg hover:bg-primary hover:text-white transition">
-                    <i class="fas fa-star mr-1"></i> Set as Main
-                </button>
-                <button type="button" onclick="removeSelected()" 
-                        class="px-4 py-2 bg-red-50 text-red-600 text-sm font-medium rounded-lg hover:bg-red-100 transition">
-                    <i class="fas fa-trash mr-1"></i> Remove Selected
-                </button>
-                <button type="button" onclick="clearSelection()" 
-                        class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-100 transition">
-                    <i class="fas fa-times mr-1"></i> Clear Selection
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- Submit -->
             <div class="p-6">
@@ -535,9 +526,9 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
-// Media Upload Variables
-let uploadedMedia = [];
-let selectedMedia = new Set();
+// Image Upload Variables
+let uploadedImages = [];
+let selectedImages = new Set();
 
 // Variations Variables
 let colors = [];
@@ -564,11 +555,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Initialize drag and drop
-    initMediaDragAndDrop();
+    initDragAndDrop();
 });
 
-// Enhanced drag and drop functionality for media
-function initMediaDragAndDrop() {
+// Drag and drop functionality
+function initDragAndDrop() {
     const uploadZone = document.getElementById('uploadZone');
     if (!uploadZone) return;
     
@@ -588,28 +579,21 @@ function initMediaDragAndDrop() {
     });
     
     // Handle dropped files
-    uploadZone.addEventListener('drop', handleMediaDrop, false);
+    uploadZone.addEventListener('drop', handleDrop, false);
     
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if (e.ctrlKey || e.metaKey) {
             if (e.key === 'a') {
                 e.preventDefault();
-                selectAllMedia();
+                selectAllImages();
             }
         }
         if (e.key === 'Delete' || e.key === 'Backspace') {
-            if (selectedMedia.size > 0) {
+            if (selectedImages.size > 0) {
                 e.preventDefault();
-                removeSelectedMedia();
+                removeSelected();
             }
-        }
-    });
-    
-    // Add video preview modal close on escape
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeVideoPreview();
         }
     });
 }
@@ -633,241 +617,130 @@ function unhighlight() {
     }
 }
 
-function handleMediaDrop(e) {
+function handleDrop(e) {
     const dt = e.dataTransfer;
     const files = dt.files;
-    handleMediaFiles(files);
+    handleFiles(files);
 }
 
 function handleFileSelect(input) {
-    handleMediaFiles(input.files);
+    handleFiles(input.files);
 }
 
-function handleMediaFiles(files) {
+function handleFiles(files) {
     if (!files || files.length === 0) return;
     
     // Limit to 5 files
     let filesArray = Array.from(files).slice(0, 5);
     
     // Check if adding these files would exceed limit
-    const totalAfterAdd = uploadedMedia.length + filesArray.length;
+    const totalAfterAdd = uploadedImages.length + filesArray.length;
     if (totalAfterAdd > 5) {
-        showToast(`Maximum 5 files allowed. You already have ${uploadedMedia.length} files.`, 'error');
-        filesArray = filesArray.slice(0, 5 - uploadedMedia.length);
+        alert(`Maximum 5 images allowed. You already have ${uploadedImages.length} images.`);
+        filesArray = filesArray.slice(0, 5 - uploadedImages.length);
     }
     
-    // Check file sizes and types
-    const validFiles = [];
-    const invalidFiles = [];
-    
-    filesArray.forEach(file => {
-        const maxSize = file.type.startsWith('video/') ? 20 * 1024 * 1024 : 2 * 1024 * 1024;
-        
-        if (file.size > maxSize) {
-            invalidFiles.push(`${file.name} exceeds ${file.type.startsWith('video/') ? '20MB' : '2MB'} limit`);
-        } else if (!isValidMediaType(file)) {
-            invalidFiles.push(`${file.name} has unsupported format`);
-        } else {
-            validFiles.push(file);
-        }
-    });
-    
-    if (invalidFiles.length > 0) {
-        showToast(`Some files were rejected:\n${invalidFiles.join(', ')}`, 'error');
+    // Check file sizes
+    const oversizedFiles = filesArray.filter(file => file.size > 2 * 1024 * 1024);
+    if (oversizedFiles.length > 0) {
+        alert(`Some files exceed 2MB limit: ${oversizedFiles.map(f => f.name).join(', ')}`);
+        filesArray = filesArray.filter(file => file.size <= 2 * 1024 * 1024);
     }
     
-    // Process valid files
+    // Process files
     let processedCount = 0;
-    const totalFiles = validFiles.length;
+    const totalFiles = filesArray.length;
     
-    if (totalFiles === 0) return;
-    
-    validFiles.forEach((file, index) => {
+    filesArray.forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = function(e) {
-            const isVideo = file.type.startsWith('video/');
-            
-            uploadedMedia.push({
+            uploadedImages.push({
                 id: Date.now() + index,
                 file: file,
                 preview: e.target.result,
                 name: file.name,
-                type: isVideo ? 'video' : 'image',
                 size: formatFileSize(file.size),
                 selected: false,
-                isMain: uploadedMedia.length === 0,
-                duration: isVideo ? 0 : null // Will be set for videos
+                isMain: uploadedImages.length === 0
             });
             
             processedCount++;
             
             if (processedCount === totalFiles) {
-                // For videos, try to get duration
-                if (isVideo) {
-                    getVideoDuration(file).then(duration => {
-                        const mediaItem = uploadedMedia.find(m => m.id === uploadedMedia[uploadedMedia.length - 1].id);
-                        if (mediaItem) {
-                            mediaItem.duration = duration;
-                            updateMediaPreviews();
-                        }
-                    }).catch(() => {
-                        updateMediaPreviews();
-                    });
-                } else {
-                    updateMediaPreviews();
-                }
-                
-                updateMediaInputOrder();
-                showToast(`${totalFiles} files uploaded successfully!`, 'success');
+                updateImagePreviews();
+                updateFileInputOrder();
+                showSuccessMessage(`${totalFiles} images uploaded successfully!`);
             }
         };
         reader.readAsDataURL(file);
     });
 }
 
-function isValidMediaType(file) {
-    const validImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
-    const validVideoTypes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
-    
-    return validImageTypes.includes(file.type) || validVideoTypes.includes(file.type);
-}
-
-function getVideoDuration(videoFile) {
-    return new Promise((resolve, reject) => {
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        
-        video.onloadedmetadata = function() {
-            window.URL.revokeObjectURL(video.src);
-            resolve(Math.round(video.duration));
-        };
-        
-        video.onerror = function() {
-            reject(new Error('Failed to load video metadata'));
-        };
-        
-        video.src = URL.createObjectURL(videoFile);
-    });
-}
-
-function updateMediaPreviews() {
-    const container = document.getElementById('newMediaSortable');
+function updateImagePreviews() {
+    const container = document.getElementById('newImagesSortable');
     if (!container) return;
     
     container.innerHTML = '';
     
-    if (uploadedMedia.length === 0) {
-        const mediaPreview = document.getElementById('mediaPreview');
-        if (mediaPreview) mediaPreview.classList.add('hidden');
+    if (uploadedImages.length === 0) {
+        const imagePreview = document.getElementById('imagePreview');
+        if (imagePreview) imagePreview.classList.add('hidden');
         return;
     }
     
-    const mediaPreview = document.getElementById('mediaPreview');
-    if (mediaPreview) mediaPreview.classList.remove('hidden');
+    const imagePreview = document.getElementById('imagePreview');
+    if (imagePreview) imagePreview.classList.remove('hidden');
     
-    // Count files by type
-    const imageCount = uploadedMedia.filter(m => m.type === 'image').length;
-    const videoCount = uploadedMedia.filter(m => m.type === 'video').length;
-    
-    const imageCountEl = document.getElementById('imageCount');
-    const videoCountEl = document.getElementById('videoCount');
-    if (imageCountEl) imageCountEl.textContent = imageCount;
-    if (videoCountEl) videoCountEl.textContent = videoCount;
-    
-    uploadedMedia.forEach((media, index) => {
+    uploadedImages.forEach((img, index) => {
         const col = document.createElement('div');
-        col.className = `relative group media-preview-item ${media.selected ? 'ring-2 ring-primary' : ''}`;
-        col.setAttribute('data-id', media.id);
-        
-        // Common HTML for both image and video
-        let mediaHTML = '';
-        let typeBadge = '';
-        
-        if (media.type === 'image') {
-            mediaHTML = `
-                <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                    <img src="${media.preview}" 
-                         alt="${media.name}" 
-                         class="w-full h-full object-cover transition-transform group-hover:scale-105">
-                </div>
-            `;
-            typeBadge = `<span class="px-2 py-1 bg-blue-500 text-white text-xs rounded">IMG</span>`;
-        } else {
-            mediaHTML = `
-                <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100 relative">
-                    <video class="w-full h-full object-cover">
-                        <source src="${media.preview}" type="${media.file.type}">
-                    </video>
-                    <div class="absolute inset-0 bg-black/30 flex items-center justify-center">
-                        <div class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                            <i class="fas fa-play text-white text-xl"></i>
-                        </div>
-                    </div>
-                    ${media.duration ? `
-                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                        ${formatDuration(media.duration)}
-                    </div>` : ''}
-                </div>
-            `;
-            typeBadge = `<span class="px-2 py-1 bg-purple-500 text-white text-xs rounded">VID</span>`;
-        }
+        col.className = `relative group image-preview-item ${img.selected ? 'ring-2 ring-primary' : ''}`;
+        col.setAttribute('data-id', img.id);
         
         col.innerHTML = `
-            <!-- Media Type Badge -->
-            <div class="absolute top-2 left-2 z-10">
-                ${typeBadge}
-            </div>
-            
             <!-- Selection Checkbox -->
-            <div class="absolute top-2 right-2 z-10">
+            <div class="absolute top-2 left-2 z-10">
                 <input type="checkbox" 
-                       id="select-${media.id}" 
-                       ${media.selected ? 'checked' : ''}
+                       id="select-${img.id}" 
+                       ${img.selected ? 'checked' : ''}
+                       onchange="toggleSelect(${img.id}, this)"
                        class="hidden">
-                <label for="select-${media.id}" 
-                       onclick="toggleMediaSelect(${media.id}, event)"
-                       class="w-6 h-6 bg-white rounded-full flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-100 transition ${media.selected ? 'bg-primary text-white' : 'text-gray-400 hover:text-gray-600'}">
+                <label for="select-${img.id}" 
+                       class="w-6 h-6 bg-white rounded-full flex items-center justify-center cursor-pointer shadow-sm hover:bg-gray-100 transition ${img.selected ? 'bg-primary text-white' : 'text-gray-400 hover:text-gray-600'}">
                     <i class="fas fa-check text-xs"></i>
                 </label>
             </div>
             
-            <!-- Main Media Badge -->
-            ${media.isMain ? 
-                `<div class="absolute top-10 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm main-media-badge">
+            <!-- Main Image Badge -->
+            ${img.isMain ? 
+                `<div class="absolute top-2 right-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-sm">
                     <i class="fas fa-star mr-1"></i> Main
                 </div>` : 
                 `<button type="button" 
-                        onclick="setMediaAsMain(${media.id})"
-                        class="absolute top-10 right-2 bg-white/90 hover:bg-white text-gray-600 hover:text-yellow-600 w-7 h-7 rounded-full flex items-center justify-center text-sm shadow-sm transition opacity-0 group-hover:opacity-100">
+                        onclick="setImageAsMain(${img.id})"
+                        class="absolute top-2 right-2 bg-white/90 hover:bg-white text-gray-600 hover:text-yellow-600 w-7 h-7 rounded-full flex items-center justify-center text-sm shadow-sm transition opacity-0 group-hover:opacity-100">
                     <i class="far fa-star"></i>
                 </button>`
             }
             
-            <!-- Media Preview -->
-            ${mediaHTML}
+            <!-- Image -->
+            <div class="aspect-square rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                <img src="${img.preview}" 
+                     alt="${img.name}" 
+                     class="w-full h-full object-cover transition-transform group-hover:scale-105">
+            </div>
             
-            <!-- Media Info -->
+            <!-- Image Info -->
             <div class="mt-2 p-2 bg-gray-50 rounded-lg">
                 <div class="flex justify-between items-center mb-1">
-                    <p class="text-xs font-medium text-gray-700 truncate" title="${media.name}">
-                        ${media.type === 'image' ? 'Image' : 'Video'} ${index + 1}
+                    <p class="text-xs font-medium text-gray-700 truncate" title="${img.name}">
+                        Image ${index + 1}
                     </p>
-                    <span class="text-xs text-gray-500">${media.size}</span>
+                    <span class="text-xs text-gray-500">${img.size}</span>
                 </div>
-                
-                <!-- Play/Preview Button for Videos -->
-                ${media.type === 'video' ? `
-                <button type="button" 
-                        onclick="previewVideo('${media.id}')"
-                        class="w-full mt-1 px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-600 text-xs font-medium rounded flex items-center justify-center gap-1 transition">
-                    <i class="fas fa-play mr-1"></i>
-                    Preview
-                </button>
-                ` : ''}
                 
                 <!-- Remove Button -->
                 <button type="button" 
-                        onclick="removeMedia(${media.id})"
+                        onclick="removeImage(${img.id})"
                         class="w-full mt-1 px-2 py-1 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-medium rounded flex items-center justify-center gap-1 transition">
                     <i class="fas fa-trash text-xs"></i>
                     Remove
@@ -879,7 +752,7 @@ function updateMediaPreviews() {
                 <i class="fas fa-grip-vertical"></i>
             </div>
             
-            <!-- Item Number -->
+            <!-- Image Number -->
             <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs w-6 h-6 rounded-full flex items-center justify-center">
                 ${index + 1}
             </div>
@@ -888,168 +761,55 @@ function updateMediaPreviews() {
         container.appendChild(col);
     });
     
-    // Initialize sorting
-    initMediaSorting();
+    // Initialize Sortable with better configuration
+    initImageSorting();
     
     // Update counters
-    updateMediaCounters();
-    updateMediaFileSizeInfo();
+    updateCounters();
+    updateFileSizeInfo();
 }
 
-function formatDuration(seconds) {
-    if (!seconds || seconds <= 0) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function previewVideo(mediaId) {
-    const media = uploadedMedia.find(m => m.id === mediaId);
-    if (!media || media.type !== 'video') return;
+function initImageSorting() {
+    const container = document.getElementById('newImagesSortable');
+    if (!container) return;
     
-    // Create modal for video preview
-    const modalHTML = `
-        <div id="videoPreviewModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
-            <div class="relative max-w-4xl w-full">
-                <button onclick="closeVideoPreview()" class="absolute -top-10 right-0 text-white text-2xl hover:text-gray-300">
-                    <i class="fas fa-times"></i>
-                </button>
-                <div class="bg-black rounded-xl overflow-hidden">
-                    <video controls autoplay class="w-full h-auto max-h-[70vh]">
-                        <source src="${media.preview}" type="${media.file.type}">
-                        Your browser does not support the video tag.
-                    </video>
-                </div>
-                <div class="mt-2 text-white text-sm">
-                    <p class="font-medium">${media.name}</p>
-                    <p class="text-gray-300">${media.size} • ${formatDuration(media.duration || 0)}</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    // Remove existing modal if any
-    const existingModal = document.getElementById('videoPreviewModal');
-    if (existingModal) existingModal.remove();
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-}
-
-function closeVideoPreview() {
-    const modal = document.getElementById('videoPreviewModal');
-    if (modal) {
-        const video = modal.querySelector('video');
-        if (video) {
-            video.pause();
-            video.currentTime = 0;
+    new Sortable(container, {
+        animation: 200,
+        ghostClass: 'bg-blue-50',
+        chosenClass: 'ring-2 ring-primary',
+        dragClass: 'opacity-50',
+        handle: '.fa-grip-vertical, .image-preview-item',
+        onEnd: function(evt) {
+            // Update order in uploadedImages array
+            const movedItem = uploadedImages.splice(evt.oldIndex, 1)[0];
+            uploadedImages.splice(evt.newIndex, 0, movedItem);
+            
+            // Update file input (preserve order for form submission)
+            const dataTransfer = new DataTransfer();
+            uploadedImages.forEach(img => {
+                dataTransfer.items.add(img.file);
+            });
+            
+            const fileInput = document.getElementById('images');
+            if (fileInput) {
+                fileInput.files = dataTransfer.files;
+            }
+            
+            // Update UI
+            updateImagePreviews();
+            showToast('Images reordered!', 'success');
         }
-        modal.remove();
-    }
+    });
 }
 
-function setMediaAsMain(mediaId) {
-    uploadedMedia.forEach(m => m.isMain = false);
-    const media = uploadedMedia.find(m => m.id === mediaId);
-    if (media) {
-        media.isMain = true;
-        
-        // Move to first position
-        const index = uploadedMedia.indexOf(media);
-        uploadedMedia.splice(index, 1);
-        uploadedMedia.unshift(media);
-        
-        // Update file input order
-        updateMediaInputOrder();
-        updateMediaPreviews();
-        
-        showToast('Main media set!', 'success');
-    }
-}
-
-function removeMedia(mediaId) {
-    if (!confirm('Remove this media file?')) return;
-    
-    const index = uploadedMedia.findIndex(m => m.id === mediaId);
-    if (index !== -1) {
-        const wasMain = uploadedMedia[index].isMain;
-        uploadedMedia.splice(index, 1);
-        
-        // If main media was removed, set new main
-        if (wasMain && uploadedMedia.length > 0) {
-            uploadedMedia[0].isMain = true;
-        }
-        
-        updateMediaInputOrder();
-        updateMediaPreviews();
-        showToast('Media removed', 'success');
-    }
-}
-
-// Selection Functions
-function toggleMediaSelect(mediaId, event) {
-    event.stopPropagation();
-    const media = uploadedMedia.find(m => m.id === mediaId);
-    if (media) {
-        media.selected = !media.selected;
-        updateMediaCounters();
-        updateMediaPreviews();
-    }
-}
-
-function selectAllMedia() {
-    uploadedMedia.forEach(media => media.selected = true);
-    updateMediaCounters();
-    updateMediaPreviews();
-}
-
-function clearSelection() {
-    uploadedMedia.forEach(media => media.selected = false);
-    updateMediaCounters();
-    updateMediaPreviews();
-}
-
-function removeSelectedMedia() {
-    const selected = uploadedMedia.filter(m => m.selected);
-    if (selected.length === 0) {
-        showToast('No files selected', 'error');
-        return;
-    }
-    
-    if (!confirm(`Remove ${selected.length} selected file(s)?`)) return;
-    
-    // Remove selected media
-    uploadedMedia = uploadedMedia.filter(m => !m.selected);
-    
-    // Ensure there's a main media
-    if (uploadedMedia.length > 0 && !uploadedMedia.some(m => m.isMain)) {
-        uploadedMedia[0].isMain = true;
-    }
-    
-    updateMediaInputOrder();
-    updateMediaPreviews();
-    showToast(`${selected.length} file(s) removed`, 'success');
-}
-
-function clearAllMedia() {
-    if (uploadedMedia.length === 0) return;
-    
-    if (!confirm('Remove all files?')) return;
-    
-    uploadedMedia = [];
-    const fileInput = document.getElementById('media_files');
-    if (fileInput) fileInput.value = '';
-    updateMediaPreviews();
-    showToast('All files cleared', 'success');
-}
-
-function updateMediaCounters() {
-    const totalMedia = uploadedMedia.length;
-    const selectedCount = uploadedMedia.filter(m => m.selected).length;
+function updateCounters() {
+    const totalImages = uploadedImages.length;
+    const selectedCount = uploadedImages.filter(img => img.selected).length;
     
     const selectedCountEl = document.getElementById('selectedCount');
     const batchCountEl = document.getElementById('batchCount');
     
-    if (selectedCountEl) selectedCountEl.textContent = totalMedia;
+    if (selectedCountEl) selectedCountEl.textContent = totalImages;
     if (batchCountEl) batchCountEl.textContent = selectedCount;
     
     // Show/hide batch actions
@@ -1065,58 +825,21 @@ function updateMediaCounters() {
     // Update upload zone text
     const uploadText = document.querySelector('#uploadZone p.text-xl');
     if (uploadText) {
-        if (totalMedia > 0) {
-            uploadText.textContent = `Add More Files (${totalMedia}/5 uploaded)`;
+        if (totalImages > 0) {
+            uploadText.textContent = `Add More Images (${totalImages}/5 uploaded)`;
         } else {
-            uploadText.textContent = 'Drag & Drop Images & Videos Here';
+            uploadText.textContent = 'Drag & Drop Images Here';
         }
     }
 }
 
-function updateMediaFileSizeInfo() {
-    const totalSize = uploadedMedia.reduce((sum, media) => sum + media.file.size, 0);
+function updateFileSizeInfo() {
+    const totalSize = uploadedImages.reduce((sum, img) => sum + img.file.size, 0);
     const formattedSize = formatFileSize(totalSize);
     const fileSizeInfo = document.getElementById('fileSizeInfo');
     if (fileSizeInfo) {
         fileSizeInfo.textContent = `Total: ${formattedSize}`;
     }
-}
-
-function updateMediaInputOrder() {
-    const dataTransfer = new DataTransfer();
-    uploadedMedia.forEach(media => {
-        dataTransfer.items.add(media.file);
-    });
-    
-    const fileInput = document.getElementById('media_files');
-    if (fileInput) {
-        fileInput.files = dataTransfer.files;
-    }
-}
-
-function initMediaSorting() {
-    const container = document.getElementById('newMediaSortable');
-    if (!container) return;
-    
-    new Sortable(container, {
-        animation: 200,
-        ghostClass: 'bg-blue-50',
-        chosenClass: 'ring-2 ring-primary',
-        dragClass: 'opacity-50',
-        handle: '.fa-grip-vertical, .media-preview-item',
-        onEnd: function(evt) {
-            // Update order in uploadedMedia array
-            const movedItem = uploadedMedia.splice(evt.oldIndex, 1)[0];
-            uploadedMedia.splice(evt.newIndex, 0, movedItem);
-            
-            // Update file input (preserve order for form submission)
-            updateMediaInputOrder();
-            
-            // Update UI
-            updateMediaPreviews();
-            showToast('Files reordered!', 'success');
-        }
-    });
 }
 
 function formatFileSize(bytes) {
@@ -1125,6 +848,137 @@ function formatFileSize(bytes) {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Selection Functions
+function toggleSelect(imageId, checkbox) {
+    const image = uploadedImages.find(img => img.id === imageId);
+    if (image) {
+        image.selected = checkbox.checked;
+        updateCounters();
+        updateImagePreviews();
+    }
+}
+
+function selectAllImages() {
+    uploadedImages.forEach(img => img.selected = true);
+    updateCounters();
+    updateImagePreviews();
+}
+
+function clearSelection() {
+    uploadedImages.forEach(img => img.selected = false);
+    updateCounters();
+    updateImagePreviews();
+}
+
+function selectImage(imageId) {
+    const image = uploadedImages.find(img => img.id === imageId);
+    if (image) {
+        image.selected = !image.selected;
+        updateCounters();
+        updateImagePreviews();
+    }
+}
+
+// Image Management Functions
+function setImageAsMain(imageId) {
+    uploadedImages.forEach(img => img.isMain = false);
+    const image = uploadedImages.find(img => img.id === imageId);
+    if (image) {
+        image.isMain = true;
+        
+        // Move to first position
+        const index = uploadedImages.indexOf(image);
+        uploadedImages.splice(index, 1);
+        uploadedImages.unshift(image);
+        
+        // Update file input order
+        updateFileInputOrder();
+        updateImagePreviews();
+        
+        showToast('Main image set!', 'success');
+    }
+}
+
+function setAsMain() {
+    const selected = uploadedImages.filter(img => img.selected);
+    if (selected.length === 0) {
+        showToast('Please select an image first', 'error');
+        return;
+    }
+    
+    if (selected.length > 1) {
+        showToast('Please select only one image to set as main', 'error');
+        return;
+    }
+    
+    setImageAsMain(selected[0].id);
+}
+
+function removeImage(imageId) {
+    if (!confirm('Remove this image?')) return;
+    
+    const index = uploadedImages.findIndex(img => img.id === imageId);
+    if (index !== -1) {
+        const wasMain = uploadedImages[index].isMain;
+        uploadedImages.splice(index, 1);
+        
+        // If main image was removed, set new main
+        if (wasMain && uploadedImages.length > 0) {
+            uploadedImages[0].isMain = true;
+        }
+        
+        updateFileInputOrder();
+        updateImagePreviews();
+        showToast('Image removed', 'success');
+    }
+}
+
+function removeSelected() {
+    const selected = uploadedImages.filter(img => img.selected);
+    if (selected.length === 0) {
+        showToast('No images selected', 'error');
+        return;
+    }
+    
+    if (!confirm(`Remove ${selected.length} selected image(s)?`)) return;
+    
+    // Remove selected images
+    uploadedImages = uploadedImages.filter(img => !img.selected);
+    
+    // Ensure there's a main image
+    if (uploadedImages.length > 0 && !uploadedImages.some(img => img.isMain)) {
+        uploadedImages[0].isMain = true;
+    }
+    
+    updateFileInputOrder();
+    updateImagePreviews();
+    showToast(`${selected.length} image(s) removed`, 'success');
+}
+
+function clearAllImages() {
+    if (uploadedImages.length === 0) return;
+    
+    if (!confirm('Remove all images?')) return;
+    
+    uploadedImages = [];
+    const fileInput = document.getElementById('images');
+    if (fileInput) fileInput.value = '';
+    updateImagePreviews();
+    showToast('All images cleared', 'success');
+}
+
+function updateFileInputOrder() {
+    const dataTransfer = new DataTransfer();
+    uploadedImages.forEach(img => {
+        dataTransfer.items.add(img.file);
+    });
+    
+    const fileInput = document.getElementById('images');
+    if (fileInput) {
+        fileInput.files = dataTransfer.files;
+    }
 }
 
 // Variations Functions
@@ -1348,10 +1202,10 @@ document.getElementById('listingForm').addEventListener('submit', function(e) {
         return false;
     }
     
-    // Media validation
-    if (uploadedMedia.length === 0) {
+    // Images validation
+    if (uploadedImages.length === 0) {
         e.preventDefault();
-        showToast('Please upload at least one file (image or video)', 'error');
+        showToast('Please upload at least one image', 'error');
         return false;
     }
     
@@ -1421,11 +1275,11 @@ style.textContent = `
         animation: slideIn 0.3s ease-out;
     }
     
-    .media-preview-item {
+    .image-preview-item {
         transition: all 0.2s ease;
     }
     
-    .media-preview-item:hover {
+    .image-preview-item:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
@@ -1433,22 +1287,6 @@ style.textContent = `
     #uploadZone.drag-over {
         border-color: #4f46e5;
         background: linear-gradient(135deg, rgba(79,70,229,0.05) 0%, rgba(124,58,237,0.05) 100%);
-    }
-    
-    /* Video preview styles */
-    video {
-        max-width: 100%;
-        height: auto;
-    }
-    
-    .main-media-badge {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
     }
 `;
 document.head.appendChild(style);

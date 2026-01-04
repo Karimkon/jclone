@@ -635,114 +635,59 @@ button[onclick="closeOptionsModal()"]:hover {
                 <!-- Left: Image Gallery -->
                 <div class="p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-gray-100">
                     <!-- Main Image -->
-<div class="main-image-container mb-4 cursor-zoom-in" onclick="openLightbox()">
-    @if($listing->images->first())
-    <img id="mainImage" 
-         src="{{ asset('storage/' . $listing->images->first()->path) }}" 
-         alt="{{ $listing->title }}" 
-         class="main-image">
-    @else
-    <div class="w-full h-[500px] flex items-center justify-center bg-gray-100">
-        <div class="text-center">
-            <i class="fas fa-image text-gray-300 text-6xl mb-4"></i>
-            <p class="text-gray-400">No image available</p>
-        </div>
-    </div>
-    @endif
-    
-    <!-- Badges -->
-    <div class="absolute top-4 left-4 flex flex-col gap-2">
-        @if($listing->origin == 'imported')
-        <span class="px-3 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full shadow-lg">
-            <i class="fas fa-plane mr-1"></i> Imported
-        </span>
-        @else
-        <span class="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-full shadow-lg">
-            <i class="fas fa-map-marker-alt mr-1"></i> Local
-        </span>
-        @endif
-        
-        @if($listing->condition == 'new')
-        <span class="px-3 py-1.5 bg-purple-500 text-white text-sm font-semibold rounded-full shadow-lg">
-            <i class="fas fa-sparkles mr-1"></i> New
-        </span>
-        @endif
-        
-        <!-- Video Badge - ADD THIS -->
-        @if($listing->has_video)
-        <span class="px-3 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg">
-            <i class="fas fa-video mr-1"></i> Video
-        </span>
-        @endif
-    </div>
-    
-    <!-- Zoom Hint -->
-    <div class="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
-        <i class="fas fa-search-plus mr-1"></i> Click to zoom
-    </div>
-</div>
-                   <!-- Thumbnails -->
-@if($listing->media->count() > 1)
-<div class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-    @foreach($listing->media as $index => $media)
-    <button onclick="changeMedia('{{ $index }}', this)" 
-            class="thumbnail-btn flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden {{ $index === 0 ? 'active' : '' }}">
-        @if($media->is_video)
-        <div class="relative w-full h-full">
-            <img src="{{ $media->thumbnail_url }}" 
-                 alt="{{ $listing->title }}" 
-                 class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
-                <i class="fas fa-play text-white text-lg"></i>
-            </div>
-            @if($media->duration)
-            <div class="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1 py-0.5 rounded">
-                {{ gmdate("i:s", $media->duration) }}
-            </div>
-            @endif
-        </div>
-        @else
-        <img src="{{ $media->url }}" 
-             alt="{{ $listing->title }}" 
-             class="w-full h-full object-cover">
-        @endif
-    </button>
-    @endforeach
-</div>
-@endif
-
-                    <!-- Videos Section - ADD THIS -->
-@if($listing->has_video && $listing->videos()->exists())
-<div class="mt-6 pt-6 border-t border-gray-100">
-    <h3 class="text-lg font-bold text-gray-800 mb-4">Product Videos</h3>
-    <div class="space-y-4">
-        @foreach($listing->videos as $video)
-        <div class="bg-gray-50 rounded-xl overflow-hidden">
-            <div class="aspect-video bg-black relative">
-                <video 
-                    controls 
-                    class="w-full h-full"
-                    poster="{{ $video->thumbnail_url }}"
-                    preload="metadata">
-                    <source src="{{ $video->url }}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-                @if($video->duration)
-                <div class="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
-                    {{ gmdate("i:s", $video->duration) }}
-                </div>
-                @endif
-            </div>
-            @if($video->metadata && isset($video->metadata['original_name']))
-            <div class="p-3 text-sm text-gray-600">
-                <p class="truncate">{{ $video->metadata['original_name'] }}</p>
-            </div>
-            @endif
-        </div>
-        @endforeach
-    </div>
-</div>
-@endif
+                    <div class="main-image-container mb-4 cursor-zoom-in" onclick="openLightbox()">
+                        @if($listing->images->first())
+                        <img id="mainImage" 
+                             src="{{ asset('storage/' . $listing->images->first()->path) }}" 
+                             alt="{{ $listing->title }}" 
+                             class="main-image">
+                        @else
+                        <div class="w-full h-[500px] flex items-center justify-center bg-gray-100">
+                            <div class="text-center">
+                                <i class="fas fa-image text-gray-300 text-6xl mb-4"></i>
+                                <p class="text-gray-400">No image available</p>
+                            </div>
+                        </div>
+                        @endif
+                        
+                        <!-- Badges -->
+                        <div class="absolute top-4 left-4 flex flex-col gap-2">
+                            @if($listing->origin == 'imported')
+                            <span class="px-3 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                                <i class="fas fa-plane mr-1"></i> Imported
+                            </span>
+                            @else
+                            <span class="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                                <i class="fas fa-map-marker-alt mr-1"></i> Local
+                            </span>
+                            @endif
+                            
+                            @if($listing->condition == 'new')
+                            <span class="px-3 py-1.5 bg-purple-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                                <i class="fas fa-sparkles mr-1"></i> New
+                            </span>
+                            @endif
+                        </div>
+                        
+                        <!-- Zoom Hint -->
+                        <div class="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
+                            <i class="fas fa-search-plus mr-1"></i> Click to zoom
+                        </div>
+                    </div>
+                    
+                    <!-- Thumbnails -->
+                    @if($listing->images->count() > 1)
+                    <div class="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+                        @foreach($listing->images as $index => $image)
+                        <button onclick="changeImage('{{ asset('storage/' . $image->path) }}', this)" 
+                                class="thumbnail-btn flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden {{ $index === 0 ? 'active' : '' }}">
+                            <img src="{{ asset('storage/' . $image->path) }}" 
+                                 alt="{{ $listing->title }}" 
+                                 class="w-full h-full object-cover">
+                        </button>
+                        @endforeach
+                    </div>
+                    @endif
                     
                     <!-- Share & Actions Row -->
                     <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
@@ -1484,7 +1429,7 @@ button[onclick="closeOptionsModal()"]:hover {
                             Chat with Vendor
                         </button>
                         
-                        <a href="#" 
+                        <a href="{{ route('vendor.store.show', $listing->vendor->id) }}" 
                         class="w-full py-2.5 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
                             <i class="fas fa-store"></i>
                             View Store
@@ -1868,114 +1813,6 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Options section shown');
     }
 });
-
-// Array to store media URLs and types
-let mediaItems = @json($listing->media->map(function($item) {
-    return [
-        'url' => $item->url,
-        'type' => $item->type,
-        'thumbnail' => $item->thumbnail_url,
-        'is_video' => $item->is_video
-    ];
-}));
-
-// Change media (image or video)
-function changeMedia(index, btn) {
-    const mainContainer = document.querySelector('.main-image-container');
-    const media = mediaItems[index];
-    
-    if (media.is_video) {
-        mainContainer.innerHTML = `
-            <div class="aspect-video bg-black rounded-xl overflow-hidden">
-                <video 
-                    id="mainVideo" 
-                    controls 
-                    class="w-full h-full"
-                    poster="${media.thumbnail}">
-                    <source src="${media.url}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-            
-            <!-- Badges -->
-            <div class="absolute top-4 left-4 flex flex-col gap-2">
-                @if($listing->origin == 'imported')
-                <span class="px-3 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-plane mr-1"></i> Imported
-                </span>
-                @else
-                <span class="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-map-marker-alt mr-1"></i> Local
-                </span>
-                @endif
-                
-                @if($listing->condition == 'new')
-                <span class="px-3 py-1.5 bg-purple-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-sparkles mr-1"></i> New
-                </span>
-                @endif
-                
-                <!-- Video Badge -->
-                <span class="px-3 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-video mr-1"></i> Video
-                </span>
-            </div>
-            
-            <!-- Play Hint -->
-            <div class="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
-                <i class="fas fa-play mr-1"></i> Click to play
-            </div>
-        `;
-        
-        // Remove zoom functionality for video
-        mainContainer.style.cursor = 'default';
-        mainContainer.onclick = null;
-    } else {
-        mainContainer.innerHTML = `
-            <img id="mainImage" 
-                 src="${media.url}" 
-                 alt="{{ $listing->title }}" 
-                 class="main-image">
-            
-            <!-- Badges -->
-            <div class="absolute top-4 left-4 flex flex-col gap-2">
-                @if($listing->origin == 'imported')
-                <span class="px-3 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-plane mr-1"></i> Imported
-                </span>
-                @else
-                <span class="px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-map-marker-alt mr-1"></i> Local
-                </span>
-                @endif
-                
-                @if($listing->condition == 'new')
-                <span class="px-3 py-1.5 bg-purple-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-sparkles mr-1"></i> New
-                </span>
-                @endif
-                
-                @if($listing->has_video && index === 0)
-                <span class="px-3 py-1.5 bg-red-500 text-white text-sm font-semibold rounded-full shadow-lg">
-                    <i class="fas fa-video mr-1"></i> Video Available
-                </span>
-                @endif
-            </div>
-            
-            <!-- Zoom Hint -->
-            <div class="absolute bottom-4 right-4 bg-black/50 text-white px-3 py-1.5 rounded-full text-sm backdrop-blur-sm">
-                <i class="fas fa-search-plus mr-1"></i> Click to zoom
-            </div>
-        `;
-        
-        // Restore zoom functionality
-        mainContainer.style.cursor = 'zoom-in';
-        mainContainer.onclick = openLightbox;
-    }
-    
-    document.querySelectorAll('.thumbnail-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
 
 // Update the handleAddToCart and handleBuyNow functions:
 function handleAddToCart(button) {
@@ -2536,13 +2373,6 @@ function changeImage(src, btn) {
 }
 
 function openLightbox() {
-    // Check if currently showing a video
-    const videoElement = document.getElementById('mainVideo');
-    if (videoElement) {
-        // Don't open lightbox for videos
-        return;
-    }
-    
     const img = document.getElementById('mainImage').src;
     document.getElementById('lightboxImage').src = img;
     document.getElementById('lightbox').classList.add('active');

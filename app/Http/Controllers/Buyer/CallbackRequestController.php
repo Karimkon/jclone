@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Buyer;
 
 use App\Http\Controllers\Controller;
-use App\Models\CallbackRequest;
 use App\Models\Listing;
 use Illuminate\Http\Request;
 
@@ -35,4 +34,6 @@ class CallbackRequestController extends Controller
             'message' => 'Callback request sent! The vendor will contact you soon.',
         ]);
     }
+
+
 }

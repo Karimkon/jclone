@@ -706,18 +706,18 @@ main {
             <div class="cat-sidebar-item">
                 <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
                    class="flex items-center justify-between px-4 py-3 text-ink-600 transition hover:no-underline">
-                    <span class="flex items-center gap-2">
-                        <!-- Product Count Badge -->
-                        <span class="category-product-count bg-brand-100 text-brand-600 text-xs px-1.5 py-0.5 rounded font-bold">
-                            {{ isset($cat->listings_count) ? ($cat->listings_count > 99 ? '99+' : $cat->listings_count) : rand(5,50) }}
-                        </span>
-                        
-                        <!-- Category Icon -->
-                        <i class="fas fa-{{ $cat->icon ?? 'tag' }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
-                        
-                        <!-- Category Name -->
-                        <span class="text-sm font-medium">{{ $cat->name }}</span>
-                    </span>
+       <span class="flex items-center gap-2">
+            <!-- Category Icon -->
+            <i class="fas fa-{{ $cat->icon ?? 'tag' }} cat-icon text-ink-400 w-4 text-sm transition-transform"></i>
+            
+            <!-- Category Name -->
+            <span class="text-sm font-medium">
+                {{ $cat->name }} 
+                <span class="text-brand-600 font-bold ml-1">
+                    ({{ isset($cat->listings_count) ? ($cat->listings_count > 99 ? '99+' : $cat->listings_count) : rand(5,50) }})
+                </span>
+            </span>
+        </span>
                     
                     <!-- Chevron if has subcategories -->
                     @if($cat->children && $cat->children->count() > 0)

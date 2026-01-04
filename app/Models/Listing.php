@@ -12,7 +12,7 @@ class Listing extends Model
     protected $fillable = [
         'vendor_profile_id', 'title', 'description', 'sku', 'price', 
         'weight_kg', 'origin', 'condition', 'category_id', 'stock', 
-        'attributes', 'is_active', 'has_video',  'view_count', 'click_count', 'wishlist_count', 
+        'attributes', 'is_active',  'view_count', 'click_count', 'wishlist_count', 
         'cart_add_count', 'purchase_count', 'share_count', 'last_viewed_at'
     ];
 
@@ -21,7 +21,6 @@ class Listing extends Model
         'price' => 'decimal:2',
         'weight_kg' => 'decimal:2',
         'is_active' => 'boolean',
-        'has_video' => 'boolean', 
         'last_viewed_at' => 'datetime',
     ];
 
@@ -75,48 +74,6 @@ class Listing extends Model
     public function getReviewsCountAttribute()
     {
         return $this->approvedReviews()->count();
-    }
-
-     /**
-     * Get all media (images and videos)
-     */
-    public function media()
-    {
-        return $this->hasMany(ListingImage::class)->orderBy('order');
-    }
-
-
-    /**
-     * Get only videos
-     */
-    public function videos()
-    {
-        return $this->hasMany(ListingImage::class)
-                    ->orderBy('order')
-                    ->where('type', 'video');
-    }
-
-
-     /**
-     * Get the main image/video (first one)
-     */
-    public function getMainMediaAttribute()
-    {
-        return $this->media()->first();
-    }
-
-      /**
-     * Get thumbnail URL
-     */
-    public function getThumbnailUrlAttribute()
-    {
-        $mainMedia = $this->mainMedia;
-        return $mainMedia ? $mainMedia->thumbnail_url : asset('images/default-product.png');
-    }
-
-     public function checkHasVideo()
-    {
-        return $this->media()->where('type', 'video')->exists();
     }
 
     /**
