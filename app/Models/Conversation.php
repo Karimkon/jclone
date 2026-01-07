@@ -137,15 +137,24 @@ class Conversation extends Model
      */
     public static function findOrCreateBetween(int $buyerId, int $vendorProfileId, ?int $listingId = null): self
     {
-        return self::firstOrCreate(
-            [
-                'buyer_id' => $buyerId,
-                'vendor_profile_id' => $vendorProfileId,
-                'listing_id' => $listingId,
-            ],
-            [
-                'status' => 'active',
-            ]
-        );
+        // Check if a conversation already exists between this buyer and vendor profile
+        $conversation = self::where('buyer_id', $buyerId)
+            ->where('vendor_profile_id', $vendorProfileId)
+            ->first();
+
+        if ($conversation) {
+            // Optional: Update listing context if it was null before
+            if ($listingId && !$conversation->listing_id) {
+                $conversation->update(['listing_id' => $listingId]);
+            }
+            return $conversation;
+        }
+
+        return self::create([
+            'buyer_id' => $buyerId,
+            'vendor_profile_id' => $vendorProfileId,
+            'listing_id' => $listingId,
+            'status' => 'active',
+        ]);
     }
 }

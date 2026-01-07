@@ -630,11 +630,24 @@ Route::get('/categories/{slug}', function ($slug) {
         return response()->json([
             'success' => true,
             'data' => [
-                'category' => [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                ],
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'description' => $category->description,
+                'icon' => $category->icon ?? 'category',
+                'parent_id' => $category->parent_id,
+                'listings_count' => $category->total_listings_count,
+                'children' => $category->children->map(function ($child) {
+                    return [
+                        'id' => $child->id,
+                        'name' => $child->name,
+                        'slug' => $child->slug,
+                        'description' => $child->description,
+                        'icon' => $child->icon ?? 'category',
+                        'parent_id' => $child->parent_id,
+                        'listings_count' => $child->total_listings_count,
+                    ];
+                })->values()->toArray(),
                 'listings' => $listings,
             ],
         ]);
@@ -642,8 +655,134 @@ Route::get('/categories/{slug}', function ($slug) {
     } catch (\Exception $e) {
         return response()->json([
             'success' => false,
-            'message' => 'Server error: ' . $e->getMessage(),
         ], 500);
+    }
+});
+
+// Jobs & Services (Public)
+Route::get('/service-categories', function (Request $request) {
+    $type = $request->get('type'); // job, service
+    $query = \App\Models\ServiceCategory::active()->parents();
+    
+    if ($type === 'job') {
+        $query->forJobs();
+    } elseif ($type === 'service') {
+        $query->forServices();
+    }
+    
+    $categories = $query->with(['children' => function($q) use ($type) {
+        $q->active();
+        if ($type === 'job') $q->forJobs();
+        if ($type === 'service') $q->forServices();
+    }])->orderBy('sort_order')->get();
+    
+    return response()->json([
+        'success' => true,
+        'data' => $categories->map(function($cat) {
+            return [
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'slug' => $cat->slug,
+                'type' => $cat->type,
+                'icon' => $cat->icon,
+                'children' => $cat->children->map(function($child) {
+                    return [
+                        'id' => $child->id,
+                        'name' => $child->name,
+                        'slug' => $child->slug,
+                        'type' => $child->type,
+                        'icon' => $child->icon,
+                    ];
+                })
+            ];
+        })
+    ]);
+});
+
+Route::get('/marketplace/services', function (Request $request) {
+    try {
+        $query = \App\Models\VendorService::active()
+            ->with(['vendor', 'category'])
+            ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
+            
+        $perPage = $request->get('per_page', 10);
+        $services = $query->latest()->paginate($perPage);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $services->getCollection()->map(function($service) {
+                return [
+                    'id' => $service->id,
+                    'title' => $service->title,
+                    'slug' => $service->slug,
+                    'price' => $service->price,
+                    'image' => $service->images && count($service->images) > 0 ? $service->images[0] : null,
+                    'description' => $service->description,
+                    'location' => $service->location,
+                    'city' => $service->city,
+                    'vendor' => [
+                        'id' => $service->vendor->id,
+                        'business_name' => $service->vendor->business_name,
+                    ],
+                    'category' => $service->category ? [
+                        'id' => $service->category->id,
+                        'name' => $service->category->name,
+                        'slug' => $service->category->slug,
+                    ] : null,
+                ];
+            }),
+            'meta' => [
+                'current_page' => $services->currentPage(),
+                'last_page' => $services->lastPage(),
+                'total' => $services->total(),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+});
+
+Route::get('/marketplace/jobs', function (Request $request) {
+    try {
+        $query = \App\Models\JobListing::active()->notExpired()->with(['vendor', 'category']);
+        
+        $perPage = $request->get('per_page', 10);
+        $jobs = $query->latest()->paginate($perPage);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $jobs->getCollection()->map(function($job) {
+                return [
+                    'id' => $job->id,
+                    'title' => $job->title,
+                    'slug' => $job->slug,
+                    'company_name' => $job->company_name ?? $job->vendor->business_name,
+                    'job_type' => $job->job_type,
+                    'salary_min' => $job->salary_min,
+                    'salary_max' => $job->salary_max,
+                    'requirements' => $job->requirements,
+                    'city' => $job->city,
+                    'description' => $job->description,
+                    'location' => $job->location,
+                    'vendor' => [
+                        'id' => $job->vendor->id,
+                        'business_name' => $job->vendor->business_name,
+                    ],
+                    'category' => $job->category ? [
+                        'id' => $job->category->id,
+                        'name' => $job->category->name,
+                        'slug' => $job->category->slug,
+                    ] : null,
+                ];
+            }),
+            'meta' => [
+                'current_page' => $jobs->currentPage(),
+                'last_page' => $jobs->lastPage(),
+                'total' => $jobs->total(),
+            ]
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
     }
 });
 
@@ -956,16 +1095,19 @@ Route::middleware('auth:sanctum')->group(function () {
         }
 
         // Store new avatar
-        $path = $request->file('avatar')->store('avatars', 'public');
         $user->avatar = $path;
         $user->save();
-
         return response()->json([
             'success' => true,
             'message' => 'Avatar updated successfully',
-            'avatar' => asset('storage/' . $path),
+            'avatar' => asset('storage/' . $user->avatar),
         ]);
     });
+
+    // Vendor Onboarding
+    Route::post('/vendor/onboard', [App\Http\Controllers\Marketplace\VendorOnboardingController::class, 'store']);
+    Route::get('/vendor/onboard/status', [App\Http\Controllers\Marketplace\VendorOnboardingController::class, 'show']);
+    Route::post('/vendor/onboard/additional', [App\Http\Controllers\Marketplace\VendorOnboardingController::class, 'uploadAdditional']);
 
     // Request Account Deletion (Google Play Store requirement)
     Route::post('/user/delete-account', function (Request $request) {
@@ -2652,38 +2794,37 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             $vendorProfileId = $vendorProfile ? $vendorProfile->id : null;
         }
 
-        $query = \DB::table('conversations')
-            ->select([
-                'conversations.id',
-                'conversations.buyer_id',
-                'conversations.vendor_profile_id',
-                'conversations.listing_id',
-                'conversations.subject',
-                'conversations.last_message_at',
-                'conversations.status',
-                'conversations.created_at',
-            ]);
-
+        // Fetch ALL active conversations for this user/vendor
+        $allConversations = \DB::table('conversations')
+            ->where('status', 'active');
+            
         if ($isVendor && $vendorProfileId) {
-            $query->where('conversations.vendor_profile_id', $vendorProfileId);
+            $allConversations->where('vendor_profile_id', $vendorProfileId);
         } else {
-            $query->where('conversations.buyer_id', $user->id);
+            $allConversations->where('buyer_id', $user->id);
         }
 
-        $conversations = $query->where('conversations.status', 'active')
-            ->orderBy('conversations.last_message_at', 'desc')
-            ->get();
+        $conversations = $allConversations->orderBy('last_message_at', 'desc')->get();
+
+        // Group by participants in PHP to be absolutely sure - picks the latest one for each pair
+        $grouped = $conversations->groupBy(function ($conv) {
+            // Ensure grouping is based on the pair, regardless of who is buyer/vendor
+            // But since one is always 'me', we just need the other person's ID type
+            return $conv->buyer_id . '-' . $conv->vendor_profile_id;
+        })->map(function ($group) {
+            return $group->first(); // Conversations are already sorted by last_message_at desc
+        })->values();
 
         // Enrich with participant info and last message
-        $enriched = $conversations->map(function ($conv) use ($user, $isVendor) {
+        $enriched = $grouped->map(function ($conv) use ($user, $isVendor) {
             // Get other participant
             if ($isVendor) {
                 $otherUser = \DB::table('users')->where('id', $conv->buyer_id)->first();
-                $participantName = $otherUser->name ?? 'Buyer';
+                $participantName = ($otherUser->name ?? 'Buyer') . ' +';
                 $participantAvatar = $otherUser->avatar ?? null;
             } else {
                 $vendorProfile = \DB::table('vendor_profiles')->where('id', $conv->vendor_profile_id)->first();
-                $participantName = $vendorProfile->business_name ?? 'Vendor';
+                $participantName = ($vendorProfile->business_name ?? 'Vendor') . ' +';
                 $participantAvatar = $vendorProfile->logo ?? null;
             }
 
@@ -2755,17 +2896,10 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         $vendorProfileId = $request->vendor_profile_id;
         $listingId = $request->listing_id;
 
-        // Check if conversation already exists
+        // Check if conversation already exists between these participants
         $existing = \DB::table('conversations')
             ->where('buyer_id', $user->id)
             ->where('vendor_profile_id', $vendorProfileId)
-            ->where(function ($q) use ($listingId) {
-                if ($listingId) {
-                    $q->where('listing_id', $listingId);
-                } else {
-                    $q->whereNull('listing_id');
-                }
-            })
             ->first();
 
         if ($existing) {

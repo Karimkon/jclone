@@ -623,7 +623,7 @@ Route::middleware(['auth'])->group(function () {
     // ====================
     // BUYER ROUTES (AUTHENTICATION REQUIRED)
     // ====================
-    Route::middleware(['auth', 'role:buyer'])->prefix('buyer')->name('buyer.')->group(function () {
+    Route::middleware(['auth', 'role:buyer,vendor_local,vendor_international'])->prefix('buyer')->name('buyer.')->group(function () {
         // Dashboard
         Route::get('/dashboard', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'index'])->name('dashboard');
         Route::get('/profile', [\App\Http\Controllers\Buyer\BuyerDashboardController::class, 'profile'])->name('profile');

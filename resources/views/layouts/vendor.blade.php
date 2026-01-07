@@ -116,6 +116,10 @@
                 @endif
             </a>
             
+            <a href="{{ route('buyer.orders.index') }}" class="nav-item {{ request()->routeIs('buyer.orders*') ? 'active' : '' }}">
+                <i class="fas fa-shopping-bag w-5 mr-3"></i> My Purchases
+            </a>
+            
             <!-- Jobs & Services Section -->
             <div class="nav-section-title">Jobs & Services</div>
             

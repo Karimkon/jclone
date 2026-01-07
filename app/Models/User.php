@@ -166,6 +166,14 @@ public function isBuyer()
 }
 
 /**
+ * Check if user can buy items (Buyer or Vendor)
+ */
+public function canBuy()
+{
+    return in_array($this->role, ['buyer', 'vendor_local', 'vendor_international']);
+}
+
+/**
  * Check if user is in vendor onboarding
  */
 public function isInVendorOnboarding()

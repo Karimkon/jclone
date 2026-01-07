@@ -102,6 +102,14 @@ class VendorOnboardingController extends Controller
                 'request_data' => $request->except(['password', 'password_confirmation']),
             ]);
             
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            
             return back()->withErrors($e->errors())->withInput();
         }
 
@@ -129,6 +137,12 @@ class VendorOnboardingController extends Controller
                 // Check if user already has a vendor profile
                 if ($user->vendorProfile) {
                     DB::rollBack();
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'You already have a vendor profile.'
+                        ], 400);
+                    }
                     return back()->withInput()
                         ->with('error', 'You already have a vendor profile. Please check your application status.');
                 }
@@ -262,6 +276,14 @@ class VendorOnboardingController extends Controller
                 Auth::login($user);
             }
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Vendor application submitted successfully!',
+                    'vendor_profile' => $vendorProfile
+                ]);
+            }
+
             return redirect()->route('vendor.onboard.status')
                 ->with('success', 'Vendor application submitted successfully! It will be reviewed within 24-48 hours. Check your email for updates.');
 
@@ -271,6 +293,14 @@ class VendorOnboardingController extends Controller
                 'errors' => $e->errors(),
             ]);
             
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+
             return back()->withErrors($e->errors())->withInput()
                 ->with('error', 'Please correct the errors below and try again.');
                 
@@ -283,16 +313,29 @@ class VendorOnboardingController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to submit application: ' . $e->getMessage()
+                ], 500);
+            }
+
             return back()->withInput()
                 ->with('error', 'Failed to submit application: ' . $e->getMessage() . '. Please try again or contact support.');
         }
     }
 
 
- public function show()
+ public function show(Request $request)
 {
     // Check if user is logged in
     if (!Auth::check()) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 401);
+        }
         return redirect()->route('login')
             ->with('error', 'Please login to view your application status.');
     }
@@ -321,6 +364,12 @@ class VendorOnboardingController extends Controller
     
     // Only vendor-type roles should see this page
     if (!in_array($user->role, ['vendor_local', 'vendor_international'])) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This page is only for vendor accounts.'
+            ], 403);
+        }
         return redirect()->route('welcome')
             ->with('error', 'This page is only for vendor accounts.');
     }
@@ -331,6 +380,12 @@ class VendorOnboardingController extends Controller
     $vendorProfile = $user->vendorProfile;
     
     if (!$vendorProfile) {
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You haven\'t submitted a vendor application yet.'
+            ], 404);
+        }
         return redirect()->route('vendor.onboard.create')
             ->with('info', 'You haven\'t submitted a vendor application yet.');
     }
@@ -338,6 +393,16 @@ class VendorOnboardingController extends Controller
     $documents = $vendorProfile->documents;
     $score = $vendorProfile->scores()->latest()->first();
     
+    if ($request->expectsJson()) {
+        return response()->json([
+            'success' => true,
+            'vendor_profile' => $vendorProfile,
+            'status' => $vendorProfile->vetting_status,
+            'documents' => $documents,
+            'score' => $score
+        ]);
+    }
+
     return view('vendor.onboarding.status', compact('vendorProfile', 'documents', 'score'));
 }
 
@@ -349,6 +414,12 @@ class VendorOnboardingController extends Controller
     {
         // Ensure user is authenticated
         if (!Auth::check()) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
             return redirect()->route('login')
                 ->with('error', 'Please login to upload documents.');
         }
@@ -362,6 +433,12 @@ class VendorOnboardingController extends Controller
         $vendorProfile = Auth::user()->vendorProfile;
         
         if (!$vendorProfile) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You need to submit a vendor application first.'
+                ], 400);
+            }
             return redirect()->route('vendor.onboard.create')
                 ->with('error', 'You need to submit a vendor application first.');
         }
@@ -390,6 +467,13 @@ class VendorOnboardingController extends Controller
                 'document_type' => $request->document_type
             ]);
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Additional document uploaded successfully.'
+                ]);
+            }
+
             return back()->with('success', 'Additional document uploaded successfully.');
             
         } catch (\Exception $e) {
@@ -398,6 +482,13 @@ class VendorOnboardingController extends Controller
                 'error' => $e->getMessage()
             ]);
             
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to upload document: ' . $e->getMessage()
+                ], 500);
+            }
+
             return back()->with('error', 'Failed to upload document. Please try again.');
         }
     }
