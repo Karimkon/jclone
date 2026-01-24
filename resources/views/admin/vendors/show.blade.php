@@ -37,7 +37,12 @@
         <div class="p-6 border-b">
             <div class="flex justify-between items-center">
                 <div>
-                    <h2 class="text-xl font-bold text-gray-900">{{ $vendor->business_name }}</h2>
+                    <h2 class="text-xl font-bold text-gray-900 flex items-center">
+                        {{ $vendor->business_name }}
+                        @if($vendor->user->is_admin_verified)
+                            <i class="fas fa-check-circle text-blue-500 ml-2" title="Verified Seller"></i>
+                        @endif
+                    </h2>
                     <div class="flex items-center mt-1">
                         <span class="text-sm text-gray-600 mr-3">
                             <i class="fas fa-user mr-1"></i>{{ $vendor->user->name }}
@@ -316,11 +321,22 @@
                 <!-- Toggle Status -->
                 <form action="{{ route('admin.vendors.toggleStatus', $vendor->id) }}" method="POST" class="inline">
                     @csrf
-                    <button type="submit" 
+                    <button type="submit"
                             class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg {{ $vendor->user->is_active ? 'text-red-600 hover:bg-red-50' : 'text-green-600 hover:bg-green-50' }}"
                             onclick="return confirm('{{ $vendor->user->is_active ? 'Deactivate this vendor?' : 'Activate this vendor?' }}')">
                         <i class="fas fa-power-off mr-2"></i>
                         {{ $vendor->user->is_active ? 'Deactivate' : 'Activate' }}
+                    </button>
+                </form>
+
+                <!-- Toggle Verified Badge -->
+                <form action="{{ route('admin.users.toggle-verified', $vendor->user->id) }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit"
+                            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg {{ $vendor->user->is_admin_verified ? 'text-blue-600 bg-blue-50 hover:bg-blue-100' : 'text-gray-600 hover:bg-gray-50' }}"
+                            onclick="return confirm('{{ $vendor->user->is_admin_verified ? 'Remove verified badge from this vendor?' : 'Give this vendor a verified badge (blue tick)?' }}')">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        {{ $vendor->user->is_admin_verified ? 'Remove Verified' : 'Mark as Verified' }}
                     </button>
                 </form>
                 

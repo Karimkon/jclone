@@ -173,12 +173,26 @@ class AdminUserController extends Controller
     {
         try {
             $user->update(['email_verified_at' => now()]);
-            
+
             return back()->with('success', 'Email verified successfully.');
-            
+
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to verify email.');
         }
+    }
+
+    /**
+     * Toggle user admin verified status (blue tick badge)
+     */
+    public function toggleVerified(User $user)
+    {
+        $user->update([
+            'is_admin_verified' => !$user->is_admin_verified,
+            'admin_verified_at' => !$user->is_admin_verified ? now() : null,
+        ]);
+
+        $status = $user->is_admin_verified ? 'verified' : 'unverified';
+        return back()->with('success', "User marked as {$status}.");
     }
 
     /**

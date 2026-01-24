@@ -439,14 +439,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         
         // Admin User Management Routes
-    Route::resource('users', App\Http\Controllers\Admin\UserController::class);
+    Route::resource('users', AdminUserController::class);
     
     // Advertisement Routes
     Route::resource('advertisements', App\Http\Controllers\Admin\AdvertisementController::class);
     Route::post('advertisements/{advertisement}/toggle', [App\Http\Controllers\Admin\AdvertisementController::class, 'toggleStatus'])->name('advertisements.toggle');
         Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
-        
+        Route::post('/users/{user}/toggle-verified', [AdminUserController::class, 'toggleVerified'])->name('users.toggle-verified');
+
         // Vendor vetting
         Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
         Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');

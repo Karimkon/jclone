@@ -134,6 +134,9 @@
                                 <div class="ml-4">
                                     <div class="text-sm font-medium text-gray-900">
                                         {{ $user->name }}
+                                        @if($user->is_admin_verified)
+                                            <i class="fas fa-check-circle text-blue-500 ml-1" title="Verified User"></i>
+                                        @endif
                                         @if($user->id == auth()->id())
                                             <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded ml-2">You</span>
                                         @endif

@@ -314,6 +314,38 @@ button[onclick="closeOptionsModal()"]:hover {
         .badge-sale { background: linear-gradient(135deg, #dc2626, #ea580c); }
         .badge-imported { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
         .badge-local { background: linear-gradient(135deg, #10b981, #14b8a6); }
+
+        /* Verified Badge - Twitter/Meta Style */
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #1d9bf0 0%, #1a8cd8 100%);
+            border-radius: 50%;
+            margin-left: 4px;
+            box-shadow: 0 1px 3px rgba(29, 155, 240, 0.3);
+            position: relative;
+        }
+        .verified-badge::after {
+            content: '';
+            width: 8px;
+            height: 5px;
+            border-left: 2px solid white;
+            border-bottom: 2px solid white;
+            transform: rotate(-45deg);
+            margin-top: -1px;
+        }
+        .verified-badge-sm {
+            width: 14px;
+            height: 14px;
+        }
+        .verified-badge-sm::after {
+            width: 6px;
+            height: 4px;
+            border-width: 1.5px;
+        }
         
         /* Stars */
         .star-filled { color: #fbbf24; }
@@ -905,13 +937,28 @@ main {
                                     @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= 4 ? 'star-filled' : 'star-empty' }}"></i>@endfor
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
+                                @if($product->vendor)
+                                <div class="flex items-center text-xs text-ink-500 mb-2">
+                                    <i class="fas fa-user-clock mr-1"></i>
+                                    @php
+                                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
+                                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
+                                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
+                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
+                                    @endphp
+                                    <span>{{ $dt }}</span>
+                                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+                                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                                    @endif
+                                </div>
+                                @endif
                             <div class="flex items-center justify-between mt-2">
     <div class="flex items-baseline">
         <span class="text-xs text-ink-500 mr-1">UGX</span>
         <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
     </div>
     @if($product->stock > 0)
-    <button data-quick-cart data-listing-id="{{ $product->id }}" 
+    <button data-quick-cart data-listing-id="{{ $product->id }}"
             class="quick-add w-7 h-7 btn-primary rounded-lg flex items-center justify-center ml-2 flex-shrink-0">
         <i class="fas fa-shopping-cart text-xs"></i>
     </button>
@@ -1002,6 +1049,21 @@ main {
                                     @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= rand(3,5) ? 'star-filled' : 'star-empty' }}"></i>@endfor
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
+                                @if($product->vendor)
+                                <div class="flex items-center text-xs text-ink-500 mb-2">
+                                    <i class="fas fa-user-clock mr-1"></i>
+                                    @php
+                                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
+                                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
+                                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
+                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
+                                    @endphp
+                                    <span>{{ $dt }}</span>
+                                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+                                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                                    @endif
+                                </div>
+                                @endif
                                 <div class="flex items-center justify-between">
     <div class="flex items-baseline gap-1">
         <span class="text-xs text-ink-500">UGX</span>
@@ -1062,21 +1124,35 @@ main {
                         {{ $product->title }}
                     </h3>
                 </a>
-                
+                @if($product->vendor)
+                <div class="flex items-center text-xs text-ink-500 mb-2">
+                    <i class="fas fa-user-clock mr-1"></i>
+                    @php
+                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
+                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
+                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
+                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
+                    @endphp
+                    <span>{{ $dt }}</span>
+                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                    @endif
+                </div>
+                @endif
                 <div class="flex items-center justify-between mt-3">
                     <div class="flex items-baseline gap-1">
                         <span class="text-xs text-ink-500">UGX</span>
                         <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>
                     </div>
-                    
+
                     <!-- ADD TO CART BUTTON - ADD THIS -->
                     @if($product->stock > 0)
-                    <button data-quick-cart data-listing-id="{{ $product->id }}" 
+                    <button data-quick-cart data-listing-id="{{ $product->id }}"
                             class="quick-add w-7 h-7 btn-primary rounded-lg flex items-center justify-center ml-2 flex-shrink-0">
                         <i class="fas fa-shopping-cart text-xs"></i>
                     </button>
                     @else
-                    <button class="w-7 h-7 bg-gray-200 rounded-lg flex items-center justify-center ml-2 cursor-not-allowed" 
+                    <button class="w-7 h-7 bg-gray-200 rounded-lg flex items-center justify-center ml-2 cursor-not-allowed"
                             title="Out of Stock">
                         <i class="fas fa-times text-gray-500 text-xs"></i>
                     </button>

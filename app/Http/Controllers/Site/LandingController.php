@@ -27,21 +27,21 @@ class LandingController extends Controller
 
         // Featured products (you can add a 'is_featured' column later)
         $featuredProducts = Listing::where('is_active', true)
-            ->with(['images', 'category', 'vendor'])
+            ->with(['images', 'category', 'vendor.user'])
             ->inRandomOrder()
             ->take(10)
             ->get();
 
         // Trending/New Arrivals
         $newArrivals = Listing::where('is_active', true)
-            ->with(['images', 'category', 'vendor'])
+            ->with(['images', 'category', 'vendor.user'])
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
 
         // Recently added products
         $recentProducts = Listing::where('is_active', true)
-            ->with(['images', 'category'])
+            ->with(['images', 'category', 'vendor.user'])
             ->orderBy('created_at', 'desc')
             ->take(12)
             ->get();

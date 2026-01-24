@@ -21,7 +21,7 @@ class ListingController extends Controller
      */
     public function indexPublic(Request $request)
     {
-        $query = Listing::with(['images', 'vendor', 'category'])
+        $query = Listing::with(['images', 'vendor.user', 'category'])
             ->where('is_active', true);
         
         // Search filter

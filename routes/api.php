@@ -71,6 +71,7 @@ Route::post('/login', function (Request $request) {
             'role' => $user->role,
             'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
             'email_verified_at' => $user->email_verified_at,
+            'is_admin_verified' => $user->is_admin_verified ?? false,
             'created_at' => $user->created_at,
             'vendor_profile' => $user->vendorProfile ? [
                 'id' => $user->vendorProfile->id,
@@ -78,6 +79,7 @@ Route::post('/login', function (Request $request) {
                 'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
                 'store_name' => $user->vendorProfile->store_name,
                 'vetting_status' => $user->vendorProfile->vetting_status,
+                'created_at' => $user->vendorProfile->created_at?->toIso8601String(),
             ] : null,
         ],
     ]);
@@ -614,6 +616,8 @@ Route::get('/categories/{slug}', function ($slug) {
                     'vendor' => $listing->user && $listing->user->vendorProfile ? [
                         'id' => $listing->user->vendorProfile->id,
                         'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
+                        'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
+                        'is_verified' => $listing->user->is_admin_verified ?? false,
                     ] : null,
                     'category' => $listing->category ? [
                         'id' => $listing->category->id,
@@ -845,6 +849,8 @@ Route::get('/marketplace', function (Request $request) {
                 'id' => $listing->user->vendorProfile->id,
                 'user_id' => $listing->user->id,
                 'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
+                'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
+                'is_verified' => $listing->user->is_admin_verified ?? false,
             ] : null,
             'average_rating' => $listing->average_rating ?? 0,
             'reviews_count' => $listing->reviews_count ?? 0,
@@ -893,6 +899,8 @@ Route::get('/marketplace/{id}', function ($id) {
             'vendor' => $listing->user && $listing->user->vendorProfile ? [
                 'id' => $listing->user->vendorProfile->id,
                 'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
+                'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
+                'is_verified' => $listing->user->is_admin_verified ?? false,
             ] : null,
             'average_rating' => $listing->average_rating ?? 0,
             'reviews_count' => $listing->reviews ? $listing->reviews->count() : 0,
@@ -922,6 +930,8 @@ Route::get('/featured-listings', function () {
                 'vendor' => $listing->user && $listing->user->vendorProfile ? [
                     'id' => $listing->user->vendorProfile->id,
                     'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
+                    'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
+                    'is_verified' => $listing->user->is_admin_verified ?? false,
                 ] : null,
                 'category' => $listing->category ? ['id' => $listing->category->id, 'name' => $listing->category->name] : null,
                 'average_rating' => $listing->average_rating ?? 0,
@@ -1043,6 +1053,7 @@ Route::middleware('auth:sanctum')->group(function () {
                 'role' => $user->role,
                 'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
                 'is_verified' => $user->is_verified,
+                'is_admin_verified' => $user->is_admin_verified ?? false,
                 'phone_verified' => $user->phone_verified ?? false,
                 'created_at' => $user->created_at,
                 'updated_at' => $user->updated_at,
@@ -1053,17 +1064,26 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Update User Profile
     Route::put('/user/profile', function (Request $request) {
-        $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:20',
-        ]);
-
         $user = $request->user();
+
+        // Build validation rules - skip phone validation if it's a Google placeholder
+        $rules = [
+            'name' => 'sometimes|string|max:255',
+        ];
+
+        // Only validate phone if provided and not a Google placeholder
+        if ($request->has('phone') && !str_starts_with($request->phone, 'google_')) {
+            $rules['phone'] = 'sometimes|string|max:20';
+        }
+
+        $request->validate($rules);
 
         if ($request->has('name')) {
             $user->name = $request->name;
         }
-        if ($request->has('phone')) {
+
+        // Only update phone if it's not a Google placeholder being sent back
+        if ($request->has('phone') && !str_starts_with($request->phone, 'google_')) {
             $user->phone = $request->phone;
         }
 
@@ -2924,6 +2944,16 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
                 'listing_id' => $listingId,
                 'subject' => $subject,
                 'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Add automated safety message for new conversations
+            \DB::table('messages')->insert([
+                'conversation_id' => $conversationId,
+                'sender_id' => null, // null indicates system message
+                'body' => 'Avoid paying in advance! Even for delivery',
+                'type' => 'system',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

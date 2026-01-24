@@ -602,6 +602,30 @@ button[onclick="closeOptionsModal()"]:hover {
         white-space: nowrap;
     }
 }
+
+/* Verified Badge - Twitter/Meta Style */
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: linear-gradient(135deg, #1d9bf0 0%, #1a8cd8 100%);
+    border-radius: 50%;
+    margin-left: 6px;
+    box-shadow: 0 2px 4px rgba(29, 155, 240, 0.3);
+    position: relative;
+    flex-shrink: 0;
+}
+.verified-badge::after {
+    content: '';
+    width: 9px;
+    height: 5px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg);
+    margin-top: -1px;
+}
 </style>
 @endpush
 
@@ -1351,7 +1375,12 @@ button[onclick="closeOptionsModal()"]:hover {
             <i class="fas fa-store text-xl"></i>
         </div>
         <div>
-            <h5 class="font-bold text-gray-900">{{ $listing->vendor->business_name ?? 'Verified Vendor' }}</h5>
+            <h5 class="font-bold text-gray-900 flex items-center">
+                {{ $listing->vendor->business_name ?? 'Verified Vendor' }}
+                @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
+                    <span class="verified-badge" title="Verified Seller"></span>
+                @endif
+            </h5>
             <p class="text-sm text-gray-500">
                 @if(($listing->vendor->vendor_type ?? '') == 'china_supplier')
                 <i class="fas fa-globe mr-1"></i>International Supplier
@@ -1359,9 +1388,30 @@ button[onclick="closeOptionsModal()"]:hover {
                 <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
                 @endif
             </p>
+            @if($listing->vendor && $listing->vendor->created_at)
+            @php
+                $totalDays = $listing->vendor->created_at->diffInDays(now());
+                $vendorYears = floor($totalDays / 365);
+                $vendorMonths = floor(($totalDays % 365) / 30);
+                if ($vendorYears == 0) {
+                    if ($vendorMonths == 0) {
+                        $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
+                    } else {
+                        $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
+                    }
+                } elseif ($vendorYears == 1) {
+                    $durationText = '1 year on BebaMart';
+                } else {
+                    $durationText = $vendorYears . '+ years on BebaMart';
+                }
+            @endphp
+            <p class="text-xs text-gray-500 flex items-center mt-1">
+                <i class="fas fa-user-clock mr-1"></i>{{ $durationText }}
+            </p>
+            @endif
             @if($listing->vendor && $listing->vendor->latitude && $listing->vendor->longitude)
-            <a href="https://www.google.com/maps/search/?api=1&query={{ $listing->vendor->latitude }},{{ $listing->vendor->longitude }}" 
-               target="_blank" 
+            <a href="https://www.google.com/maps/search/?api=1&query={{ $listing->vendor->latitude }},{{ $listing->vendor->longitude }}"
+               target="_blank"
                class="text-xs text-primary hover:text-indigo-700 block mt-1 font-medium hover:underline">
                 <i class="fas fa-location-dot mr-1"></i>View Store Location
             </a>

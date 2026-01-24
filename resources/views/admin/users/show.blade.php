@@ -78,6 +78,12 @@
                                 {{ ucfirst(str_replace('_', ' ', $user->role)) }}
                             </span>
                             
+                            @if($user->is_admin_verified)
+                                <span class="mt-2 px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Verified
+                                </span>
+                            @endif
+
                             @if($user->is_active)
                                 <span class="mt-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
                                     <i class="fas fa-check-circle mr-1"></i> Active
@@ -228,14 +234,24 @@
                         @if(!$user->email_verified_at)
                         <form action="{{ route('admin.users.verify-email', $user->id) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                     class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-white bg-green-600 rounded-lg hover:bg-green-700"
                                     onclick="return confirm('Mark this email as verified?')">
                                 <i class="fas fa-check-circle mr-2"></i> Verify Email
                             </button>
                         </form>
                         @endif
-                        
+
+                        <form action="{{ route('admin.users.toggle-verified', $user->id) }}" method="POST">
+                            @csrf
+                            <button type="submit"
+                                    class="w-full flex items-center justify-center px-4 py-2 border {{ $user->is_admin_verified ? 'border-gray-300 text-gray-700 hover:bg-gray-50' : 'border-transparent text-white bg-blue-600 hover:bg-blue-700' }} rounded-lg"
+                                    onclick="return confirm('{{ $user->is_admin_verified ? 'Remove verified badge from this user?' : 'Grant verified badge (blue tick) to this user?' }}')">
+                                <i class="fas fa-{{ $user->is_admin_verified ? 'times' : 'check' }}-circle mr-2"></i>
+                                {{ $user->is_admin_verified ? 'Remove Verified Badge' : 'Grant Verified Badge' }}
+                            </button>
+                        </form>
+
                         @if($user->id != auth()->id())
                         <button type="button" 
                                 onclick="showDeleteModal('{{ $user->id }}', '{{ $user->name }}')"

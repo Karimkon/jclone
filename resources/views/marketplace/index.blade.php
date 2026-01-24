@@ -268,6 +268,30 @@
     color: white !important;
     opacity: 1 !important;
 }
+
+/* Verified Badge - Twitter/Meta Style */
+.verified-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(135deg, #1d9bf0 0%, #1a8cd8 100%);
+    border-radius: 50%;
+    margin-left: 4px;
+    box-shadow: 0 1px 3px rgba(29, 155, 240, 0.3);
+    position: relative;
+    flex-shrink: 0;
+}
+.verified-badge::after {
+    content: '';
+    width: 8px;
+    height: 5px;
+    border-left: 2px solid white;
+    border-bottom: 2px solid white;
+    transform: rotate(-45deg);
+    margin-top: -1px;
+}
 </style>
 
     <!-- Main Content -->
@@ -531,15 +555,33 @@
                                             <i class="fas fa-store"></i>
                                         </div>
                                         <div>
-                                            <p class="text-sm font-medium text-gray-700">
+                                            <p class="text-sm font-medium text-gray-700 flex items-center">
                                                 {{ $listing->vendor->business_name ?? 'Vendor' }}
+                                                @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
+                                                    <span class="verified-badge" title="Verified Seller"></span>
+                                                @endif
                                             </p>
-                                            <div class="flex items-center">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                    <i class="fas fa-star text-xs {{ $i <= 4 ? 'text-yellow-400' : 'text-gray-300' }}"></i>
-                                                @endfor
-                                                <span class="text-xs text-gray-500 ml-1">({{ rand(10,200) }})</span>
-                                            </div>
+                                            @if($listing->vendor && $listing->vendor->created_at)
+                                            @php
+                                                $totalDays = $listing->vendor->created_at->diffInDays(now());
+                                                $vendorYears = floor($totalDays / 365);
+                                                $vendorMonths = floor(($totalDays % 365) / 30);
+                                                if ($vendorYears == 0) {
+                                                    if ($vendorMonths == 0) {
+                                                        $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
+                                                    } else {
+                                                        $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
+                                                    }
+                                                } elseif ($vendorYears == 1) {
+                                                    $durationText = '1 year on BebaMart';
+                                                } else {
+                                                    $durationText = $vendorYears . '+ years on BebaMart';
+                                                }
+                                            @endphp
+                                            <p class="text-xs text-gray-500 flex items-center">
+                                                <i class="fas fa-user-clock mr-1"></i>{{ $durationText }}
+                                            </p>
+                                            @endif
                                         </div>
                                     </div>
                                     
