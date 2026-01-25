@@ -43,19 +43,42 @@
                     </div>
 
                     <!-- Category -->
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Category *
                         </label>
-                        <select name="category_id" required
+                        <select name="category_id" id="category_id" required
                                 class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
                             <option value="">Select Category</option>
                             @foreach($categories as $category)
-                            <option value="{{ $category->id }}" {{ old('category_id', $listing->category_id) == $category->id ? 'selected' : '' }}>
-                                {{ $category->name }}
-                            </option>
+                                @if($category->children->count() > 0)
+                                    {{-- Parent category with children - make it a disabled header --}}
+                                    <optgroup label="{{ $category->name }}">
+                                        @foreach($category->children as $child)
+                                            @if($child->children->count() > 0)
+                                                {{-- Sub-category with children - show children only --}}
+                                                @foreach($child->children as $subchild)
+                                                    <option value="{{ $subchild->id }}" {{ old('category_id', $listing->category_id) == $subchild->id ? 'selected' : '' }}>
+                                                        {{ $child->name }} › {{ $subchild->name }}
+                                                    </option>
+                                                @endforeach
+                                            @else
+                                                {{-- Leaf subcategory - selectable --}}
+                                                <option value="{{ $child->id }}" {{ old('category_id', $listing->category_id) == $child->id ? 'selected' : '' }}>
+                                                    {{ $child->name }}
+                                                </option>
+                                            @endif
+                                        @endforeach
+                                    </optgroup>
+                                @else
+                                    {{-- Category without children (leaf) - selectable --}}
+                                    <option value="{{ $category->id }}" {{ old('category_id', $listing->category_id) == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endif
                             @endforeach
                         </select>
+                        <p class="mt-1 text-sm text-gray-500">Select a specific subcategory, not a main category</p>
                         @error('category_id')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror

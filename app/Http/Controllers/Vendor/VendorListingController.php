@@ -35,7 +35,18 @@ class VendorListingController extends Controller
      */
     public function create()
     {
-        $categories = Category::where('is_active', true)->get();
+        // Load only top-level categories with their children hierarchy
+        $categories = Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true);
+                    }]);
+            }])
+            ->orderBy('name')
+            ->get();
+
         return view('vendor.listings.create', compact('categories'));
     }
 
@@ -54,17 +65,17 @@ class VendorListingController extends Controller
             'origin' => 'required|in:local,imported',
             'condition' => 'required|in:new,used,refurbished',
             'sku' => 'nullable|string|max:100|unique:listings,sku',
-            
+
             // Attributes
             'attributes.brand' => 'nullable|string|max:100',
             'attributes.model' => 'nullable|string|max:100',
             'attributes.color' => 'nullable|string|max:50',
             'attributes.size' => 'nullable|string|max:50',
-            
+
             // Media files - accept both images and videos
             'media_files' => 'required|array|min:1|max:5',
             'media_files.*' => 'mimetypes:image/jpeg,image/png,image/jpg,image/webp,video/mp4,video/mpeg,video/quicktime,video/x-msvideo,video/webm|max:20480', // 20MB max for videos
-            
+
             // Variations
             'variations' => 'nullable|array',
             'variations.*.sku' => 'nullable|string',
@@ -75,6 +86,12 @@ class VendorListingController extends Controller
             'variations.*.size' => 'nullable|string',
             'variations.*.attributes' => 'nullable|array',
         ]);
+
+        // Validate that the category is a leaf category (has no children)
+        $category = Category::withCount('children')->find($validated['category_id']);
+        if ($category && $category->children_count > 0) {
+            return back()->withErrors(['category_id' => 'Please select a specific subcategory, not a parent category.'])->withInput();
+        }
 
         $vendor = Auth::user()->vendorProfile;
 
@@ -201,10 +218,21 @@ class VendorListingController extends Controller
         if ($listing->vendor_profile_id !== Auth::user()->vendorProfile->id) {
             abort(403);
         }
-        
-        $categories = Category::where('is_active', true)->get();
+
+        // Load only top-level categories with their children hierarchy
+        $categories = Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->with(['children' => function($query) {
+                $query->where('is_active', true)
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true);
+                    }]);
+            }])
+            ->orderBy('name')
+            ->get();
+
         $listing->load('media'); // Changed from 'images' to 'media' to load all files
-        
+
         return view('vendor.listings.edit', compact('listing', 'categories'));
     }
 
@@ -243,6 +271,12 @@ class VendorListingController extends Controller
             // Delete media
             'delete_media' => 'nullable|array',
         ]);
+
+        // Validate that the category is a leaf category (has no children)
+        $category = Category::withCount('children')->find($validated['category_id']);
+        if ($category && $category->children_count > 0) {
+            return back()->withErrors(['category_id' => 'Please select a specific subcategory, not a parent category.'])->withInput();
+        }
 
         // Prepare attributes
         $attributes = [];

@@ -595,18 +595,27 @@ Route::middleware(['auth'])->group(function () {
     // FINANCE ROUTES
     // ====================
     Route::middleware(['role:finance,admin'])->prefix('finance')->name('finance.')->group(function () {
-        Route::get('/dashboard', [FinanceDashboardController::class, 'index'])->name('dashboard');
-        
-        // Payouts
+        Route::get('/dashboard', [\App\Http\Controllers\Finance\FinanceDashboardController::class, 'index'])->name('dashboard');
+
+        // Payouts / Withdrawals
+        Route::get('/payouts/pending', [\App\Http\Controllers\Finance\PayoutController::class, 'pending'])->name('payouts.pending');
         Route::get('/payouts', [\App\Http\Controllers\Finance\PayoutController::class, 'index'])->name('payouts.index');
-        Route::post('/payouts/{vendor}/create', [\App\Http\Controllers\Finance\PayoutController::class, 'createPayout'])->name('payouts.create');
-        
+        Route::get('/payouts/{withdrawal}', [\App\Http\Controllers\Finance\PayoutController::class, 'show'])->name('payouts.show');
+        Route::post('/payouts/{withdrawal}/approve', [\App\Http\Controllers\Finance\PayoutController::class, 'approve'])->name('payouts.approve');
+        Route::post('/payouts/{withdrawal}/complete', [\App\Http\Controllers\Finance\PayoutController::class, 'complete'])->name('payouts.complete');
+        Route::post('/payouts/{withdrawal}/reject', [\App\Http\Controllers\Finance\PayoutController::class, 'reject'])->name('payouts.reject');
+
         // Transactions
         Route::get('/transactions', [\App\Http\Controllers\Finance\TransactionController::class, 'index'])->name('transactions.index');
-        
+        Route::get('/transactions/payments', [\App\Http\Controllers\Finance\TransactionController::class, 'payments'])->name('transactions.payments');
+        Route::get('/transactions/{transaction}', [\App\Http\Controllers\Finance\TransactionController::class, 'show'])->name('transactions.show');
+
         // Escrow management
         Route::get('/escrows', [\App\Http\Controllers\Finance\EscrowController::class, 'index'])->name('escrows.index');
+        Route::get('/escrows/{escrow}', [\App\Http\Controllers\Finance\EscrowController::class, 'show'])->name('escrows.show');
         Route::post('/escrows/{escrow}/release', [\App\Http\Controllers\Finance\EscrowController::class, 'release'])->name('escrows.release');
+        Route::post('/escrows/{escrow}/refund', [\App\Http\Controllers\Finance\EscrowController::class, 'refund'])->name('escrows.refund');
+        Route::post('/escrows/{escrow}/extend', [\App\Http\Controllers\Finance\EscrowController::class, 'extend'])->name('escrows.extend');
     });
     
     // ====================
