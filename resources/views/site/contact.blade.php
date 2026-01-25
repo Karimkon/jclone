@@ -114,7 +114,7 @@
                                 </div>
                                 <div>
                                     <h4 class="font-bold text-gray-800">Email</h4>
-                                    <p class="text-gray-600">bebamartglobal@gmail.com</p>
+                                    <p class="text-gray-600">support@bebamart.com</p>
                                     <p class="text-sm text-gray-500">Response within 24 hours</p>
                                 </div>
                             </div>
@@ -166,6 +166,9 @@
                             </a>
                             <a href="#" class="w-10 h-10 bg-pink-600 text-white rounded-lg flex items-center justify-center hover:bg-pink-700 transition">
                                 <i class="fab fa-instagram"></i>
+                            </a>
+                            <a href="#" class="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 transition">
+                                <i class="fab fa-tiktok"></i>
                             </a>
                             <a href="#" class="w-10 h-10 bg-blue-700 text-white rounded-lg flex items-center justify-center hover:bg-blue-800 transition">
                                 <i class="fab fa-linkedin-in"></i>

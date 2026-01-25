@@ -27,7 +27,7 @@
             </div>
             
             <div class="mt-4 md:mt-0">
-                <p class="text-3xl font-bold text-primary">${{ number_format($order->total, 2) }}</p>
+                <p class="text-3xl font-bold text-primary">UGX {{ number_format($order->total, 2) }}</p>
             </div>
         </div>
     </div>
@@ -89,14 +89,14 @@
                         <div class="flex-1">
                             <h3 class="font-semibold text-gray-800">{{ $item->title }}</h3>
                             <p class="text-sm text-gray-600">Qty: {{ $item->quantity }}</p>
-                            <p class="text-sm text-gray-600">Unit Price: ${{ number_format($item->unit_price, 2) }}</p>
+                            <p class="text-sm text-gray-600">Unit Price: UGX {{ number_format($item->unit_price, 2) }}</p>
                             @if($item->listing)
                             <p class="text-sm text-gray-600">SKU: {{ $item->listing->sku ?? 'N/A' }}</p>
                             @endif
                         </div>
                         
                         <div class="text-right">
-                            <p class="font-bold text-gray-800">${{ number_format($item->line_total, 2) }}</p>
+                            <p class="font-bold text-gray-800">UGX {{ number_format($item->line_total, 2) }}</p>
                         </div>
                     </div>
                     @endforeach
@@ -190,20 +190,20 @@
                 <div class="space-y-2">
                     <div class="flex justify-between">
                         <span class="text-gray-600">Subtotal</span>
-                        <span>${{ number_format($order->subtotal, 2) }}</span>
+                        <span>UGX {{ number_format($order->subtotal, 2) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Shipping</span>
-                        <span>${{ number_format($order->shipping_cost, 2) }}</span>
+                        <span>UGX {{ number_format($order->shipping_cost, 2) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-600">Tax</span>
-                        <span>${{ number_format($order->tax, 2) }}</span>
+                        <span>UGX {{ number_format($order->tax, 2) }}</span>
                     </div>
                     <div class="pt-2 border-t">
                         <div class="flex justify-between font-bold text-lg">
                             <span>Total</span>
-                            <span class="text-primary">${{ number_format($order->total, 2) }}</span>
+                            <span class="text-primary">UGX {{ number_format($order->total, 2) }}</span>
                         </div>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
                 <div class="space-y-2">
                     @foreach($order->payments as $payment)
                     <div class="border-b pb-2">
-                        <p class="text-gray-800">${{ number_format($payment->amount, 2) }} - {{ ucfirst($payment->status) }}</p>
+                        <p class="text-gray-800">UGX {{ number_format($payment->amount, 2) }} - {{ ucfirst($payment->status) }}</p>
                         <p class="text-sm text-gray-600">{{ $payment->created_at->format('M d, Y h:i A') }}</p>
                     </div>
                     @endforeach

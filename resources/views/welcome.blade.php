@@ -315,36 +315,13 @@ button[onclick="closeOptionsModal()"]:hover {
         .badge-imported { background: linear-gradient(135deg, #0ea5e9, #06b6d4); }
         .badge-local { background: linear-gradient(135deg, #10b981, #14b8a6); }
 
-        /* Verified Badge - Twitter/Meta Style */
+        /* Verified Badge - Twitter Style SVG */
         .verified-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 16px;
-            height: 16px;
-            background: linear-gradient(135deg, #1d9bf0 0%, #1a8cd8 100%);
-            border-radius: 50%;
-            margin-left: 4px;
-            box-shadow: 0 1px 3px rgba(29, 155, 240, 0.3);
-            position: relative;
-        }
-        .verified-badge::after {
-            content: '';
-            width: 8px;
-            height: 5px;
-            border-left: 2px solid white;
-            border-bottom: 2px solid white;
-            transform: rotate(-45deg);
-            margin-top: -1px;
-        }
-        .verified-badge-sm {
             width: 14px;
             height: 14px;
-        }
-        .verified-badge-sm::after {
-            width: 6px;
-            height: 4px;
-            border-width: 1.5px;
+            margin-left: 3px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 1px 2px rgba(29, 155, 240, 0.3));
         }
         
         /* Stars */
@@ -554,6 +531,16 @@ main {
     </style>
 </head>
 <body class="bg-ink-50 font-body">
+
+<!-- SVG Gradient Definition for Verified Badge -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+    <defs>
+        <linearGradient id="verifiedGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#1d9bf0"/>
+            <stop offset="100%" style="stop-color:#1a8cd8"/>
+        </linearGradient>
+    </defs>
+</svg>
 
 <!-- TOP BAR -->
 <div class="bg-ink-900 text-white text-sm py-2">
@@ -948,7 +935,7 @@ main {
                                     @endphp
                                     <span>{{ $dt }}</span>
                                     @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
                                     @endif
                                 </div>
                                 @endif
@@ -1060,7 +1047,7 @@ main {
                                     @endphp
                                     <span>{{ $dt }}</span>
                                     @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
                                     @endif
                                 </div>
                                 @endif
@@ -1135,7 +1122,7 @@ main {
                     @endphp
                     <span>{{ $dt }}</span>
                     @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                        <span class="verified-badge verified-badge-sm" title="Verified Seller"></span>
+                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
                     @endif
                 </div>
                 @endif

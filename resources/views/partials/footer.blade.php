@@ -9,11 +9,23 @@
                     <span class="text-lg font-bold font-display">{{ config('app.name') }}</span>
                 </div>
                 <p class="text-ink-400 text-xs mb-4 leading-relaxed">Your trusted marketplace with escrow protection.</p>
-                <div class="flex gap-2">
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-brand-600 transition text-sm"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-sm"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-sm"><i class="fab fa-instagram"></i></a>
-                </div>
+               <div class="flex flex-wrap gap-2">
+                <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-brand-600 transition text-sm">
+                    <i class="fab fa-facebook-f"></i>
+                </a>
+                <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-sm">
+                    <i class="fab fa-twitter"></i>
+                </a>
+                <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-sm">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-black transition text-sm">
+                    <i class="fab fa-tiktok"></i>
+                </a>
+                <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-blue-700 transition text-sm">
+                    <i class="fab fa-linkedin-in"></i>
+                </a>
+            </div>
             </div>
             
             <div>

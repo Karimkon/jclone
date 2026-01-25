@@ -229,10 +229,10 @@
                         </div>
                         
                         <div class="space-y-2">
-                            <a href="mailto:support@jclone.com" 
+                            <a href="mailto:support@bebamart.com" 
                                class="flex items-center text-gray-700 hover:text-primary">
                                 <i class="fas fa-envelope mr-3"></i>
-                                support@jclone.com
+                                support@bebamart.com
                             </a>
                             
                             <a href="{{ route('vendor.orders.index') }}" 

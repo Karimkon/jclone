@@ -603,28 +603,13 @@ button[onclick="closeOptionsModal()"]:hover {
     }
 }
 
-/* Verified Badge - Twitter/Meta Style */
+/* Verified Badge - Twitter Style SVG */
 .verified-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #1d9bf0 0%, #1a8cd8 100%);
-    border-radius: 50%;
     margin-left: 6px;
-    box-shadow: 0 2px 4px rgba(29, 155, 240, 0.3);
-    position: relative;
     flex-shrink: 0;
-}
-.verified-badge::after {
-    content: '';
-    width: 9px;
-    height: 5px;
-    border-left: 2px solid white;
-    border-bottom: 2px solid white;
-    transform: rotate(-45deg);
-    margin-top: -1px;
+    filter: drop-shadow(0 2px 4px rgba(29, 155, 240, 0.3));
 }
 </style>
 @endpush
@@ -1378,7 +1363,7 @@ button[onclick="closeOptionsModal()"]:hover {
             <h5 class="font-bold text-gray-900 flex items-center">
                 {{ $listing->vendor->business_name ?? 'Verified Vendor' }}
                 @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
-                    <span class="verified-badge" title="Verified Seller"></span>
+                    <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="#1d9bf0"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
                 @endif
             </h5>
             <p class="text-sm text-gray-500">

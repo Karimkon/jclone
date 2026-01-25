@@ -288,7 +288,7 @@ class LandingController extends Controller
             ],
             [
                 'question' => 'How do I contact customer support?',
-                'answer' => 'You can reach us via: Email: support@' . parse_url(config('app.url'), PHP_URL_HOST) . ', Live Chat: Available on our website, Phone: +256 XXX XXX XXX'
+                'answer' => 'You can reach us via: Email: support@' . parse_url(config('app.url'), PHP_URL_HOST) . ', Live Chat: Available on our website, Phone: +256 707 208954'
             ]
         ];
         

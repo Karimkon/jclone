@@ -166,7 +166,7 @@
                             <div class="text-sm text-gray-500">{{ $order->created_at->format('h:i A') }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="font-bold text-gray-900">${{ number_format($order->total, 2) }}</div>
+                            <div class="font-bold text-gray-900">UGX {{ number_format($order->total, 2) }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 

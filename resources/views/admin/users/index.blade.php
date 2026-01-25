@@ -132,10 +132,12 @@
                                     @endif
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">
+                                    <div class="text-sm font-medium text-gray-900 flex items-center">
                                         {{ $user->name }}
                                         @if($user->is_admin_verified)
-                                            <i class="fas fa-check-circle text-blue-500 ml-1" title="Verified User"></i>
+                                            <span class="inline-flex items-center justify-center w-4 h-4 ml-1 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm" title="Verified User">
+                                                <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>
+                                            </span>
                                         @endif
                                         @if($user->id == auth()->id())
                                             <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded ml-2">You</span>
