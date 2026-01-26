@@ -183,10 +183,9 @@
                     <h2 class="text-xl font-bold text-gray-800 mb-3">13. Contact Us</h2>
                     <p class="text-gray-600">For questions about this Privacy Policy, contact us at:</p>
                     <div class="mt-3 p-4 bg-gray-50 rounded-lg">
-                        <p><strong>Email:</strong> privacy@yourmarketplace.com</p>
-                        <p><strong>Phone:</strong> +256 700 000 000</p>
-                        <p><strong>Address:</strong> Plot 123, Kampala Road, Kampala, Uganda</p>
-                        <p><strong>Data Protection Officer:</strong> dpo@yourmarketplace.com</p>
+                        <p><strong>Email:</strong> support@bebamart.com</p>
+                        <p><strong>Phone:</strong> +256 782 971 912</p>
+                        <p><strong>Address:</strong> Plot 28, Katula Road, Kisaasi, Uganda</p>
                     </div>
                 </section>
             </div>

@@ -35,11 +35,12 @@ class ListingController extends Controller
         }
         
         // Category filter
+        $selectedCategory = null;
         if ($request->has('category') && $request->category) {
-            $category = Category::find($request->category);
-            if ($category) {
+            $selectedCategory = Category::find($request->category);
+            if ($selectedCategory) {
                 // Get ALL descendant category IDs including the selected category
-                $categoryIds = $category->getDescendantIds();
+                $categoryIds = $selectedCategory->getDescendantIds();
                 $query->whereIn('category_id', $categoryIds);
             }
         }
@@ -96,7 +97,7 @@ class ListingController extends Controller
     });
          $totalProducts = Listing::where('is_active', true)->count();
         
-        return view('marketplace.index', compact('listings', 'categories', 'totalProducts'));
+        return view('marketplace.index', compact('listings', 'categories', 'totalProducts', 'selectedCategory'));
     }
 
    /**

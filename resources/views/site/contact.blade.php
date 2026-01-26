@@ -155,26 +155,51 @@
                     </div>
 
                     <!-- Social Media -->
-                    <div class="bg-white rounded-xl shadow-sm p-6">
-                        <h3 class="text-xl font-bold text-gray-800 mb-4">Follow Us</h3>
-                        <div class="flex space-x-3">
-                            <a href="#" class="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition">
-                                <i class="fab fa-facebook-f"></i>
-                            </a>
-                            <a href="#" class="w-10 h-10 bg-sky-500 text-white rounded-lg flex items-center justify-center hover:bg-sky-600 transition">
-                                <i class="fab fa-twitter"></i>
-                            </a>
-                            <a href="#" class="w-10 h-10 bg-pink-600 text-white rounded-lg flex items-center justify-center hover:bg-pink-700 transition">
-                                <i class="fab fa-instagram"></i>
-                            </a>
-                            <a href="#" class="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 transition">
-                                <i class="fab fa-tiktok"></i>
-                            </a>
-                            <a href="#" class="w-10 h-10 bg-blue-700 text-white rounded-lg flex items-center justify-center hover:bg-blue-800 transition">
-                                <i class="fab fa-linkedin-in"></i>
-                            </a>
-                        </div>
-                    </div>
+<div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Follow Us</h3>
+    <div class="flex space-x-3">
+        <a href="https://www.facebook.com/yourpage" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700 transition hover:scale-105">
+            <i class="fab fa-facebook-f"></i>
+        </a>
+        <a href="https://x.com/BebamartGlobal" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 transition hover:scale-105">
+            <!-- X Logo -->
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+        </a>
+        <a href="https://www.instagram.com/yourprofile" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-lg flex items-center justify-center hover:opacity-90 transition hover:scale-105">
+            <i class="fab fa-instagram"></i>
+        </a>
+        <a href="https://www.tiktok.com/@bebamart.global?lang=en" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-black text-white rounded-lg flex items-center justify-center hover:bg-gray-800 transition hover:scale-105">
+            <i class="fab fa-tiktok"></i>
+        </a>
+        <a href="https://www.linkedin.com/company/beba-mart-global-limited" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-blue-700 text-white rounded-lg flex items-center justify-center hover:bg-blue-800 transition hover:scale-105">
+            <i class="fab fa-linkedin-in"></i>
+        </a>
+        <a href="https://www.youtube.com/@bebamartglobal" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           class="w-10 h-10 bg-red-600 text-white rounded-lg flex items-center justify-center hover:bg-red-700 transition hover:scale-105">
+            <i class="fab fa-youtube"></i>
+        </a>
+    </div>
+    <p class="text-sm text-gray-500 mt-4">Stay updated with our latest news and offers!</p>
+</div>
                 </div>
             </div>
         </div>

@@ -594,16 +594,23 @@ main {
 <header class="bg-white shadow-sm sticky top-0 z-50">
     <div class="container mx-auto px-4">
         <div class="flex items-center justify-between py-3">
-            <!-- Logo -->
-            <a href="{{ route('welcome') }}" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i class="fas fa-store text-white"></i>
-                </div>
-                <div>
-                    <span class="text-xl font-bold text-ink-800 font-display">{{ config('app.name') }}</span>
-                    <span class="hidden lg:block text-xs text-ink-400 -mt-0.5">Trusted Marketplace</span>
-                </div>
-            </a>
+           <a href="{{ route('welcome') }}" class="flex items-center gap-3 group">
+    <div class="relative">
+        {{-- Logo Image --}}
+        <img src="{{ asset('images/logo.png') }}" 
+             alt="{{ config('app.name') }} Logo" 
+             class="w-12 h-12 object-contain transition-transform group-hover:scale-105"
+             onerror="this.src='https://ui-avatars.com/api/?name=B+M&background=6366f1&color=fff'">
+    </div>
+    <div class="flex flex-col">
+        <span class="text-xl font-bold text-gray-900 leading-tight font-display tracking-tight">
+            {{ config('app.name') }}
+        </span>
+        <span class="hidden lg:block text-xs text-gray-500 font-medium">
+            Trusted Marketplace
+        </span>
+    </div>
+</a>
             
             <!-- Search - IMPROVED WITH FORM -->
             <div class="hidden md:flex flex-1 max-w-xl mx-6">
@@ -924,21 +931,34 @@ main {
                                     @for($s = 1; $s <= 5; $s++)<i class="fas fa-star text-xs {{ $s <= 4 ? 'star-filled' : 'star-empty' }}"></i>@endfor
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
-                                @if($product->vendor)
-                                <div class="flex items-center text-xs text-ink-500 mb-2">
-                                    <i class="fas fa-user-clock mr-1"></i>
-                                    @php
-                                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
-                                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
-                                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
-                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
-                                    @endphp
-                                    <span>{{ $dt }}</span>
-                                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
-                                    @endif
-                                </div>
-                                @endif
+                            @if($product->vendor)
+    <div class="flex items-center text-xs text-ink-500 mb-2">
+        <i class="fas fa-user-clock mr-1"></i>
+        @php
+            $createdAt = $product->vendor->created_at;
+            $vy = $createdAt ? floor($createdAt->diffInDays(now()) / 365) : 0;
+            $vm = $createdAt ? floor(($createdAt->diffInDays(now()) % 365) / 30) : 0;
+            $totalDays = $createdAt ? $createdAt->diffInDays(now()) : 0;
+
+            if ($vy >= 1) {
+                $dt = $vy == 1 ? '1 year' : $vy . '+ years';
+            } elseif ($vm >= 1) {
+                $dt = $vm == 1 ? '1 month' : $vm . ' months';
+            } else {
+                $dt = $totalDays == 0 ? 'New' : $totalDays . 'd';
+            }
+        @endphp
+        <span>{{ $dt }}</span>
+        
+        @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+            {{-- Professional X-Style Scalloped Badge --}}
+            <svg class="ml-1" viewBox="0 0 24 24" style="width: 14px; height: 14px;" title="Verified Seller">
+                <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+            </svg>
+        @endif
+    </div>
+@endif
                             <div class="flex items-center justify-between mt-2">
     <div class="flex items-baseline">
         <span class="text-xs text-ink-500 mr-1">UGX</span>
@@ -1037,20 +1057,34 @@ main {
                                     <span class="text-xs text-ink-400 ml-1">({{ rand(10,200) }})</span>
                                 </div>
                                 @if($product->vendor)
-                                <div class="flex items-center text-xs text-ink-500 mb-2">
-                                    <i class="fas fa-user-clock mr-1"></i>
-                                    @php
-                                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
-                                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
-                                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
-                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
-                                    @endphp
-                                    <span>{{ $dt }}</span>
-                                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
-                                    @endif
-                                </div>
-                                @endif
+    <div class="flex items-center text-xs text-ink-500 mb-2">
+        <i class="fas fa-user-clock mr-1"></i>
+        @php
+            $createdAt = $product->vendor->created_at;
+            $vy = $createdAt ? floor($createdAt->diffInDays(now()) / 365) : 0;
+            $vm = $createdAt ? floor(($createdAt->diffInDays(now()) % 365) / 30) : 0;
+            $totalDays = $createdAt ? $createdAt->diffInDays(now()) : 0;
+
+            // Clean logic for full words and plurals
+            if ($vy >= 1) {
+                $dt = $vy == 1 ? '1 year' : $vy . '+ years';
+            } elseif ($vm >= 1) {
+                $dt = $vm == 1 ? '1 month' : $vm . ' months';
+            } else {
+                $dt = $totalDays == 0 ? 'New' : $totalDays . 'd';
+            }
+        @endphp
+        <span>{{ $dt }}</span>
+        
+        @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+            {{-- X-Style Verified Badge --}}
+            <svg class="ml-1" viewBox="0 0 24 24" style="width: 14px; height: 14px;" title="Verified Seller">
+                <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+            </svg>
+        @endif
+    </div>
+@endif
                                 <div class="flex items-center justify-between">
     <div class="flex items-baseline gap-1">
         <span class="text-xs text-ink-500">UGX</span>
@@ -1111,22 +1145,35 @@ main {
                         {{ $product->title }}
                     </h3>
                 </a>
-                @if($product->vendor)
-                <div class="flex items-center text-xs text-ink-500 mb-2">
-                    <i class="fas fa-user-clock mr-1"></i>
-                    @php
-                        $vy = $product->vendor->created_at ? floor($product->vendor->created_at->diffInDays(now()) / 365) : 0;
-                        $vm = $product->vendor->created_at ? floor(($product->vendor->created_at->diffInDays(now()) % 365) / 30) : 0;
-                        $totalDays = $product->vendor->created_at ? $product->vendor->created_at->diffInDays(now()) : 0;
-                                        $dt = $vy == 0 ? ($vm == 0 ? ($totalDays == 0 ? 'New' : $totalDays . 'd') : ($vm == 1 ? '1mo' : $vm . 'mo')) : ($vy == 1 ? '1yr' : $vy . '+yrs');
-                    @endphp
-                    <span>{{ $dt }}</span>
-                    @if($product->vendor->user && $product->vendor->user->is_admin_verified)
-                        <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="url(#verifiedGradient)"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
-                    @endif
-                </div>
-                @endif
-                <div class="flex items-center justify-between mt-3">
+               @if($product->vendor)
+    <div class="flex items-center text-xs text-ink-500 mb-2">
+        <i class="fas fa-user-clock mr-1"></i>
+        @php
+            $createdAt = $product->vendor->created_at;
+            $vy = $createdAt ? floor($createdAt->diffInDays(now()) / 365) : 0;
+            $vm = $createdAt ? floor(($createdAt->diffInDays(now()) % 365) / 30) : 0;
+            $totalDays = $createdAt ? $createdAt->diffInDays(now()) : 0;
+
+            if ($vy >= 1) {
+                $dt = $vy == 1 ? '1 year' : $vy . '+ years';
+            } elseif ($vm >= 1) {
+                $dt = $vm == 1 ? '1 month' : $vm . ' months';
+            } else {
+                $dt = $totalDays == 0 ? 'New' : $totalDays . 'd';
+            }
+        @endphp
+        <span>{{ $dt }}</span>
+        
+        @if($product->vendor->user && $product->vendor->user->is_admin_verified)
+            {{-- Perfect X-Style Scalloped Badge --}}
+            <svg class="ml-1" viewBox="0 0 24 24" style="width: 14px; height: 14px;" title="Verified Seller">
+                <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+            </svg>
+        @endif
+    </div>
+@endif
+ <div class="flex items-center justify-between mt-3">
                     <div class="flex items-baseline gap-1">
                         <span class="text-xs text-ink-500">UGX</span>
                         <span class="text-sm font-bold text-brand-600">{{ number_format($product->price) }}</span>

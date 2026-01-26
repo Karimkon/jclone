@@ -277,6 +277,21 @@
     flex-shrink: 0;
     filter: drop-shadow(0 1px 2px rgba(29, 155, 240, 0.3));
 }
+
+/* Fix for filter buttons being hidden */
+#priceForm button[type="submit"] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    background-color: #6366f1 !important; /* Forces the indigo color */
+    color: white !important;
+}
+
+/* Ensure the slider itself is visible */
+.price-range {
+    display: block !important;
+    opacity: 1 !important;
+}
 </style>
 
     <!-- Main Content -->
@@ -313,20 +328,24 @@
                         <h4 class="font-semibold text-gray-700 mb-3">Price Range</h4>
                         <form method="GET" action="{{ route('marketplace.index') }}" id="priceForm">
                             <div class="mb-4">
-                                <input type="range" min="0" max="1000" value="{{ request('max_price', 1000) }}" 
+                                <input type="range" min="0" max="1000000000" step="100000" 
+                                       value="{{ request('max_price', 1000000) }}" 
                                        class="price-range w-full" id="priceSlider">
                             </div>
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-sm text-gray-600">UGX 0</span>
-<span class="text-sm font-semibold text-primary" id="priceValue">UGX {{ number_format(request('max_price', 1000000)) }}</span>
+                                <span class="text-sm font-semibold text-primary" id="priceValue">
+                                    UGX {{ number_format(request('max_price', 1000000)) }}
+                                </span>
                             </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <input type="number" name="min_price" value="{{ request('min_price', 0) }}" 
                                        placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
-                                <input type="number" name="max_price" value="{{ request('max_price', 1000000) }}" 
-       placeholder="Max (e.g., 5000000)" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
+                                <input type="number" name="max_price" id="maxPriceInput" 
+                                       value="{{ request('max_price', 1000000) }}" 
+                                       placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
                             </div>
-                            <button type="submit" class="w-full mt-4 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition">
+                            <button type="submit" class="relative z-10 w-full mt-4 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition">
                                 Apply Price Filter
                             </button>
                         </form>
@@ -543,7 +562,10 @@
                                             <p class="text-sm font-medium text-gray-700 flex items-center">
                                                 {{ $listing->vendor->business_name ?? 'Vendor' }}
                                                 @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
-                                                    <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="#1d9bf0"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
+                                                    <svg class="ml-1.5" viewBox="0 0 24 24" style="width: 16px; height: 16px;" title="Verified Seller">
+                        <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                        <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+                    </svg>
                                                 @endif
                                             </p>
                                             @if($listing->vendor && $listing->vendor->created_at)
@@ -784,20 +806,24 @@
     <!-- JavaScript -->
 
 <script>
-    // Price range slider
-    const priceSlider = document.getElementById('priceSlider');
-    const priceValue = document.getElementById('priceValue');
-    const maxPriceInput = document.querySelector('input[name="max_price"]');
-    
-    if (priceSlider && priceValue) {
-        priceSlider.addEventListener('input', function() {
-            const value = this.value;
-            priceValue.textContent = 'UGX ' + value.toLocaleString();
-            if (maxPriceInput) {
-                maxPriceInput.value = value;
-            }
-        });
-    }
+    // Price range slider fix
+    document.addEventListener('DOMContentLoaded', function() {
+        const slider = document.getElementById('priceSlider');
+        const priceLabel = document.getElementById('priceValue');
+        const maxInput = document.getElementById('maxPriceInput');
+
+        if (slider) {
+            slider.addEventListener('input', function() {
+                const val = parseInt(this.value);
+                // Update the Blue Label
+                priceLabel.textContent = 'UGX ' + val.toLocaleString();
+                // Update the Max Price Input Box
+                if (maxInput) {
+                    maxInput.value = val;
+                }
+            });
+        }
+    });
     
    let cartProcessing = false;
 async function quickAddToCart(listingId, button) {

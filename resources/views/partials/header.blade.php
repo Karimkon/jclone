@@ -2,15 +2,22 @@
     <div class="container mx-auto px-4">
         <div class="flex items-center justify-between py-3">
             <!-- Logo -->
-            <a href="{{ route('welcome') }}" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-gradient-to-br from-brand-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <i class="fas fa-store text-white"></i>
-                </div>
-                <div>
-                    <span class="text-xl font-bold text-ink-800 font-display">{{ config('app.name') }}</span>
-                    <span class="hidden lg:block text-xs text-ink-400 -mt-0.5">Trusted Marketplace</span>
-                </div>
-            </a>
+            <a href="{{ route('welcome') }}" class="flex items-center gap-3">
+    {{-- Logo Image Container --}}
+    <img src="{{ asset('images/logo.png') }}" 
+         alt="{{ config('app.name') }}" 
+         class="w-10 h-10 object-contain rounded-lg"
+         onerror="this.src='https://ui-avatars.com/api/?name=B+M&background=6366f1&color=fff'">
+    
+    <div>
+        <span class="text-xl font-bold text-gray-900 font-display block leading-none">
+            {{ config('app.name') }}
+        </span>
+        <span class="hidden lg:block text-xs text-gray-400 mt-0.5">
+            Trusted Marketplace
+        </span>
+    </div>
+</a>
             
             <!-- Search -->
             <div class="hidden md:flex flex-1 max-w-xl mx-6">

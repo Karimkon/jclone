@@ -161,18 +161,27 @@
         </div>
         
         <!-- Vendor Info (optional) -->
-        @if(isset($showVendor) && $showVendor && $product->vendor)
-        <div class="mt-2 pt-2 border-t border-gray-100">
-            <div class="flex items-center gap-2">
-                <div class="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
-                    <i class="fas fa-store text-primary text-xs"></i>
-                </div>
-                <span class="text-xs text-gray-500 truncate">
-                    {{ $product->vendor->business_name ?? 'Vendor' }}
-                </span>
-            </div>
+       @if(isset($showVendor) && $showVendor && $product->vendor)
+<div class="mt-2 pt-2 border-t border-gray-100">
+    <div class="flex flex-col gap-1">
+        {{-- Business Name & Verification Badge --}}
+        <div class="flex items-center gap-1.5">
+            <span class="text-xs font-semibold text-gray-700 truncate max-w-[140px]">
+                {{ $product->vendor->business_name ?? 'Vendor' }}
+            </span>
+            @if($product->vendor->is_verified ?? true) {{-- Assuming verified by default based on your UI --}}
+                <i class="fas fa-check-circle text-blue-500 text-[10px]"></i>
+            @endif
         </div>
-        @endif
+
+        {{-- Time on BebaMart --}}
+        <div class="flex items-center gap-1.5 text-[10px] text-gray-500">
+            <i class="fas fa-user-clock opacity-70"></i>
+            <span>{{ $product->vendor->created_at ? $product->vendor->created_at->diffForHumans(null, true) : '1 month' }} on BebaMart</span>
+        </div>
+    </div>
+</div>
+@endif
     </div>
 </div>
 @endif

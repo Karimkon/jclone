@@ -1354,54 +1354,72 @@ button[onclick="closeOptionsModal()"]:hover {
                         Vendor Information
                     </h4>
                     
-                   <div class="vendor-card mb-4">
-    <div class="flex items-center gap-4 mb-3">
-        <div class="w-14 h-14 bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl flex items-center justify-center">
-            <i class="fas fa-store text-xl"></i>
-        </div>
+                 <div class="vendor-card mb-4">
+    <div class="flex items-center justify-between gap-4 mb-3">
+        {{-- Left Side: Text Information --}}
         <div>
             <h5 class="font-bold text-gray-900 flex items-center">
                 {{ $listing->vendor->business_name ?? 'Verified Vendor' }}
                 @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
-                    <svg class="verified-badge" viewBox="0 0 22 22" title="Verified Seller"><circle cx="11" cy="11" r="11" fill="#1d9bf0"/><path d="M9.5 14.5L6 11l1-1 2.5 2.5 5-5 1 1-6 6z" fill="white"/></svg>
+                    <svg class="ml-1.5" viewBox="0 0 24 24" style="width: 16px; height: 16px;" title="Verified Seller">
+                        <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                        <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+                    </svg>
                 @endif
             </h5>
             <p class="text-sm text-gray-500">
                 @if(($listing->vendor->vendor_type ?? '') == 'china_supplier')
-                <i class="fas fa-globe mr-1"></i>International Supplier
+                    <i class="fas fa-globe mr-1"></i>International Supplier
                 @else
-                <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
+                    <i class="fas fa-map-marker-alt mr-1"></i>Local Vendor
                 @endif
             </p>
+            
             @if($listing->vendor && $listing->vendor->created_at)
-            @php
-                $totalDays = $listing->vendor->created_at->diffInDays(now());
-                $vendorYears = floor($totalDays / 365);
-                $vendorMonths = floor(($totalDays % 365) / 30);
-                if ($vendorYears == 0) {
-                    if ($vendorMonths == 0) {
-                        $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
+                @php
+                    $totalDays = $listing->vendor->created_at->diffInDays(now());
+                    $vendorYears = floor($totalDays / 365);
+                    $vendorMonths = floor(($totalDays % 365) / 30);
+                    if ($vendorYears == 0) {
+                        if ($vendorMonths == 0) {
+                            $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
+                        } else {
+                            $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
+                        }
+                    } elseif ($vendorYears == 1) {
+                        $durationText = '1 year on BebaMart';
                     } else {
-                        $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
+                        $durationText = $vendorYears . '+ years on BebaMart';
                     }
-                } elseif ($vendorYears == 1) {
-                    $durationText = '1 year on BebaMart';
-                } else {
-                    $durationText = $vendorYears . '+ years on BebaMart';
-                }
-            @endphp
-            <p class="text-xs text-gray-500 flex items-center mt-1">
-                <i class="fas fa-user-clock mr-1"></i>{{ $durationText }}
-            </p>
-            @endif
-            @if($listing->vendor && $listing->vendor->latitude && $listing->vendor->longitude)
-            <a href="https://www.google.com/maps/search/?api=1&query={{ $listing->vendor->latitude }},{{ $listing->vendor->longitude }}"
-               target="_blank"
-               class="text-xs text-primary hover:text-indigo-700 block mt-1 font-medium hover:underline">
-                <i class="fas fa-location-dot mr-1"></i>View Store Location
-            </a>
+                @endphp
+                <p class="text-xs text-gray-500 flex items-center mt-1">
+                    <i class="fas fa-user-clock mr-1"></i>{{ $durationText }}
+                </p>
             @endif
         </div>
+
+        {{-- Right Side: Profile Picture --}}
+        <div class="w-14 h-14 flex-shrink-0">
+            @if($listing->vendor && $listing->vendor->logo)
+                <img src="{{ asset('storage/' . $listing->vendor->logo) }}" 
+                     alt="{{ $listing->vendor->business_name }}" 
+                     class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100">
+            @else
+                <div class="w-full h-full bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl flex items-center justify-center shadow-sm">
+                    <i class="fas fa-store text-xl"></i>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    @if($listing->vendor && $listing->vendor->latitude && $listing->vendor->longitude)
+        <a href="https://www.google.com/maps/search/?api=1&query={{ $listing->vendor->latitude }},{{ $listing->vendor->longitude }}"
+           target="_blank"
+           class="text-xs text-primary hover:text-indigo-700 block mt-1 font-medium hover:underline">
+            <i class="fas fa-location-dot mr-1"></i>View Store Location
+        </a>
+    @endif
+</div>
     </div>
     
    <!-- Delivery Performance Info -->
