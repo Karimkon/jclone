@@ -49,8 +49,9 @@ class CategoryController extends Controller
         // Get all descendant category IDs
         $categoryIds = $category->getDescendantIds();
         
-        // Get listings from this category AND all descendants
+        // Get listings from this category AND all descendants (excluding deactivated vendors)
         $listings = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->whereIn('category_id', $categoryIds)
             ->with(['vendor', 'images'])
             ->orderBy('created_at', 'desc')

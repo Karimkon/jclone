@@ -50,24 +50,26 @@ class Category extends Model
     }
 
     /**
-     * Get total listings count including all descendants
+     * Get total listings count including all descendants (excluding deactivated vendors)
      */
     public function getTotalListingsCountAttribute()
     {
         $categoryIds = $this->getDescendantIds();
-        
+
         return Listing::whereIn('category_id', $categoryIds)
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->count();
     }
 
     /**
-     * Get listings count for this category only (direct listings)
+     * Get listings count for this category only (direct listings, excluding deactivated vendors)
      */
     public function getDirectListingsCountAttribute()
     {
         return $this->listings()
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->count();
     }
 }

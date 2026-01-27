@@ -12,13 +12,23 @@ class VendorDashboardController extends Controller
 {
     public function index()
     {
-        $vendor = auth()->user()->vendorProfile;
-        
+        $user = auth()->user();
+        $vendor = $user->vendorProfile;
+
         if (!$vendor) {
             return redirect()->route('vendor.onboard.create')
                 ->with('error', 'Please complete vendor onboarding first.');
         }
-        
+
+        // Check if vendor account is deactivated
+        if (!$user->is_active) {
+            return view('vendor.deactivated', [
+                'message' => 'Your vendor account has been deactivated.',
+                'support_email' => 'support@bebamart.com',
+                'support_phone' => '+256700000000',
+            ]);
+        }
+
         // Check if vendor is approved
         if ($vendor->vetting_status != 'approved') {
             return redirect()->route('vendor.onboard.status');

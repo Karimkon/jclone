@@ -98,6 +98,7 @@ Route::post('/register', function (Request $request) {
             'phone.unique' => 'This phone number is already registered. Please sign in instead.',
         ]);
 
+        // Create user with requested role
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -144,6 +145,7 @@ Route::post('/register', function (Request $request) {
             'user_id' => $user->id,
             'email' => $user->email,
             'phone' => $user->phone,
+            'role' => $user->role,
         ], 201);
     } catch (\Illuminate\Validation\ValidationException $e) {
         return response()->json([
@@ -593,6 +595,7 @@ Route::get('/categories/{slug}', function ($slug) {
         $listings = Listing::with(['images', 'category', 'user.vendorProfile'])
             ->whereIn('category_id', $categoryIds)
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($listing) {
@@ -793,7 +796,8 @@ Route::get('/marketplace/jobs', function (Request $request) {
 // Marketplace/Listings (Public)
 Route::get('/marketplace', function (Request $request) {
     $query = Listing::with(['category', 'user.vendorProfile', 'images'])
-        ->where('is_active', true);
+        ->where('is_active', true)
+        ->whereHas('user', fn($q) => $q->where('is_active', true));
 
     if ($request->has('search')) {
         $search = $request->search;
@@ -805,6 +809,18 @@ Route::get('/marketplace', function (Request $request) {
 
     if ($request->has('category_id')) {
         $query->where('category_id', $request->category_id);
+    }
+
+    // Exclude specific product (for related products)
+    if ($request->has('exclude')) {
+        $query->where('id', '!=', $request->exclude);
+    }
+
+    // Filter by vendor
+    if ($request->has('vendor_id')) {
+        $query->whereHas('user.vendorProfile', function($q) use ($request) {
+            $q->where('id', $request->vendor_id);
+        });
     }
 
     if ($request->has('min_price')) {
@@ -873,10 +889,16 @@ Route::get('/marketplace', function (Request $request) {
 Route::get('/marketplace/{id}', function ($id) {
     $listing = Listing::with(['category', 'user.vendorProfile', 'variants', 'images', 'reviews.user'])
         ->where('is_active', true)
+        ->whereHas('user', fn($q) => $q->where('is_active', true))
         ->find($id);
 
     if (!$listing) {
         return response()->json(['success' => false, 'message' => 'Listing not found'], 404);
+    }
+
+    // Check if vendor is deactivated
+    if ($listing->user && !$listing->user->is_active) {
+        return response()->json(['success' => false, 'message' => 'This product is currently unavailable'], 404);
     }
 
     return response()->json([
@@ -913,6 +935,7 @@ Route::get('/marketplace/{id}', function ($id) {
 Route::get('/featured-listings', function () {
     $listings = Listing::with(['images', 'category', 'user.vendorProfile'])
         ->where('is_active', true)
+        ->whereHas('user', fn($q) => $q->where('is_active', true))
         ->orderBy('created_at', 'desc')
         ->limit(20)
         ->get()
@@ -1784,6 +1807,18 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['success' => false, 'message' => 'Invalid shipping address'], 400);
         }
 
+        // Check if any vendor in cart is deactivated
+        foreach ($cart->items as $item) {
+            $listing = Listing::with('user')->find($item['listing_id']);
+            if ($listing && $listing->user && !$listing->user->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Some products in your cart are from a vendor that is currently unavailable. Please remove them and try again.',
+                    'unavailable_listing_id' => $listing->id,
+                ], 400);
+            }
+        }
+
         try {
             \DB::beginTransaction();
 
@@ -2259,13 +2294,32 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
     Route::get('/dashboard', function (Request $request) {
         $user = $request->user();
         $vendor = $user->vendorProfile;
-        
+
+        // Check if user has a vendor profile at all
         if (!$vendor) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vendor profile not found',
+                'message' => 'You need to complete vendor onboarding first.',
+                'requires_onboarding' => true,
+                'vetting_status' => null,
             ], 404);
         }
+
+        // Check if vendor account is deactivated
+        if (!$user->is_active) {
+            return response()->json([
+                'success' => false,
+                'is_deactivated' => true,
+                'message' => 'Your vendor account has been deactivated. If you believe this was a mistake, please contact support or submit an appeal.',
+                'support_email' => 'support@bebamart.com',
+                'support_phone' => '+256700000000',
+            ], 403);
+        }
+
+        // Check if vendor is approved - allow dashboard access but with status info
+        $isApproved = $vendor->vetting_status === 'approved';
+        $isPending = $vendor->vetting_status === 'pending';
+        $isRejected = $vendor->vetting_status === 'rejected';
 
         // Get stats
         $stats = [
@@ -2306,6 +2360,11 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
             'success' => true,
             'stats' => $stats,
             'recent_orders' => $recentOrders,
+            'vetting_status' => $vendor->vetting_status,
+            'is_approved' => $isApproved,
+            'is_pending' => $isPending,
+            'is_rejected' => $isRejected,
+            'vetting_notes' => $isRejected ? $vendor->vetting_notes : null,
         ]);
     });
 
@@ -2350,9 +2409,23 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
         // Create new listing
         Route::post('/', function (Request $request) {
             $vendor = $request->user()->vendorProfile;
-            
+
             if (!$vendor) {
-                return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must complete vendor onboarding before listing products.',
+                    'requires_onboarding' => true,
+                ], 403);
+            }
+
+            // SECURITY: Check if vendor is approved before allowing product creation
+            if ($vendor->vetting_status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your vendor application is pending approval. You cannot list products until approved.',
+                    'vetting_status' => $vendor->vetting_status,
+                    'requires_approval' => true,
+                ], 403);
             }
 
             $request->validate([
@@ -2561,7 +2634,7 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
         // Get all vendor orders
         Route::get('/', function (Request $request) {
             $vendor = $request->user()->vendorProfile;
-            
+
             if (!$vendor) {
                 return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
             }
@@ -2577,9 +2650,19 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
             $orders = $query->orderBy('created_at', 'desc')
                 ->paginate($request->get('per_page', 20));
 
+            // Transform orders to include payment info at root level
+            $transformedOrders = collect($orders->items())->map(function ($order) {
+                $orderData = $order->toArray();
+                $meta = $order->meta ?? [];
+                $orderData['payment_method'] = $meta['payment_method'] ?? null;
+                $orderData['payment_status'] = $meta['payment_status'] ?? 'pending';
+                $orderData['is_cod'] = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+                return $orderData;
+            });
+
             return response()->json([
                 'success' => true,
-                'data' => $orders->items(),
+                'data' => $transformedOrders,
                 'current_page' => $orders->currentPage(),
                 'last_page' => $orders->lastPage(),
                 'total' => $orders->total(),
@@ -2589,7 +2672,7 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
         // Get single order
         Route::get('/{id}', function (Request $request, $id) {
             $vendor = $request->user()->vendorProfile;
-            
+
             $order = Order::where('id', $id)
                 ->where('vendor_profile_id', $vendor->id)
                 ->with(['buyer', 'items.listing.images', 'payments']) // Note: shippingAddress is in $appends
@@ -2599,16 +2682,24 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 return response()->json(['success' => false, 'message' => 'Order not found'], 404);
             }
 
+            // Transform order data to include payment info at root level
+            $orderData = $order->toArray();
+            $meta = $order->meta ?? [];
+            $orderData['payment_method'] = $meta['payment_method'] ?? null;
+            $orderData['payment_status'] = $meta['payment_status'] ?? ($order->payments->first()?->status ?? 'pending');
+            $orderData['is_cod'] = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+            $orderData['cod_payment_confirmed'] = $meta['cod_payment_confirmed_by_vendor'] ?? false;
+
             return response()->json([
                 'success' => true,
-                'order' => $order,
+                'order' => $orderData,
             ]);
         });
 
         // Update order status
         Route::post('/{id}/status', function (Request $request, $id) {
             $vendor = $request->user()->vendorProfile;
-            
+
             $order = Order::where('id', $id)
                 ->where('vendor_profile_id', $vendor->id)
                 ->first();
@@ -2621,9 +2712,23 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
             ]);
 
+            $meta = $order->meta ?? [];
+            $isCOD = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+
+            // For COD orders, vendor cannot directly mark as "delivered"
+            // They must use the confirm-cod-payment endpoint instead
+            if ($isCOD && $request->status === 'delivered') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'For Cash on Delivery orders, please use "Confirm Payment Received" to mark as delivered.',
+                    'requires_payment_confirmation' => true,
+                ], 400);
+            }
+
             $oldStatus = $order->status;
-            $order->status = $request->status;
-            $order->save();
+
+            // Use the model method for proper timestamp tracking
+            $order->updateStatusWithTimestamps($request->status);
 
             // TODO: Send notification to buyer about status change
 
@@ -2632,6 +2737,123 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'message' => "Order status updated from {$oldStatus} to {$request->status}",
                 'order' => $order->fresh(['buyer', 'items']),
             ]);
+        });
+
+        // Confirm COD Payment Received (Vendor confirms they received cash payment)
+        Route::post('/{id}/confirm-cod-payment', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+
+            $order = Order::where('id', $id)
+                ->where('vendor_profile_id', $vendor->id)
+                ->first();
+
+            if (!$order) {
+                return response()->json(['success' => false, 'message' => 'Order not found'], 404);
+            }
+
+            // Check if order is shipped
+            if ($order->status !== 'shipped') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Order must be shipped before confirming payment',
+                ], 400);
+            }
+
+            // Check if this is a COD order
+            $meta = $order->meta ?? [];
+            $isCOD = isset($meta['payment_method']) && $meta['payment_method'] === 'cash_on_delivery';
+
+            if (!$isCOD) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This order is not Cash on Delivery',
+                ], 400);
+            }
+
+            // Check if already confirmed
+            if (isset($meta['cod_payment_confirmed_by_vendor']) && $meta['cod_payment_confirmed_by_vendor']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'COD payment has already been confirmed',
+                ], 400);
+            }
+
+            try {
+                \DB::beginTransaction();
+
+                // Calculate delivery metrics
+                $deliveryTimeDays = 0;
+                if ($order->shipped_at) {
+                    $deliveryTimeDays = $order->shipped_at->diffInDays(now());
+                } else {
+                    $deliveryTimeDays = $order->created_at->diffInDays(now());
+                }
+
+                // Calculate delivery score
+                $deliveryScore = match(true) {
+                    $deliveryTimeDays <= 1 => 100,
+                    $deliveryTimeDays <= 2 => 95,
+                    $deliveryTimeDays <= 3 => 90,
+                    $deliveryTimeDays <= 5 => 80,
+                    $deliveryTimeDays <= 7 => 70,
+                    $deliveryTimeDays <= 10 => 60,
+                    $deliveryTimeDays <= 14 => 50,
+                    default => 40,
+                };
+
+                // Update order - mark as delivered with COD payment confirmed
+                $order->update([
+                    'status' => 'delivered',
+                    'delivered_at' => now(),
+                    'delivery_time_days' => $deliveryTimeDays,
+                    'delivery_score' => $deliveryScore,
+                    'meta' => array_merge($meta, [
+                        'cod_payment_confirmed_by_vendor' => true,
+                        'cod_payment_confirmed_at' => now()->toDateTimeString(),
+                        'cod_payment_amount' => $order->total,
+                        'payment_type' => 'cash_on_delivery',
+                        // COD goes directly to vendor, NOT to escrow
+                        'payment_method_note' => 'Cash received directly by vendor - no escrow',
+                    ]),
+                ]);
+
+                // Update the payment record (mark as completed)
+                $payment = $order->payments()->where('provider', 'cash')->first();
+                if ($payment) {
+                    $payment->update([
+                        'status' => 'completed',
+                        'meta' => array_merge($payment->meta ?? [], [
+                            'paid_at' => now()->toDateTimeString(),
+                            'confirmed_by_vendor' => true,
+                            'vendor_confirmed_at' => now()->toDateTimeString(),
+                        ]),
+                    ]);
+                }
+
+                // DO NOT create escrow for COD - vendor already has the cash
+                // No wallet transaction needed - cash was received directly
+
+                \DB::commit();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'COD payment confirmed and order marked as delivered',
+                    'order' => $order->fresh(['buyer', 'items']),
+                ]);
+
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                \Log::error('COD payment confirmation failed', [
+                    'order_id' => $order->id,
+                    'vendor_id' => $vendor->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to confirm payment: ' . $e->getMessage(),
+                ], 500);
+            }
         });
     });
 

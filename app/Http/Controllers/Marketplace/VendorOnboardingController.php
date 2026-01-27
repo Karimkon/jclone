@@ -163,7 +163,7 @@ class VendorOnboardingController extends Controller
                 'country' => $validated['country'],
                 'city' => $validated['city'],
                 'address' => $validated['address'],
-                'annual_turnover' => $validated['annual_turnover'],
+                'annual_turnover' => $validated['annual_turnover'] ?? null,
                 'preferred_currency' => $validated['preferred_currency'],
                 'vetting_status' => 'pending',
                 'vetting_notes' => null,
@@ -276,7 +276,12 @@ class VendorOnboardingController extends Controller
                 Auth::login($user);
             }
 
-            if ($request->expectsJson()) {
+            // Check if this is an API request (JSON expected or has Bearer token or is api/* path)
+            $isApiRequest = $request->expectsJson()
+                || $request->bearerToken()
+                || $request->is('api/*');
+
+            if ($isApiRequest) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Vendor application submitted successfully!',
@@ -292,8 +297,9 @@ class VendorOnboardingController extends Controller
             Log::error('Vendor onboarding validation exception', [
                 'errors' => $e->errors(),
             ]);
-            
-            if ($request->expectsJson()) {
+
+            $isApiRequest = $request->expectsJson() || $request->bearerToken() || $request->is('api/*');
+            if ($isApiRequest) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Validation failed',
@@ -303,7 +309,7 @@ class VendorOnboardingController extends Controller
 
             return back()->withErrors($e->errors())->withInput()
                 ->with('error', 'Please correct the errors below and try again.');
-                
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Vendor onboarding failed', [
@@ -312,8 +318,9 @@ class VendorOnboardingController extends Controller
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            if ($request->expectsJson()) {
+
+            $isApiRequest = $request->expectsJson() || $request->bearerToken() || $request->is('api/*');
+            if ($isApiRequest) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Failed to submit application: ' . $e->getMessage()

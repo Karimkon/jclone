@@ -27,6 +27,7 @@ class LandingController extends Controller
 
         // Featured products (you can add a 'is_featured' column later)
         $featuredProducts = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->with(['images', 'category', 'vendor.user'])
             ->inRandomOrder()
             ->take(10)
@@ -34,6 +35,7 @@ class LandingController extends Controller
 
         // Trending/New Arrivals
         $newArrivals = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->with(['images', 'category', 'vendor.user'])
             ->orderBy('created_at', 'desc')
             ->take(10)
@@ -41,6 +43,7 @@ class LandingController extends Controller
 
         // Recently added products
         $recentProducts = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->with(['images', 'category', 'vendor.user'])
             ->orderBy('created_at', 'desc')
             ->take(12)
@@ -48,6 +51,7 @@ class LandingController extends Controller
 
         // Flash deals (products with potential discounts)
         $flashDeals = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->with(['images', 'category'])
             ->where('stock', '>', 0)
             ->inRandomOrder()
@@ -64,6 +68,7 @@ class LandingController extends Controller
                     ->where('orders.status', '!=', 'cancelled');
             }, 'order_count')
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->where('stock', '>', 0)
             ->with(['images', 'category'])
             ->orderByDesc('order_count')
@@ -73,6 +78,7 @@ class LandingController extends Controller
 
         // Imported products
         $importedProducts = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->where('origin', 'imported')
             ->with(['images', 'category'])
             ->take(8)
@@ -80,6 +86,7 @@ class LandingController extends Controller
 
         // Local products
         $localProducts = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->where('origin', 'local')
             ->with(['images', 'category'])
             ->take(8)
@@ -141,20 +148,23 @@ class LandingController extends Controller
     {
         // Get all descendant IDs for this category
         $descendantIds = $this->getAllDescendantIds($category);
-        
-        // Get total listings count
+
+        // Get total listings count (excluding deactivated vendors)
         $category->listings_count = Listing::whereIn('category_id', $descendantIds)
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->count();
 
         // Get direct listings count (only this category, not children)
         $category->direct_listings_count = Listing::where('category_id', $category->id)
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->count();
 
         // Get top 5 products for this category (most viewed/recent)
         $category->top_products = Listing::whereIn('category_id', $descendantIds)
             ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->select('id', 'title', 'price')
             ->orderByDesc('created_at')
             ->take(5)

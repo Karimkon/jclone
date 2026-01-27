@@ -22,8 +22,22 @@ return Application::configure(basePath: dirname(__DIR__))
             'check.vendor.status' => \App\Http\Middleware\CheckVendorStatus::class,
         ]);
 
-        //
+        // Return JSON 401 for unauthenticated API requests instead of redirecting
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return null; // Return null to trigger 401 response
+            }
+            return route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Handle authentication exceptions for API
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated. Please login again.',
+                ], 401);
+            }
+        });
     })->create();

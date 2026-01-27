@@ -22,7 +22,8 @@ class ListingController extends Controller
     public function indexPublic(Request $request)
     {
         $query = Listing::with(['images', 'vendor.user', 'category'])
-            ->where('is_active', true);
+            ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true));
         
         // Search filter
         if ($request->has('search')) {
@@ -95,7 +96,9 @@ class ListingController extends Controller
             $child->listings_count = $child->total_listings_count;
         });
     });
-         $totalProducts = Listing::where('is_active', true)->count();
+         $totalProducts = Listing::where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
+            ->count();
         
         return view('marketplace.index', compact('listings', 'categories', 'totalProducts', 'selectedCategory'));
     }
@@ -107,6 +110,11 @@ public function showPublic(Listing $listing)
 {
     if (!$listing->is_active) {
         abort(404);
+    }
+
+    // Check if vendor is deactivated
+    if ($listing->user && !$listing->user->is_active) {
+        abort(404, 'This product is currently unavailable');
     }
 
      app(\App\Services\ProductAnalyticsService::class)->trackView(
@@ -212,6 +220,7 @@ public function showPublic(Listing $listing)
     $related = Listing::where('category_id', $listing->category_id)
         ->where('id', '!=', $listing->id)
         ->where('is_active', true)
+        ->whereHas('user', fn($q) => $q->where('is_active', true))
         ->with('images')
         ->take(4)
         ->get();

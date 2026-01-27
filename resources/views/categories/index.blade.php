@@ -54,7 +54,7 @@
                     </div>
                     <div>
                         <p class="text-sm text-ink-500">Total Products</p>
-                        <p class="text-2xl font-bold text-ink-800">{{ \App\Models\Listing::where('is_active', true)->count() }}</p>
+                        <p class="text-2xl font-bold text-ink-800">{{ \App\Models\Listing::where('is_active', true)->whereHas('user', fn($q) => $q->where('is_active', true))->count() }}</p>
                     </div>
                 </div>
             </div>

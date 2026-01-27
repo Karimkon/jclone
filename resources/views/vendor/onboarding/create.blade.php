@@ -3,590 +3,339 @@
 @section('title', 'Become a Vendor - ' . config('app.name'))
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-    <div class="max-w-5xl mx-auto">
-        <!-- Progress Steps -->
-        <div class="mb-8">
-            <div class="flex items-center justify-center mb-4">
-                <div class="flex items-center">
-                    <div class="flex items-center justify-center w-8 h-8 bg-indigo-600 rounded-full">
-                        <span class="text-white text-sm font-bold">1</span>
-                    </div>
-                    <div class="w-16 h-1 bg-indigo-600"></div>
-                    <div class="flex items-center justify-center w-8 h-8 bg-indigo-600 rounded-full">
-                        <span class="text-white text-sm font-bold">2</span>
-                    </div>
-                    <div class="w-16 h-1 bg-indigo-600"></div>
-                    <div class="flex items-center justify-center w-8 h-8 bg-indigo-600 rounded-full">
-                        <span class="text-white text-sm font-bold">3</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="flex justify-between px-6">
-                <div class="text-center">
-                    <p class="font-medium text-indigo-600 text-sm">Account Info</p>
-                </div>
-                <div class="text-center">
-                    <p class="font-medium text-indigo-600 text-sm">Business Info</p>
-                </div>
-                <div class="text-center">
-                    <p class="font-medium text-indigo-600 text-sm">Documents</p>
-                </div>
-            </div>
+<div class="min-h-screen bg-gray-100 py-6">
+    <div class="max-w-3xl mx-auto px-4">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">Become a Vendor</h1>
+            <p class="text-gray-600 text-sm mt-1">Complete the form below to start selling</p>
         </div>
 
-        <!-- Form -->
-        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-            <div class="p-6">
-                <h1 class="text-2xl font-bold text-gray-900 mb-1">Become a Vendor</h1>
-                <p class="text-gray-600 text-sm mb-6">
-                    @auth
-                        Complete your vendor application
-                    @else
-                        Create account & submit application
-                    @endauth
-                </p>
-                
-                @if(session('error'))
-                <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-exclamation-circle text-red-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-red-700 font-medium">{{ session('error') }}</p>
-                        </div>
+        @if(session('error'))
+        <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4 rounded">
+            <p class="text-sm text-red-700"><i class="fas fa-exclamation-circle mr-2"></i>{{ session('error') }}</p>
+        </div>
+        @endif
+
+        @if($errors->any())
+        <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4 rounded">
+            <ul class="list-disc list-inside text-sm text-red-700">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+        @endif
+
+        <form action="{{ route('vendor.onboard.store') }}" method="POST" enctype="multipart/form-data" id="vendorForm" class="space-y-4">
+            @csrf
+
+            <!-- Account Info (For New Users) -->
+            @guest
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
+                    <i class="fas fa-user text-indigo-500 mr-2"></i>Account Information
+                </h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Name *</label>
+                        <input type="text" name="name" required value="{{ old('name') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Full name">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Email *</label>
+                        <input type="email" name="email" required value="{{ old('email') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="email@example.com">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Phone *</label>
+                        <input type="tel" name="phone" required value="{{ old('phone') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="+256 XXX XXX XXX">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Password *</label>
+                        <input type="password" name="password" required
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Min 8 characters">
+                    </div>
+                    <div class="flex items-center col-span-2">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Confirm *</label>
+                        <input type="password" name="password_confirmation" required
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Confirm password">
                     </div>
                 </div>
-                @endif
+            </div>
+            @endguest
 
-                @if(session('success'))
-                <div class="bg-green-50 border-l-4 border-green-400 p-3 mb-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-check-circle text-green-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-green-700">{{ session('success') }}</p>
-                        </div>
-                    </div>
-                </div>
-                @endif
+            <!-- Business Info -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
+                    <i class="fas fa-store text-indigo-500 mr-2"></i>Business Information
+                </h2>
 
-                @if($errors->any())
-                <div class="bg-red-50 border-l-4 border-red-400 p-3 mb-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-exclamation-circle text-red-400"></i>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-red-700 font-medium mb-1">Please correct errors:</p>
-                            <ul class="list-disc list-inside text-xs text-red-600 space-y-0.5">
-                                @foreach($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                @endif
-                
-                <form action="{{ route('vendor.onboard.store') }}" method="POST" enctype="multipart/form-data" id="vendorForm">
-                    @csrf
-                    
-                    <!-- User Registration Fields -->
-                    @guest
-                    <div class="mb-8">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">Account Information</h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Full Name *</label>
-                                <input type="text" name="name" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('name') border-red-500 @enderror"
-                                       placeholder="John Doe"
-                                       value="{{ old('name') }}">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Email *</label>
-                                <input type="email" name="email" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('email') border-red-500 @enderror"
-                                       placeholder="vendor@example.com"
-                                       value="{{ old('email') }}">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Phone *</label>
-                                <input type="tel" name="phone" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('phone') border-red-500 @enderror"
-                                       placeholder="+256 XXX XXX XXX"
-                                       value="{{ old('phone') }}">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Password *</label>
-                                <input type="password" name="password" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent @error('password') border-red-500 @enderror"
-                                       placeholder="Min 8 characters">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Confirm Password *</label>
-                                <input type="password" name="password_confirmation" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                       placeholder="Confirm password">
-                            </div>
-                        </div>
-                    </div>
-                    @endguest
-                    
-                    <!-- Business Information -->
-                    <div class="mb-8">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">Business Information</h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Vendor Type -->
-                            <div class="col-span-2 mb-4">
-                                <label class="block text-gray-700 font-medium mb-2 text-sm">Vendor Type *</label>
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                    <label class="vendor-type-label border border-gray-300 rounded p-3 cursor-pointer hover:border-indigo-500 transition text-center">
-                                        <input type="radio" name="vendor_type" value="local_retail" class="hidden" required {{ old('vendor_type') == 'local_retail' ? 'checked' : '' }}>
-                                        <i class="fas fa-store text-blue-600 text-lg mb-2 block"></i>
-                                        <p class="font-medium text-sm">Local Retailer</p>
-                                        <p class="text-xs text-gray-500">Sell locally</p>
-                                    </label>
-                                    
-                                    <label class="vendor-type-label border border-gray-300 rounded p-3 cursor-pointer hover:border-indigo-500 transition text-center">
-                                        <input type="radio" name="vendor_type" value="china_supplier" class="hidden" required {{ old('vendor_type') == 'china_supplier' ? 'checked' : '' }}>
-                                        <i class="fas fa-plane text-green-600 text-lg mb-2 block"></i>
-                                        <p class="font-medium text-sm">Importer</p>
-                                        <p class="text-xs text-gray-500">Import goods</p>
-                                    </label>
-                                    
-                                    <label class="vendor-type-label border border-gray-300 rounded p-3 cursor-pointer hover:border-indigo-500 transition text-center">
-                                        <input type="radio" name="vendor_type" value="dropship" class="hidden" required {{ old('vendor_type') == 'dropship' ? 'checked' : '' }}>
-                                        <i class="fas fa-box-open text-purple-600 text-lg mb-2 block"></i>
-                                        <p class="font-medium text-sm">Dropshipper</p>
-                                        <p class="text-xs text-gray-500">No inventory</p>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Business Name *</label>
-                                <input type="text" name="business_name" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                       placeholder="Your business name"
-                                       value="{{ old('business_name') }}">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Country *</label>
-                                <select name="country" required 
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                    <option value="">Select Country</option>
-                                    <option value="Uganda" {{ old('country') == 'Uganda' ? 'selected' : '' }}>Uganda</option>
-                                    <option value="Kenya" {{ old('country') == 'Kenya' ? 'selected' : '' }}>Kenya</option>
-                                    <option value="Tanzania" {{ old('country') == 'Tanzania' ? 'selected' : '' }}>Tanzania</option>
-                                    <option value="Rwanda" {{ old('country') == 'Rwanda' ? 'selected' : '' }}>Rwanda</option>
-                                    <option value="China" {{ old('country') == 'China' ? 'selected' : '' }}>China</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">City *</label>
-                                <input type="text" name="city" required 
-                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                       placeholder="City"
-                                       value="{{ old('city') }}">
-                            </div>
-
-                            <div>
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Preferred Currency *</label>
-                                <select name="preferred_currency" required 
-                                        class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                    <option value="">Select Currency</option>
-                                    <option value="USD" {{ old('preferred_currency') == 'USD' ? 'selected' : '' }}>US Dollar (USD)</option>
-                                    <option value="UGX" {{ old('preferred_currency') == 'UGX' ? 'selected' : '' }}>Ugandan Shilling (UGX)</option>
-                                    <option value="KES" {{ old('preferred_currency') == 'KES' ? 'selected' : '' }}>Kenyan Shilling (KES)</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-2">
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Business Address *</label>
-                                <textarea name="address" rows="2" required 
-                                          class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                          placeholder="Full business address">{{ old('address') }}</textarea>
-                            </div>
-
-                            <div class="col-span-2">
-                                <label class="block text-gray-700 font-medium mb-1 text-sm">Annual Turnover (Optional)</label>
-                                <div class="relative">
-                                    <span class="absolute left-3 top-2.5 text-gray-500 text-sm">UGX</span>
-                                    <input type="number" name="annual_turnover" step="1" 
-                                           class="w-full pl-12 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                           placeholder="0"
-                                           value="{{ old('annual_turnover') }}">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Required Documents -->
-                    <div class="mb-8">
-                        <h2 class="text-lg font-bold text-gray-800 mb-4 pb-2 border-b">Required Documents</h2>
-                        
-                        <div class="space-y-6">
-                            <!-- National ID - Side by side layout -->
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-blue-800 mb-3 flex items-center text-sm">
-                                    <i class="fas fa-id-card mr-2"></i>National ID Card
-                                </h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <!-- Front Side -->
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2 text-sm">Front Side *</label>
-                                        <div class="relative">
-                                            <div class="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-500 transition cursor-pointer bg-white"
-                                                 onclick="document.getElementById('national_id_front').click()">
-                                                <div id="frontPreview" class="mb-2 min-h-16 flex items-center justify-center">
-                                                    <i class="fas fa-id-card text-blue-500 text-2xl"></i>
-                                                </div>
-                                                <p class="text-blue-600 font-medium text-xs">Upload Front</p>
-                                                <p class="text-gray-500 text-xs mt-1">JPG, PNG, PDF (≤5MB)</p>
-                                            </div>
-                                            <input type="file" name="national_id_front" id="national_id_front" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required
-                                                   onchange="previewFile(this, 'frontPreview')">
-                                        </div>
-                                        <p id="frontFileName" class="text-xs text-gray-600 mt-1"></p>
-                                    </div>
-                                    
-                                    <!-- Back Side -->
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2 text-sm">Back Side *</label>
-                                        <div class="relative">
-                                            <div class="border-2 border-dashed border-blue-300 rounded-lg p-4 text-center hover:border-blue-500 transition cursor-pointer bg-white"
-                                                 onclick="document.getElementById('national_id_back').click()">
-                                                <div id="backPreview" class="mb-2 min-h-16 flex items-center justify-center">
-                                                    <i class="fas fa-id-card text-blue-500 text-2xl"></i>
-                                                </div>
-                                                <p class="text-blue-600 font-medium text-xs">Upload Back</p>
-                                                <p class="text-gray-500 text-xs mt-1">JPG, PNG, PDF (≤5MB)</p>
-                                            </div>
-                                            <input type="file" name="national_id_back" id="national_id_back" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required
-                                                   onchange="previewFile(this, 'backPreview')">
-                                        </div>
-                                        <p id="backFileName" class="text-xs text-gray-600 mt-1"></p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Bank Statement & Proof of Address - Side by side -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <!-- Bank Statement -->
-                                <div class="bg-green-50 p-4 rounded-lg">
-                                    <h3 class="font-bold text-green-800 mb-3 flex items-center text-sm">
-                                        <i class="fas fa-file-invoice-dollar mr-2"></i>Bank Statement *
-                                    </h3>
-                                    <div class="relative">
-                                        <div class="border-2 border-dashed border-green-300 rounded-lg p-4 text-center hover:border-green-500 transition cursor-pointer bg-white"
-                                             onclick="document.getElementById('bank_statement').click()">
-                                            <div id="bankPreview" class="mb-2 min-h-20 flex items-center justify-center">
-                                                <i class="fas fa-file-invoice-dollar text-green-500 text-2xl"></i>
-                                            </div>
-                                            <p class="text-green-600 font-medium text-xs">Upload Statement</p>
-                                            <p class="text-gray-500 text-xs mt-1">Last 3 months (≤5MB)</p>
-                                        </div>
-                                        <input type="file" name="bank_statement" id="bank_statement" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required
-                                               onchange="previewFile(this, 'bankPreview')">
-                                    </div>
-                                    <p id="bankFileName" class="text-xs text-gray-600 mt-1"></p>
-                                </div>
-
-                                <!-- Proof of Address -->
-                                <div class="bg-purple-50 p-4 rounded-lg">
-                                    <h3 class="font-bold text-purple-800 mb-3 flex items-center text-sm">
-                                        <i class="fas fa-home mr-2"></i>Proof of Address *
-                                    </h3>
-                                    <div class="relative">
-                                        <div class="border-2 border-dashed border-purple-300 rounded-lg p-4 text-center hover:border-purple-500 transition cursor-pointer bg-white"
-                                             onclick="document.getElementById('proof_of_address').click()">
-                                            <div id="addressPreview" class="mb-2 min-h-20 flex items-center justify-center">
-                                                <i class="fas fa-home text-purple-500 text-2xl"></i>
-                                            </div>
-                                            <p class="text-purple-600 font-medium text-xs">Upload Document</p>
-                                            <p class="text-gray-500 text-xs mt-1">Utility bill/rental (≤5MB)</p>
-                                        </div>
-                                        <input type="file" name="proof_of_address" id="proof_of_address" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required
-                                               onchange="previewFile(this, 'addressPreview')">
-                                    </div>
-                                    <p id="addressFileName" class="text-xs text-gray-600 mt-1"></p>
-                                </div>
-                            </div>
-
-                            <!-- Guarantor Information -->
-                            <div class="bg-yellow-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-yellow-800 mb-3 flex items-center text-sm">
-                                    <i class="fas fa-user-shield mr-2"></i>Guarantor Information
-                                </h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-1 text-sm">Full Name *</label>
-                                        <input type="text" name="guarantor_name" required 
-                                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                               placeholder="Guarantor name"
-                                               value="{{ old('guarantor_name') }}">
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-1 text-sm">Phone *</label>
-                                        <input type="tel" name="guarantor_phone" required 
-                                               class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                                               placeholder="+256 XXX XXX XXX"
-                                               value="{{ old('guarantor_phone') }}">
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block text-gray-700 font-medium mb-2 text-sm">Guarantor ID *</label>
-                                    <div class="relative">
-                                        <div class="border-2 border-dashed border-yellow-300 rounded-lg p-4 text-center hover:border-yellow-500 transition cursor-pointer bg-white"
-                                             onclick="document.getElementById('guarantor_id').click()">
-                                            <div id="guarantorPreview" class="mb-2 min-h-20 flex items-center justify-center">
-                                                <i class="fas fa-user-shield text-yellow-500 text-2xl"></i>
-                                            </div>
-                                            <p class="text-yellow-600 font-medium text-xs">Upload ID</p>
-                                            <p class="text-gray-500 text-xs mt-1">Front side (≤5MB)</p>
-                                        </div>
-                                        <input type="file" name="guarantor_id" id="guarantor_id" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required
-                                               onchange="previewFile(this, 'guarantorPreview')">
-                                    </div>
-                                    <p id="guarantorFileName" class="text-xs text-gray-600 mt-1"></p>
-                                </div>
-                            </div>
-
-                            <!-- Company Documents (Optional) -->
-                            <div class="bg-gray-50 p-4 rounded-lg">
-                                <h3 class="font-bold text-gray-800 mb-3 flex items-center text-sm">
-                                    <i class="fas fa-building mr-2"></i>Company Documents (Optional)
-                                </h3>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2 text-sm">Registration Certificate</label>
-                                        <div class="relative">
-                                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-500 transition cursor-pointer bg-white"
-                                                 onclick="document.getElementById('company_registration').click()">
-                                                <div id="companyPreview" class="mb-2 min-h-16 flex items-center justify-center">
-                                                    <i class="fas fa-file-contract text-gray-500 text-xl"></i>
-                                                </div>
-                                                <p class="text-gray-600 font-medium text-xs">Upload Certificate</p>
-                                            </div>
-                                            <input type="file" name="company_registration" id="company_registration" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
-                                                   onchange="previewFile(this, 'companyPreview')">
-                                        </div>
-                                        <p id="companyFileName" class="text-xs text-gray-600 mt-1"></p>
-                                    </div>
-                                    
-                                    <div>
-                                        <label class="block text-gray-700 font-medium mb-2 text-sm">Tax Certificate</label>
-                                        <div class="relative">
-                                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-gray-500 transition cursor-pointer bg-white"
-                                                 onclick="document.getElementById('tax_certificate').click()">
-                                                <div id="taxPreview" class="mb-2 min-h-16 flex items-center justify-center">
-                                                    <i class="fas fa-receipt text-gray-500 text-xl"></i>
-                                                </div>
-                                                <p class="text-gray-600 font-medium text-xs">Upload Tax Cert</p>
-                                            </div>
-                                            <input type="file" name="tax_certificate" id="tax_certificate" class="hidden" accept=".jpg,.jpeg,.png,.pdf"
-                                                   onchange="previewFile(this, 'taxPreview')">
-                                        </div>
-                                        <p id="taxFileName" class="text-xs text-gray-600 mt-1"></p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Terms and Conditions -->
-                    <div class="mb-6">
-                        <label class="flex items-start">
-                            <input type="checkbox" name="terms" required 
-                                   class="mt-0.5 mr-2 h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500">
-                            <span class="text-gray-700 text-sm">
-                                I agree to the <a href="{{ route('site.terms') }}" class="text-indigo-600 hover:text-indigo-800">Terms</a> 
-                                and <a href="{{ route('site.vendorBenefits') }}" class="text-indigo-600 hover:text-indigo-800">Vendor Agreement</a>
-                            </span>
+                <!-- Vendor Type -->
+                <div class="flex items-start mb-3">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-2">Type *</label>
+                    <div class="flex-1 flex gap-2">
+                        <label class="flex-1 border rounded p-2 cursor-pointer hover:border-indigo-400 transition text-center vendor-type-option {{ old('vendor_type') == 'local_retail' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300' }}">
+                            <input type="radio" name="vendor_type" value="local_retail" class="hidden" required {{ old('vendor_type') == 'local_retail' ? 'checked' : '' }}>
+                            <i class="fas fa-store text-blue-500 block mb-1"></i>
+                            <span class="text-xs font-medium">Local</span>
+                        </label>
+                        <label class="flex-1 border rounded p-2 cursor-pointer hover:border-indigo-400 transition text-center vendor-type-option {{ old('vendor_type') == 'china_supplier' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300' }}">
+                            <input type="radio" name="vendor_type" value="china_supplier" class="hidden" required {{ old('vendor_type') == 'china_supplier' ? 'checked' : '' }}>
+                            <i class="fas fa-plane text-green-500 block mb-1"></i>
+                            <span class="text-xs font-medium">Importer</span>
+                        </label>
+                        <label class="flex-1 border rounded p-2 cursor-pointer hover:border-indigo-400 transition text-center vendor-type-option {{ old('vendor_type') == 'dropship' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300' }}">
+                            <input type="radio" name="vendor_type" value="dropship" class="hidden" required {{ old('vendor_type') == 'dropship' ? 'checked' : '' }}>
+                            <i class="fas fa-box-open text-purple-500 block mb-1"></i>
+                            <span class="text-xs font-medium">Dropship</span>
                         </label>
                     </div>
+                </div>
 
-                    <!-- Submit Button -->
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t">
-                        <a href="{{ route('welcome') }}" class="text-gray-600 hover:text-gray-800 text-sm">
-                            <i class="fas fa-arrow-left mr-1"></i>Back to Home
-                        </a>
-                        
-                        <button type="submit" 
-                                class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 transition w-full sm:w-auto">
-                            <i class="fas fa-paper-plane mr-2"></i>Submit Application
-                        </button>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Business *</label>
+                        <input type="text" name="business_name" required value="{{ old('business_name') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Business name">
                     </div>
-                </form>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Country *</label>
+                        <select name="country" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select</option>
+                            <option value="Uganda" {{ old('country') == 'Uganda' ? 'selected' : '' }}>Uganda</option>
+                            <option value="Kenya" {{ old('country') == 'Kenya' ? 'selected' : '' }}>Kenya</option>
+                            <option value="Tanzania" {{ old('country') == 'Tanzania' ? 'selected' : '' }}>Tanzania</option>
+                            <option value="Rwanda" {{ old('country') == 'Rwanda' ? 'selected' : '' }}>Rwanda</option>
+                            <option value="China" {{ old('country') == 'China' ? 'selected' : '' }}>China</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">City *</label>
+                        <input type="text" name="city" required value="{{ old('city') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="City">
+                    </div>
+                    <div class="flex items-center">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Currency *</label>
+                        <select name="preferred_currency" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select</option>
+                            <option value="UGX" {{ old('preferred_currency') == 'UGX' ? 'selected' : '' }}>UGX</option>
+                            <option value="USD" {{ old('preferred_currency') == 'USD' ? 'selected' : '' }}>USD</option>
+                            <option value="KES" {{ old('preferred_currency') == 'KES' ? 'selected' : '' }}>KES</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center col-span-2">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Address *</label>
+                        <input type="text" name="address" required value="{{ old('address') }}"
+                               class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Full business address">
+                    </div>
+                    <div class="flex items-center col-span-2">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Turnover</label>
+                        <div class="flex-1 relative">
+                            <span class="absolute left-3 top-2 text-gray-400 text-sm">UGX</span>
+                            <input type="number" name="annual_turnover" value="{{ old('annual_turnover') }}"
+                                   class="w-full pl-12 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                                   placeholder="Optional">
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-        
-        <!-- Info Section -->
-        <div class="mt-6 text-center">
-            <p class="text-gray-600 text-sm">
-                <i class="fas fa-lock mr-1"></i>Documents are encrypted & secure
-            </p>
-            <p class="text-xs text-gray-500 mt-1">
-                Verification: 24-48 hours. Email notifications sent.
-            </p>
-        </div>
+
+            <!-- Required Documents -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
+                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Required Documents
+                </h2>
+
+                <!-- National ID - Side by Side -->
+                <div class="flex items-start mb-3">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">National ID *</label>
+                    <div class="flex-1 grid grid-cols-2 gap-2">
+                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                             onclick="document.getElementById('national_id_front').click()">
+                            <div id="frontPreview" class="text-center py-1">
+                                <i class="fas fa-id-card text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">Front Side</p>
+                            <input type="file" name="national_id_front" id="national_id_front" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                        </div>
+                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                             onclick="document.getElementById('national_id_back').click()">
+                            <div id="backPreview" class="text-center py-1">
+                                <i class="fas fa-id-card text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">Back Side</p>
+                            <input type="file" name="national_id_back" id="national_id_back" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank Statement & Proof of Address - Side by Side -->
+                <div class="flex items-start mb-3">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Bank Stmt *</label>
+                    <div class="flex-1 grid grid-cols-2 gap-2">
+                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                             onclick="document.getElementById('bank_statement').click()">
+                            <div id="bankPreview" class="text-center py-1">
+                                <i class="fas fa-file-invoice-dollar text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">Last 3 months</p>
+                            <input type="file" name="bank_statement" id="bank_statement" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                        </div>
+                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                             onclick="document.getElementById('proof_of_address').click()">
+                            <div id="addressPreview" class="text-center py-1">
+                                <i class="fas fa-home text-gray-400"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">Address Proof *</p>
+                            <input type="file" name="proof_of_address" id="proof_of_address" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guarantor Section -->
+                <div class="flex items-start mb-3">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Guarantor *</label>
+                    <div class="flex-1 grid grid-cols-3 gap-2">
+                        <input type="text" name="guarantor_name" required value="{{ old('guarantor_name') }}"
+                               class="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Full name">
+                        <input type="tel" name="guarantor_phone" required value="{{ old('guarantor_phone') }}"
+                               class="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                               placeholder="Phone">
+                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                             onclick="document.getElementById('guarantor_id').click()">
+                            <div id="guarantorPreview" class="text-center">
+                                <i class="fas fa-id-badge text-gray-400 text-sm"></i>
+                            </div>
+                            <p class="text-xs text-gray-500">ID</p>
+                            <input type="file" name="guarantor_id" id="guarantor_id" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Optional Company Docs -->
+                <div class="flex items-start">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Company</label>
+                    <div class="flex-1 grid grid-cols-2 gap-2">
+                        <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-2 text-center cursor-pointer hover:border-gray-400 transition"
+                             onclick="document.getElementById('company_registration').click()">
+                            <div id="companyPreview" class="text-center py-1">
+                                <i class="fas fa-file-contract text-gray-300"></i>
+                            </div>
+                            <p class="text-xs text-gray-400">Registration (opt)</p>
+                            <input type="file" name="company_registration" id="company_registration" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
+                        </div>
+                        <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-2 text-center cursor-pointer hover:border-gray-400 transition"
+                             onclick="document.getElementById('tax_certificate').click()">
+                            <div id="taxPreview" class="text-center py-1">
+                                <i class="fas fa-receipt text-gray-300"></i>
+                            </div>
+                            <p class="text-xs text-gray-400">Tax Cert (opt)</p>
+                            <input type="file" name="tax_certificate" id="tax_certificate" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terms & Submit -->
+            <div class="bg-white rounded-lg shadow-sm p-4">
+                <div class="flex items-center justify-between">
+                    <label class="flex items-center text-sm">
+                        <input type="checkbox" name="terms" required class="mr-2 h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500">
+                        <span class="text-gray-600">I agree to the <a href="{{ route('site.terms') }}" class="text-indigo-600 hover:underline">Terms</a></span>
+                    </label>
+                    <button type="submit" class="bg-indigo-600 text-white font-medium py-2 px-6 rounded hover:bg-indigo-700 transition text-sm">
+                        <i class="fas fa-paper-plane mr-2"></i>Submit Application
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <p class="text-center text-xs text-gray-500 mt-4">
+            <i class="fas fa-lock mr-1"></i>Secure • Review: 24-48 hours • Already have an account? <a href="{{ route('login') }}" class="text-indigo-600 hover:underline">Sign in</a>
+        </p>
     </div>
 </div>
 
 <script>
-// File preview and name display
-function previewFile(input, previewId) {
-    const preview = document.getElementById(previewId);
-    const fileName = document.getElementById(input.id + 'FileName');
-    
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        
-        // Show file name
-        if (fileName) {
-            fileName.textContent = `✓ ${file.name}`;
-            fileName.className = 'text-xs text-green-600 mt-1 font-medium';
-        }
-        
-        // Preview image if it's an image
-        if (file.type.startsWith('image/')) {
-            reader.onload = function(e) {
-                preview.innerHTML = `<img src="${e.target.result}" class="max-h-20 max-w-full rounded object-contain">`;
+// Vendor type selection
+document.querySelectorAll('.vendor-type-option').forEach(option => {
+    option.addEventListener('click', function() {
+        document.querySelectorAll('.vendor-type-option').forEach(o => {
+            o.classList.remove('border-indigo-500', 'bg-indigo-50');
+            o.classList.add('border-gray-300');
+        });
+        this.classList.remove('border-gray-300');
+        this.classList.add('border-indigo-500', 'bg-indigo-50');
+    });
+});
+
+// File upload preview
+document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const previewId = this.id.replace(/_/g, '').replace('nationalidfront', 'front').replace('nationalidback', 'back').replace('bankstatement', 'bank').replace('proofofaddress', 'address').replace('guarantorid', 'guarantor').replace('companyregistration', 'company').replace('taxcertificate', 'tax') + 'Preview';
+        const preview = document.getElementById(previewId);
+        const box = this.closest('.file-upload-box');
+
+        if (this.files && this.files[0]) {
+            const file = this.files[0];
+
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" class="h-6 w-auto mx-auto rounded">`;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                preview.innerHTML = `<i class="fas fa-file-pdf text-red-500"></i>`;
             }
-            reader.readAsDataURL(file);
-        } else if (file.type === 'application/pdf') {
-            // Show PDF icon for PDFs
-            preview.innerHTML = `<i class="fas fa-file-pdf text-red-500 text-3xl"></i><span class="text-xs text-red-600 block mt-1">PDF</span>`;
-        } else {
-            // Show generic file icon
-            preview.innerHTML = `<i class="fas fa-file text-gray-500 text-3xl"></i><span class="text-xs text-gray-600 block mt-1">Document</span>`;
+
+            box.classList.remove('border-gray-300', 'border-gray-200');
+            box.classList.add('border-green-400', 'bg-green-50');
+            box.querySelector('p').textContent = '✓ Uploaded';
+            box.querySelector('p').classList.add('text-green-600', 'font-medium');
         }
-        
-        // Show success border
-        input.closest('.relative').querySelector('.border-dashed').classList.add('border-green-400');
+    });
+});
+
+// Form validation
+document.getElementById('vendorForm').addEventListener('submit', function(e) {
+    const vendorType = document.querySelector('input[name="vendor_type"]:checked');
+    if (!vendorType) {
+        e.preventDefault();
+        alert('Please select a vendor type');
+        return false;
     }
-}
 
-// File upload feedback for all inputs
-document.addEventListener('DOMContentLoaded', function() {
-    const fileInputs = [
-        'national_id_front', 'national_id_back', 'bank_statement', 
-        'proof_of_address', 'guarantor_id', 'company_registration', 'tax_certificate'
-    ];
+    const requiredFiles = ['national_id_front', 'national_id_back', 'bank_statement', 'proof_of_address', 'guarantor_id'];
+    let missing = requiredFiles.filter(id => !document.getElementById(id).files.length);
 
-    fileInputs.forEach(id => {
-        const input = document.getElementById(id);
-        if (input) {
-            // Set up change event if not already set
-            if (!input.hasAttribute('data-preview-setup')) {
-                input.setAttribute('data-preview-setup', 'true');
-                input.addEventListener('change', function() {
-                    const previewId = this.id.replace(/_/g, '') + 'Preview';
-                    previewFile(this, previewId);
-                });
-            }
-        }
-    });
-
-    // Form validation
-    document.getElementById('vendorForm').addEventListener('submit', function(e) {
-        const vendorType = document.querySelector('input[name="vendor_type"]:checked');
-        if (!vendorType) {
-            e.preventDefault();
-            alert('Please select a vendor type');
-            return false;
-        }
-        
-        // Check required files
-        const requiredFiles = ['national_id_front', 'national_id_back', 'bank_statement', 'proof_of_address', 'guarantor_id'];
-        let missingFiles = [];
-        
-        requiredFiles.forEach(fileId => {
-            const input = document.getElementById(fileId);
-            if (input && !input.files.length) {
-                const label = input.closest('div').querySelector('label');
-                missingFiles.push(label ? label.textContent.trim().replace('*', '') : fileId);
-            }
-        });
-        
-        if (missingFiles.length > 0) {
-            e.preventDefault();
-            alert('Please upload all required documents:\n' + missingFiles.join('\n'));
-            return false;
-        }
-        
-        return true;
-    });
-
-    // Add hover effects for file upload areas
-    document.querySelectorAll('.border-dashed').forEach(area => {
-        area.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.classList.add('border-blue-500', 'bg-blue-50');
-        });
-        
-        area.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.classList.remove('border-blue-500', 'bg-blue-50');
-        });
-        
-        area.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('border-blue-500', 'bg-blue-50');
-        });
-    });
+    if (missing.length > 0) {
+        e.preventDefault();
+        alert('Please upload all required documents');
+        return false;
+    }
 });
 </script>
 
 <style>
-.vendor-type-label:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.1);
-}
-
-.vendor-type-label input:checked + div {
-    border-color: #4f46e5;
-    background-color: rgba(79, 70, 229, 0.05);
-}
-
-.border-dashed {
-    transition: all 0.2s ease;
-}
-
-/* Make form more compact */
-@media (max-width: 768px) {
-    .grid-cols-2 {
-        grid-template-columns: 1fr;
-    }
-    
-    .md\:grid-cols-2 {
-        grid-template-columns: 1fr;
-    }
-    
-    .md\:grid-cols-3 {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Compact spacing */
-.space-y-6 > * + * {
-    margin-top: 1rem;
+.file-upload-box { min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+.file-upload-box:hover { transform: translateY(-1px); }
+@media (max-width: 640px) {
+    .grid-cols-2 { grid-template-columns: 1fr; }
+    .grid-cols-3 { grid-template-columns: 1fr; }
+    .w-24 { width: 100%; margin-bottom: 4px; }
+    .flex.items-center, .flex.items-start { flex-direction: column; align-items: stretch; }
 }
 </style>
 @endsection
