@@ -472,24 +472,17 @@
                 <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Quick Access</span>
             </div>
             <div class="nav-item">
-                <a href="{{ route('admin.users.index') }}" class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                <a href="{{ route('ceo.users') }}" class="nav-link {{ request()->routeIs('ceo.users') ? 'active' : '' }}">
                     <div class="nav-icon"><i class="fas fa-users"></i></div>
                     <span class="nav-text">Users</span>
                     <div class="nav-tooltip">Users</div>
                 </a>
             </div>
             <div class="nav-item">
-                <a href="{{ route('admin.vendors.index') }}" class="nav-link {{ request()->routeIs('admin.vendors.*') ? 'active' : '' }}">
+                <a href="{{ route('ceo.vendors') }}" class="nav-link {{ request()->routeIs('ceo.vendors') ? 'active' : '' }}">
                     <div class="nav-icon"><i class="fas fa-store"></i></div>
                     <span class="nav-text">Vendors</span>
                     <div class="nav-tooltip">Vendors</div>
-                </a>
-            </div>
-            <div class="nav-item">
-                <a href="{{ route('admin.settings.index') }}" class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
-                    <div class="nav-icon"><i class="fas fa-cog"></i></div>
-                    <span class="nav-text">Settings</span>
-                    <div class="nav-tooltip">Settings</div>
                 </a>
             </div>
         </div>

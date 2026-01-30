@@ -435,7 +435,7 @@ Route::middleware(['auth'])->group(function () {
     // ====================
     // ADMIN ROUTES
     // ====================
-    Route::middleware(['role:admin,ceo'])->prefix('admin')->name('admin.')->group(function () {
+    Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
         
         // Admin User Management Routes
@@ -628,6 +628,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/analytics', [CEODashboardController::class, 'analytics'])->name('analytics');
         Route::get('/financials', [CEODashboardController::class, 'financials'])->name('financials');
         Route::get('/performance', [CEODashboardController::class, 'performance'])->name('performance');
+
+        // Users & Vendors (read-only)
+        Route::get('/users', [CEODashboardController::class, 'users'])->name('users');
+        Route::get('/vendors', [CEODashboardController::class, 'vendors'])->name('vendors');
 
         // Export Routes
         Route::get('/export/dashboard', [CEODashboardController::class, 'exportDashboard'])->name('export.dashboard');

@@ -502,6 +502,87 @@ class CEODashboardController extends Controller
     }
 
     /**
+     * Users Page (read-only)
+     */
+    public function users(Request $request)
+    {
+        $query = DB::table('users');
+
+        // Search
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Role filter
+        if ($role = $request->get('role')) {
+            $query->where('role', $role);
+        }
+
+        // Status filter
+        if ($request->has('status') && $request->get('status') !== '') {
+            $query->where('is_active', $request->get('status'));
+        }
+
+        $users = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+
+        // Stats
+        $totalUsers = DB::table('users')->count();
+        $totalVendors = DB::table('users')->whereIn('role', ['vendor_local', 'vendor_international'])->count();
+        $totalBuyers = DB::table('users')->where('role', 'buyer')->count();
+        $totalStaff = DB::table('users')->whereIn('role', ['admin', 'logistics', 'clearing_agent', 'finance', 'ceo'])->count();
+
+        return view('ceo.users', compact('users', 'totalUsers', 'totalVendors', 'totalBuyers', 'totalStaff'));
+    }
+
+    /**
+     * Vendors Page (read-only)
+     */
+    public function vendors(Request $request)
+    {
+        $query = DB::table('vendor_profiles')
+            ->join('users', 'vendor_profiles.user_id', '=', 'users.id')
+            ->select(
+                'vendor_profiles.*',
+                'users.name as owner_name',
+                'users.email as owner_email',
+                'users.is_active as user_active'
+            );
+
+        // Search
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('vendor_profiles.business_name', 'like', "%{$search}%")
+                  ->orWhere('users.name', 'like', "%{$search}%")
+                  ->orWhere('users.email', 'like', "%{$search}%");
+            });
+        }
+
+        // Vetting status filter
+        if ($status = $request->get('status')) {
+            $query->where('vendor_profiles.vetting_status', $status);
+        }
+
+        // Vendor type filter
+        if ($type = $request->get('type')) {
+            $query->where('vendor_profiles.vendor_type', $type);
+        }
+
+        $vendors = $query->orderByDesc('vendor_profiles.created_at')->paginate(15)->withQueryString();
+
+        // Stats
+        $totalVendors = DB::table('vendor_profiles')->count();
+        $pendingVendors = DB::table('vendor_profiles')->where('vetting_status', 'pending')->count();
+        $approvedVendors = DB::table('vendor_profiles')->where('vetting_status', 'approved')->count();
+        $rejectedVendors = DB::table('vendor_profiles')->where('vetting_status', 'rejected')->count();
+
+        return view('ceo.vendors', compact('vendors', 'totalVendors', 'pendingVendors', 'approvedVendors', 'rejectedVendors'));
+    }
+
+    /**
      * Export Dashboard
      */
     public function exportDashboard(Request $request)
