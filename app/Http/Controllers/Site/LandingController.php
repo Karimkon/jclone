@@ -165,7 +165,7 @@ class LandingController extends Controller
         $category->top_products = Listing::whereIn('category_id', $descendantIds)
             ->where('is_active', true)
             ->whereHas('user', fn($q) => $q->where('is_active', true))
-            ->select('id', 'title', 'price')
+            ->with('images')
             ->orderByDesc('created_at')
             ->take(5)
             ->get();

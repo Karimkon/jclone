@@ -10,10 +10,19 @@
             <h1 class="text-3xl font-bold text-gray-800">Categories Management</h1>
             <p class="text-gray-600">Manage product categories and subcategories</p>
         </div>
-        <a href="{{ route('admin.categories.create') }}"
-           class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">
-            <i class="fas fa-plus mr-2"></i> Add New Category
-        </a>
+        <div class="flex items-center gap-3">
+            @php $missingIconsCount = \App\Models\Category::whereNull('icon')->orWhere('icon', '')->count(); @endphp
+            @if($missingIconsCount > 0)
+            <a href="{{ route('admin.categories.missing-icons') }}"
+               class="bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 font-medium">
+                <i class="fas fa-exclamation-triangle mr-2"></i> {{ $missingIconsCount }} Missing Icons
+            </a>
+            @endif
+            <a href="{{ route('admin.categories.create') }}"
+               class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 font-medium">
+                <i class="fas fa-plus mr-2"></i> Add New Category
+            </a>
+        </div>
     </div>
 
     <!-- Stats -->

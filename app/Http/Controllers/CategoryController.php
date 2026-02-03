@@ -132,8 +132,67 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        $parentCategories = Category::whereNull('parent_id')->get();
-        return view('admin.categories.create', compact('parentCategories'));
+        // Get all categories with hierarchy for parent selection
+        $allCategories = $this->getCategoriesForDropdown();
+        return view('admin.categories.create', compact('allCategories'));
+    }
+
+    /**
+     * Get all categories formatted for dropdown with hierarchy
+     */
+    private function getCategoriesForDropdown($excludeId = null)
+    {
+        $categories = Category::with(['children' => function($q) {
+            $q->with(['children' => function($q2) {
+                $q2->orderBy('name');
+            }])->orderBy('name');
+        }])
+        ->whereNull('parent_id')
+        ->orderBy('name')
+        ->get();
+
+        $result = collect();
+
+        foreach ($categories as $cat) {
+            if ($excludeId && $cat->id == $excludeId) continue;
+
+            $result->push([
+                'id' => $cat->id,
+                'name' => $cat->name,
+                'level' => 0,
+                'display' => $cat->name
+            ]);
+
+            if ($cat->children) {
+                foreach ($cat->children as $child) {
+                    if ($excludeId && $child->id == $excludeId) continue;
+
+                    $result->push([
+                        'id' => $child->id,
+                        'name' => $child->name,
+                        'level' => 1,
+                        'display' => '↳ ' . $child->name,
+                        'parent' => $cat->name
+                    ]);
+
+                    if ($child->children) {
+                        foreach ($child->children as $grandchild) {
+                            if ($excludeId && $grandchild->id == $excludeId) continue;
+
+                            $result->push([
+                                'id' => $grandchild->id,
+                                'name' => $grandchild->name,
+                                'level' => 2,
+                                'display' => '↳ ↳ ' . $grandchild->name,
+                                'parent' => $cat->name . ' > ' . $child->name
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**
@@ -171,11 +230,32 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
-        $parentCategories = Category::whereNull('parent_id')
-            ->where('id', '!=', $category->id)
-            ->get();
-        
-        return view('admin.categories.edit', compact('category', 'parentCategories'));
+        // Get all categories except current one and its descendants
+        $allCategories = $this->getCategoriesForDropdown($category->id);
+
+        // Also exclude descendants of current category to prevent circular reference
+        $descendantIds = $this->getDescendantIds($category);
+        $allCategories = $allCategories->filter(function($cat) use ($descendantIds) {
+            return !in_array($cat['id'], $descendantIds);
+        })->values();
+
+        return view('admin.categories.edit', compact('category', 'allCategories'));
+    }
+
+    /**
+     * Get all descendant IDs of a category
+     */
+    private function getDescendantIds(Category $category)
+    {
+        $ids = [];
+        $children = Category::where('parent_id', $category->id)->get();
+
+        foreach ($children as $child) {
+            $ids[] = $child->id;
+            $ids = array_merge($ids, $this->getDescendantIds($child));
+        }
+
+        return $ids;
     }
 
     /**
@@ -237,5 +317,39 @@ class CategoryController extends Controller
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category deleted successfully. Subcategories have been moved to main.');
+    }
+
+    /**
+     * Quick update category icon (AJAX)
+     */
+    public function updateIcon(Request $request, Category $category)
+    {
+        $request->validate([
+            'icon' => 'required|string|max:50'
+        ]);
+
+        $category->update(['icon' => $request->icon]);
+        Cache::forget('homepage_categories');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Icon updated successfully',
+            'icon' => $request->icon
+        ]);
+    }
+
+    /**
+     * Get categories missing icons
+     */
+    public function missingIcons()
+    {
+        $categories = Category::whereNull('icon')
+            ->orWhere('icon', '')
+            ->with('parent')
+            ->orderBy('parent_id')
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.categories.missing-icons', compact('categories'));
     }
 }

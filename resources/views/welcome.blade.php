@@ -774,25 +774,87 @@ main {
                             <div class="mb-3">
                                 <!-- Subcategory Header with Count -->
                                 <div class="flex items-center justify-between mb-2">
-                                    <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
+                                    <a href="{{ route('marketplace.index', ['category' => $child->id]) }}"
                                        class="font-semibold text-ink-700 hover:text-brand-600 text-sm flex items-center gap-1">
                                         <i class="fas fa-folder-open text-xs text-brand-500"></i>
                                         <span>{{ $child->name }}</span>
                                     </a>
                                     <span class="text-xs bg-ink-100 text-ink-600 px-2 py-0.5 rounded font-medium">
-                                        {{ $child->listings_count ?? rand(2,20) }}
+                                        {{ $child->listings_count ?? 0 }}
                                     </span>
                                 </div>
-                                
-                                <!-- Products Display - ALWAYS VISIBLE (UP TO 5 PRODUCTS) -->
+
+                                <!-- Level 3: Sub-subcategories (if any) -->
+                                @if($child->children && $child->children->count() > 0)
+                                    <div class="space-y-3 mb-3">
+                                        @foreach($child->children->take(4) as $subChild)
+                                        <div class="sub-subcategory pl-3 border-l-2 border-brand-100">
+                                            <!-- Sub-subcategory Header -->
+                                            <div class="flex items-center justify-between mb-1.5">
+                                                <a href="{{ route('marketplace.index', ['category' => $subChild->id]) }}"
+                                                   class="text-xs font-medium text-ink-600 hover:text-brand-600 flex items-center gap-1">
+                                                    <i class="fas fa-caret-right text-brand-400"></i>
+                                                    {{ $subChild->name }}
+                                                </a>
+                                                <span class="text-xs text-ink-400">{{ $subChild->listings_count ?? 0 }}</span>
+                                            </div>
+
+                                            <!-- Sub-subcategory Products (3 max) -->
+                                            @if($subChild->top_products && $subChild->top_products->count() > 0)
+                                            <div class="space-y-1">
+                                                @foreach($subChild->top_products->take(3) as $product)
+                                                <a href="{{ route('marketplace.show', $product) }}"
+                                                   class="flex items-center gap-2 p-1.5 hover:bg-ink-50 rounded transition">
+                                                    @if($product->images && $product->images->first())
+                                                        <img src="{{ asset('storage/' . $product->images->first()->path) }}"
+                                                             alt="{{ $product->title }}"
+                                                             class="w-6 h-6 object-cover rounded border border-ink-100">
+                                                    @else
+                                                        <div class="w-6 h-6 bg-ink-100 rounded flex items-center justify-center">
+                                                            <i class="fas fa-image text-ink-300 text-xs"></i>
+                                                        </div>
+                                                    @endif
+                                                    <div class="flex-1 min-w-0">
+                                                        <div class="text-xs text-ink-600 truncate">{{ Str::limit($product->title, 18) }}</div>
+                                                        <div class="text-xs font-bold text-brand-600">UGX {{ number_format($product->price) }}</div>
+                                                    </div>
+                                                </a>
+                                                @endforeach
+                                                @if(($subChild->listings_count ?? 0) > 3)
+                                                <a href="{{ route('marketplace.index', ['category' => $subChild->id]) }}"
+                                                   class="text-xs text-brand-500 hover:underline pl-1">
+                                                    +{{ ($subChild->listings_count ?? 3) - 3 }} more →
+                                                </a>
+                                                @endif
+                                            </div>
+                                            @endif
+                                        </div>
+                                        @endforeach
+                                        @if($child->children->count() > 4)
+                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}"
+                                           class="text-xs text-brand-600 font-medium hover:underline pl-3">
+                                            View all {{ $child->children->count() }} subcategories →
+                                        </a>
+                                        @endif
+                                    </div>
+                                @endif
+
+                                <!-- Direct Products in this subcategory (Level 2) - Always show if available -->
+                                @php
+                                    $hasSubcategories = $child->children && $child->children->count() > 0;
+                                    $productsToShow = $hasSubcategories ? 3 : 5; // Show fewer if has subcategories
+                                @endphp
                                 @if($child->top_products && $child->top_products->count() > 0)
-                                    <div class="space-y-2">
-                                        @foreach($child->top_products->take(5) as $product)
-                                        <a href="{{ route('marketplace.show', $product) }}" 
+                                    <div class="space-y-2 {{ $hasSubcategories ? 'mt-2 pt-2 border-t border-ink-100' : '' }}">
+                                        @if($hasSubcategories)
+                                        <p class="text-xs text-ink-500 font-medium">Top in {{ $child->name }}:</p>
+                                        @endif
+                                        @foreach($child->top_products->take($productsToShow) as $product)
+                                        <a href="{{ route('marketplace.show', $product) }}"
                                            class="subcategory-product-item flex items-center gap-2 p-2 hover:bg-ink-50 rounded-lg transition">
-                                            @if($product->images->first())
-                                                <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
-                                                    alt="{{ $product->title }}" 
+                                            @if($product->images && $product->images->first())
+                                                <img src="{{ asset('storage/' . $product->images->first()->path) }}"
+                                                    alt="{{ $product->title }}"
                                                     class="subcategory-product-image w-8 h-8 object-cover rounded border border-ink-100">
                                             @else
                                                 <div class="w-8 h-8 bg-ink-100 rounded border border-ink-200 flex items-center justify-center">
@@ -800,7 +862,7 @@ main {
                                                 </div>
                                             @endif
                                             <div class="flex-1 min-w-0">
-                                                <div class="subcategory-product-name text-xs text-ink-600 font-medium truncate" 
+                                                <div class="subcategory-product-name text-xs text-ink-600 font-medium truncate"
                                                      title="{{ $product->title }}">
                                                     {{ Str::limit($product->title, 20) }}
                                                 </div>
@@ -810,17 +872,17 @@ main {
                                             </div>
                                         </a>
                                         @endforeach
-                                        
+
                                         <!-- Show More Link -->
-                                        @if(($child->listings_count ?? 0) > 5)
-                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}" 
+                                        @if(($child->listings_count ?? 0) > $productsToShow)
+                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}"
                                            class="text-xs text-brand-600 font-medium hover:underline flex items-center gap-1 justify-end">
-                                            +{{ ($child->listings_count ?? 5) - 5 }} more
+                                            +{{ ($child->listings_count ?? $productsToShow) - $productsToShow }} more
                                             <i class="fas fa-chevron-right text-xs"></i>
                                         </a>
                                         @endif
                                     </div>
-                                @else
+                                @elseif(!$hasSubcategories)
                                     <div class="text-center py-2">
                                         <p class="text-xs text-ink-400">No products yet</p>
                                     </div>

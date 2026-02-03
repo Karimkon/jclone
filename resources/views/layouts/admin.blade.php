@@ -875,6 +875,8 @@
             100% { transform: rotate(360deg); }
         }
     </style>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    @stack('styles')
 </head>
 <body class="dark:bg-dark-950">
     <!-- Sidebar -->
@@ -1580,5 +1582,6 @@ if (sidebarNav) {
     </script>
     
     @yield('scripts')
+    @stack('scripts')
 </body>
 </html>

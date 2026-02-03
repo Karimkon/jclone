@@ -469,7 +469,9 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
         Route::post('/categories/{category}/toggle', [CategoryController::class, 'toggle'])->name('categories.toggle');
-        
+        Route::post('/categories/{category}/icon', [CategoryController::class, 'updateIcon'])->name('categories.update-icon');
+        Route::get('/categories/missing-icons', [CategoryController::class, 'missingIcons'])->name('categories.missing-icons');
+
         // Orders
         Route::prefix('orders')->name('orders.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('index');

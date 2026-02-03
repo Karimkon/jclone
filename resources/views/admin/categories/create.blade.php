@@ -2,6 +2,42 @@
 
 @section('title', 'Create Category - Admin')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    .select2-container--default .select2-selection--single {
+        height: 42px;
+        padding: 6px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 28px;
+        padding-left: 0;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 40px;
+    }
+    .select2-dropdown {
+        border-radius: 0.5rem;
+        border: 1px solid #d1d5db;
+    }
+    .select2-results__option {
+        padding: 8px 12px;
+    }
+    .select2-results__option--highlighted {
+        background-color: #6366f1 !important;
+    }
+    .select2-search--dropdown .select2-search__field {
+        padding: 8px 12px;
+        border-radius: 0.375rem;
+    }
+    .level-0 { font-weight: 600; color: #1f2937; }
+    .level-1 { padding-left: 15px; color: #4b5563; }
+    .level-2 { padding-left: 30px; color: #6b7280; font-size: 0.9em; }
+</style>
+@endpush
+
 @section('content')
 <div class="p-8">
     <!-- Header -->
@@ -19,12 +55,12 @@
     <div class="bg-white rounded-lg shadow p-6 max-w-2xl">
         <form action="{{ route('admin.categories.store') }}" method="POST">
             @csrf
-            
+
             <div class="space-y-6">
                 <!-- Basic Information -->
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Category Name -->
                         <div>
@@ -32,29 +68,33 @@
                                 Category Name *
                             </label>
                             <input type="text" name="name" id="name" required
-                                   value="{{ old('name') }}"
+                                   value="{{ old('name', request('name')) }}"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                   placeholder="e.g., Electronics, Clothing, Furniture">
+                                   placeholder="e.g., Super Cars, Men's Sandals">
                             @error('name')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
 
-                        <!-- Parent Category -->
+                        <!-- Parent Category (Select2 Searchable) -->
                         <div>
                             <label for="parent_id" class="block text-sm font-medium text-gray-700 mb-1">
                                 Parent Category
                             </label>
-                            <select name="parent_id" id="parent_id"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <select name="parent_id" id="parent_id" class="w-full parent-select">
                                 <option value="">None (Main Category)</option>
-                                @foreach($parentCategories as $parent)
-                                <option value="{{ $parent->id }}" {{ old('parent_id') == $parent->id ? 'selected' : '' }}>
-                                    {{ $parent->name }}
+                                @foreach($allCategories as $cat)
+                                <option value="{{ $cat['id'] }}"
+                                        data-level="{{ $cat['level'] }}"
+                                        data-parent="{{ $cat['parent'] ?? '' }}"
+                                        {{ old('parent_id', request('parent_id')) == $cat['id'] ? 'selected' : '' }}>
+                                    {{ $cat['display'] }}
                                 </option>
                                 @endforeach
                             </select>
-                            <p class="mt-1 text-sm text-gray-500">Select parent for subcategory</p>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Search and select any category to create a subcategory under it
+                            </p>
                         </div>
                     </div>
 
@@ -72,7 +112,7 @@
                 <!-- Display Settings -->
                 <div>
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Display Settings</h3>
-                    
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <!-- Icon -->
                         <div>
@@ -85,7 +125,7 @@
                                        class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                        placeholder="tag">
                                 <div class="absolute left-3 top-2.5 text-gray-400">
-                                    <i class="fas fa-icons"></i>
+                                    <i id="iconPreviewSmall" class="fas fa-tag"></i>
                                 </div>
                             </div>
                             <p class="mt-1 text-sm text-gray-500">Font Awesome icon name</p>
@@ -104,12 +144,12 @@
 
                         <!-- Status -->
                         <div>
-                            <label for="is_active" class="block text-sm font-medium text-gray-700 mb-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">
                                 Status
                             </label>
                             <div class="mt-2">
                                 <label class="inline-flex items-center">
-                                    <input type="checkbox" name="is_active" id="is_active" value="1" 
+                                    <input type="checkbox" name="is_active" value="1"
                                            {{ old('is_active', true) ? 'checked' : '' }}
                                            class="rounded border-gray-300 text-primary focus:ring-primary">
                                     <span class="ml-2">Active</span>
@@ -122,7 +162,7 @@
 
                 <!-- Submit Buttons -->
                 <div class="flex items-center justify-end space-x-4 pt-6 border-t border-gray-200">
-                    <a href="{{ route('admin.categories.index') }}" 
+                    <a href="{{ route('admin.categories.index') }}"
                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                         Cancel
                     </a>
@@ -137,15 +177,16 @@
 
     <!-- Icon Preview -->
     <div class="mt-8 bg-white rounded-lg shadow p-6 max-w-2xl">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Icon Preview</h3>
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Common Icons</h3>
         <div class="grid grid-cols-6 gap-4">
             @php
-                $commonIcons = ['tag', 'tv', 'tshirt', 'mobile-alt', 'laptop', 'home', 
-                              'car', 'utensils', 'book', 'music', 'camera', 'gamepad'];
+                $commonIcons = ['tag', 'tv', 'tshirt', 'mobile-alt', 'laptop', 'home',
+                              'car', 'utensils', 'book', 'music', 'camera', 'gamepad',
+                              'shoe-prints', 'gem', 'baby', 'futbol', 'tools', 'couch'];
             @endphp
             @foreach($commonIcons as $icon)
-            <button type="button" 
-                    onclick="document.getElementById('icon').value = '{{ $icon }}'"
+            <button type="button"
+                    onclick="document.getElementById('icon').value = '{{ $icon }}'; updateIconPreview();"
                     class="p-4 border border-gray-200 rounded-lg hover:border-primary hover:bg-primary/5 text-center group">
                 <i class="fas fa-{{ $icon }} text-2xl text-gray-600 group-hover:text-primary mb-2"></i>
                 <div class="text-xs text-gray-500">{{ $icon }}</div>
@@ -155,16 +196,50 @@
     </div>
 </div>
 
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    // Live preview of selected icon
-    const iconInput = document.getElementById('icon');
-    const iconPreview = document.getElementById('iconPreview');
-    
-    if (iconInput && iconPreview) {
-        iconInput.addEventListener('input', function() {
-            const icon = this.value.trim();
-            iconPreview.innerHTML = icon ? `<i class="fas fa-${icon} text-4xl text-primary"></i>` : '';
-        });
+$(document).ready(function() {
+    // Initialize Select2 for parent category
+    $('#parent_id').select2({
+        placeholder: 'Search for a category...',
+        allowClear: true,
+        width: '100%',
+        templateResult: formatCategory,
+        templateSelection: formatCategorySelection
+    });
+
+    function formatCategory(category) {
+        if (!category.id) return category.text;
+
+        var level = $(category.element).data('level') || 0;
+        var parent = $(category.element).data('parent') || '';
+        var levelClass = 'level-' + level;
+
+        var html = '<div class="' + levelClass + '">' + category.text;
+        if (parent && level > 0) {
+            html += '<div class="text-xs text-gray-400 mt-0.5">in ' + parent + '</div>';
+        }
+        html += '</div>';
+
+        return $(html);
     }
+
+    function formatCategorySelection(category) {
+        return category.text || 'None (Main Category)';
+    }
+});
+
+// Icon preview
+function updateIconPreview() {
+    var icon = document.getElementById('icon').value.trim();
+    var preview = document.getElementById('iconPreviewSmall');
+    if (preview && icon) {
+        preview.className = 'fas fa-' + icon;
+    }
+}
+
+document.getElementById('icon').addEventListener('input', updateIconPreview);
 </script>
+@endpush
 @endsection
