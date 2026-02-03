@@ -560,10 +560,10 @@ main {
     <!-- App Download Buttons - More Visible -->
     <div class="flex items-center gap-2">
         <span class="hidden lg:inline text-ink-400 text-xs">Get the App:</span>
-        <a href="/bebamart.apk" 
-           class="flex items-center gap-1.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-1.5 rounded-full transition font-medium text-xs shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-105 transform" 
-           download="bebamart.apk">
-            <i class="fab fa-android text-sm"></i>
+       <a href="https://play.google.com/store/apps/details?id=com.bebamart.app" 
+        target="_blank"
+        class="flex items-center gap-1.5 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-3 py-1.5 rounded-full transition font-medium text-xs shadow-lg shadow-green-500/25 hover:shadow-green-500/40 hover:scale-105 transform">
+            <i class="fab fa-google-play text-sm"></i>
             <span class="hidden sm:inline">Android</span>
         </a>
         <a href="#" 
@@ -728,7 +728,7 @@ main {
         
         <div class="category-sidebar-container">
            
-            @foreach($categories->take(15) as $i => $cat)
+            @foreach($categories as $i => $cat)
             <div class="cat-sidebar-item">
                 <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" 
                    class="flex items-center justify-between px-4 py-3 text-ink-600 transition hover:no-underline">
@@ -994,12 +994,12 @@ main {
             ['bg-rose-50','text-rose-600'],['bg-teal-50','text-teal-600']
         ]; 
         @endphp
-        @foreach($categories->take(8) as $i => $cat)
+        @foreach($categories as $i => $cat)
         @php $cc = $catColors[$i % 8]; @endphp
         <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="category-card bg-white rounded-xl p-3 text-center shadow-sm border border-ink-100 group">
             <div class="relative">
                 <div class="w-10 h-10 mx-auto mb-2 rounded-xl {{ $cc[0] }} {{ $cc[1] }} flex items-center justify-center transition-transform group-hover:scale-110">
-                    <i class="fas fa-{{ $cat->icon ?? $catIcons[$i % 12] }} text-lg"></i>
+                    <i class="fas fa-{{ $cat->icon ?? 'tag' }} text-lg"></i>
                 </div>
                 <!-- Category Product Count Badge -->
                 <span class="absolute -top-1 -right-1 bg-brand-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -1589,7 +1589,7 @@ main {
         </nav>
         <div class="p-4 border-t border-ink-100">
             <h4 class="font-bold text-ink-800 mb-2 text-sm">Categories</h4>
-            @foreach($categories->take(8) as $cat)
+            @foreach($categories as $cat)
             <a href="{{ route('marketplace.index', ['category' => $cat->id]) }}" class="block py-1.5 text-sm text-ink-500 hover:text-brand-600 transition">
                 {{ $cat->name }}
             </a>

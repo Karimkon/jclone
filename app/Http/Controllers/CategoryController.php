@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Listing;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
@@ -76,19 +77,53 @@ class CategoryController extends Controller
     /**
      * Display admin categories index
      */
-    public function adminIndex()
+    public function adminIndex(Request $request)
     {
-        $categories = Category::with('parent')
-            ->orderBy('order')
-            ->paginate(20);
-        
+        $query = Category::with('parent')
+            ->withCount(['children', 'listings']);
+
+        // Server-side search (splits words so "new moto" matches "new" OR "moto")
+        if ($search = $request->get('search')) {
+            $words = array_filter(explode(' ', trim($search)));
+            $query->where(function($q) use ($words) {
+                foreach ($words as $word) {
+                    $q->orWhere('name', 'like', "%{$word}%")
+                      ->orWhere('slug', 'like', "%{$word}%")
+                      ->orWhere('description', 'like', "%{$word}%")
+                      ->orWhereHas('parent', function($pq) use ($word) {
+                          $pq->where('name', 'like', "%{$word}%");
+                      });
+                }
+            });
+        }
+
+        // Status filter
+        if ($status = $request->get('status')) {
+            if ($status === 'active') {
+                $query->where('is_active', true);
+            } elseif ($status === 'inactive') {
+                $query->where('is_active', false);
+            }
+        }
+
+        // Type filter
+        if ($type = $request->get('type')) {
+            if ($type === 'main') {
+                $query->whereNull('parent_id');
+            } elseif ($type === 'sub') {
+                $query->whereNotNull('parent_id');
+            }
+        }
+
+        $categories = $query->orderBy('order')->paginate(50)->withQueryString();
+
         // Add total listings count to each category
         $categories->each(function($category) {
             $category->total_listings = $category->total_listings_count;
         });
-        
+
         $parentCategories = Category::whereNull('parent_id')->get();
-        
+
         return view('admin.categories.index', compact('categories', 'parentCategories'));
     }
 
@@ -125,6 +160,7 @@ class CategoryController extends Controller
         }
 
         Category::create($validated);
+        Cache::forget('homepage_categories');
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category created successfully.');
@@ -166,6 +202,7 @@ class CategoryController extends Controller
         }
 
         $category->update($validated);
+        Cache::forget('homepage_categories');
 
         return redirect()->route('admin.categories.index')
             ->with('success', 'Category updated successfully.');
@@ -177,7 +214,8 @@ class CategoryController extends Controller
     public function toggle(Category $category)
     {
         $category->update(['is_active' => !$category->is_active]);
-        
+        Cache::forget('homepage_categories');
+
         return back()->with('success', 'Category status updated.');
     }
 
@@ -186,17 +224,18 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        // Check if category has listings (including descendants)
-        if ($category->total_listings_count > 0) {
+        // Only block if this category directly has listings
+        if ($category->listings()->count() > 0) {
             return back()->with('error', 'Cannot delete category with listings. Move listings first.');
         }
 
-        // Update child categories
+        // Orphan child categories (they become main categories)
         Category::where('parent_id', $category->id)->update(['parent_id' => null]);
-        
+
         $category->delete();
+        Cache::forget('homepage_categories');
 
         return redirect()->route('admin.categories.index')
-            ->with('success', 'Category deleted successfully.');
+            ->with('success', 'Category deleted successfully. Subcategories have been moved to main.');
     }
 }
