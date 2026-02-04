@@ -7,34 +7,34 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Card -->
-    <div class="bg-gradient-to-r from-primary to-indigo-600 text-white rounded-2xl p-6">
+    <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white rounded-2xl p-6 shadow-lg shadow-indigo-500/20">
         <div class="flex flex-col md:flex-row items-center justify-between">
             <div class="md:w-2/3">
                 <h2 class="text-2xl font-bold mb-2">Welcome back, {{ Auth::user()->name }}!</h2>
-                <p class="opacity-90 mb-4">
+                <p class="text-white/90 mb-4">
                     Track your orders, manage your wallet, and discover amazing products from local and international vendors.
                 </p>
                 <div class="flex flex-wrap gap-3">
-                    <a href="{{ route('marketplace.index') }}" 
-                       class="px-4 py-2 bg-white text-primary rounded-lg font-semibold hover:bg-gray-100 transition inline-flex items-center">
+                    <a href="{{ route('marketplace.index') }}"
+                       class="px-5 py-2.5 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-gray-100 transition inline-flex items-center shadow-lg">
                         <i class="fas fa-store mr-2"></i> Shop Now
                     </a>
-                    <a href="{{ route('buyer.wallet.index') }}" 
-                       class="px-4 py-2 bg-primary border-2 border-white text-white rounded-lg font-semibold hover:bg-indigo-700 transition inline-flex items-center">
+                    <a href="{{ route('buyer.wallet.index') }}"
+                       class="px-5 py-2.5 bg-white/20 backdrop-blur border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/30 transition inline-flex items-center">
                         <i class="fas fa-wallet mr-2"></i> My Wallet
                     </a>
                 </div>
             </div>
             <div class="mt-6 md:mt-0">
                 <div class="relative">
-                    <div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                    <div class="w-24 h-24 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
                         <i class="fas fa-shopping-bag text-4xl"></i>
                     </div>
                     @php
                         $cartCount = Auth::user()->cart ? count(Auth::user()->cart->items ?? []) : 0;
                     @endphp
                     @if($cartCount > 0)
-                    <div class="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center">
+                    <div class="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-8 h-8 flex items-center justify-center shadow-lg">
                         {{ $cartCount }}
                     </div>
                     @endif
@@ -120,7 +120,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-gray-800">Recent Orders</h3>
-                <a href="{{ route('buyer.orders.index') }}" class="text-primary hover:text-indigo-700 text-sm font-medium">
+                <a href="{{ route('buyer.orders.index') }}" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
                     View All <i class="fas fa-arrow-right ml-1"></i>
                 </a>
             </div>
@@ -159,7 +159,7 @@
                     <p class="text-gray-600">No orders yet</p>
                     <p class="text-sm text-gray-500 mt-1">Start shopping to see your orders here</p>
                     <a href="{{ route('marketplace.index') }}" 
-                       class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
+                       class="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">
                         <i class="fas fa-store mr-2"></i> Browse Products
                     </a>
                 </div>
@@ -170,7 +170,7 @@
         <div class="bg-white rounded-xl shadow-sm p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-gray-800">Recent Transactions</h3>
-                <a href="{{ route('buyer.wallet.transactions') }}" class="text-primary hover:text-indigo-700 text-sm font-medium">
+                <a href="{{ route('buyer.wallet.transactions') }}" class="text-indigo-600 hover:text-indigo-700 text-sm font-medium">
                     View All <i class="fas fa-arrow-right ml-1"></i>
                 </a>
             </div>

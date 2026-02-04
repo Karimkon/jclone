@@ -1138,6 +1138,7 @@ Route::middleware('auth:sanctum')->group(function () {
         }
 
         // Store new avatar
+        $path = $request->file('avatar')->store('avatars', 'public');
         $user->avatar = $path;
         $user->save();
         return response()->json([
@@ -1543,7 +1544,8 @@ Route::middleware('auth:sanctum')->group(function () {
         $cart = Cart::where('user_id', $request->user()->id)->first();
         if (!$cart) return response()->json(['success' => false, 'message' => 'Cart not found'], 404);
 
-        $variantId = $request->input('variant_id');
+        // Accept variant_id from query params, body, or input
+        $variantId = $request->query('variant_id') ?? $request->input('variant_id');
 
         // Filter by listing_id and optionally variant_id
         $items = collect($cart->items ?? [])->filter(function($item) use ($listingId, $variantId) {

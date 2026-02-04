@@ -3,15 +3,34 @@
 @section('title', 'Admin Dashboard - JClone')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-            <p class="text-gray-600">Welcome back, {{ auth()->user()->name }}!</p>
-        </div>
-        <div class="text-sm text-gray-500">
-            {{ now()->format('l, F j, Y') }}
+<div class="space-y-6">
+    <!-- Welcome Banner -->
+    <div class="bg-gradient-to-r from-slate-800 via-slate-900 to-indigo-900 text-white rounded-2xl p-6 shadow-lg">
+        <div class="flex flex-col md:flex-row items-center justify-between">
+            <div class="md:w-2/3">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="px-3 py-1 bg-indigo-500/30 text-indigo-300 rounded-full text-xs font-semibold">
+                        <i class="fas fa-shield-alt mr-1"></i> Admin Panel
+                    </span>
+                </div>
+                <h1 class="text-2xl font-bold mb-2">Welcome back, {{ auth()->user()->name }}!</h1>
+                <p class="text-white/80 mb-4">{{ now()->format('l, F j, Y') }} - Manage your marketplace and monitor performance.</p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('admin.vendors.pending') }}"
+                       class="px-5 py-2.5 bg-white text-slate-800 rounded-xl font-semibold hover:bg-gray-100 transition inline-flex items-center shadow-lg">
+                        <i class="fas fa-store mr-2"></i> Review Vendors
+                    </a>
+                    <a href="{{ route('admin.reports.index') }}"
+                       class="px-5 py-2.5 bg-white/20 backdrop-blur border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/30 transition inline-flex items-center">
+                        <i class="fas fa-chart-line mr-2"></i> View Reports
+                    </a>
+                </div>
+            </div>
+            <div class="mt-6 md:mt-0">
+                <div class="w-24 h-24 bg-white/10 backdrop-blur rounded-full flex items-center justify-center border border-white/20">
+                    <i class="fas fa-crown text-4xl text-amber-400"></i>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -307,5 +326,6 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 @endsection

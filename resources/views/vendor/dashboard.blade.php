@@ -6,14 +6,26 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Message -->
-    <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-2xl p-6">
-        <div class="flex items-center justify-between">
-            <div>
+    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white rounded-2xl p-6 shadow-lg shadow-purple-500/20">
+        <div class="flex flex-col md:flex-row items-center justify-between">
+            <div class="md:w-2/3">
                 <h2 class="text-2xl font-bold mb-2">Welcome back, {{ auth()->user()->name }}!</h2>
-                <p class="opacity-90">Manage your store and track your sales</p>
+                <p class="text-white/90 mb-4">Manage your store, track sales, and grow your business with BebaMart.</p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ route('vendor.listings.create') }}"
+                       class="px-5 py-2.5 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-gray-100 transition inline-flex items-center shadow-lg">
+                        <i class="fas fa-plus mr-2"></i> Add Product
+                    </a>
+                    <a href="{{ route('vendor.orders.index') }}"
+                       class="px-5 py-2.5 bg-white/20 backdrop-blur border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/30 transition inline-flex items-center">
+                        <i class="fas fa-shopping-bag mr-2"></i> View Orders
+                    </a>
+                </div>
             </div>
-            <div class="bg-white/20 p-4 rounded-xl">
-                <i class="fas fa-store text-3xl"></i>
+            <div class="mt-6 md:mt-0">
+                <div class="w-24 h-24 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
+                    <i class="fas fa-store text-4xl"></i>
+                </div>
             </div>
         </div>
     </div>
@@ -21,7 +33,7 @@
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Total Sales -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center">
                 <div class="bg-green-100 p-3 rounded-lg mr-4">
                     <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
@@ -34,7 +46,7 @@
         </div>
 
         <!-- Active Listings -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center">
                 <div class="bg-blue-100 p-3 rounded-lg mr-4">
                     <i class="fas fa-boxes text-blue-600 text-2xl"></i>
@@ -47,7 +59,7 @@
         </div>
 
         <!-- Pending Orders -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center">
                 <div class="bg-yellow-100 p-3 rounded-lg mr-4">
                     <i class="fas fa-shopping-cart text-yellow-600 text-2xl"></i>
@@ -60,7 +72,7 @@
         </div>
 
         <!-- Store Rating -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center">
                 <div class="bg-purple-100 p-3 rounded-lg mr-4">
                     <i class="fas fa-star text-purple-600 text-2xl"></i>
@@ -76,7 +88,7 @@
     <!-- Quick Actions -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Add New Product -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h3>
             <div class="space-y-3">
                 <a href="{{ route('vendor.listings.create') }}" 
@@ -110,7 +122,7 @@
         </div>
 
         <!-- Recent Orders -->
-        <div class="stat-card">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-gray-800">Recent Orders</h3>
                 <a href="{{ route('vendor.orders.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
@@ -150,7 +162,7 @@
     </div>
 
     <!-- Recent Listings -->
-    <div class="stat-card">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div class="flex justify-between items-center mb-4">
             <h3 class="text-lg font-bold text-gray-800">Your Listings</h3>
             <a href="{{ route('vendor.listings.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
