@@ -626,28 +626,47 @@ main {
             </div>
             
             <!-- Actions -->
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2 sm:gap-3">
                 @auth
-                <a href="{{ route('buyer.dashboard') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
-                    <i class="fas fa-user text-lg"></i>
-                    <span class="text-sm font-medium">Account</span>
-                </a>
+                    @if(auth()->user()->role === 'admin')
+                        {{-- Admin: Show admin panel link --}}
+                        <a href="{{ route('admin.dashboard') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
+                            <i class="fas fa-shield-alt text-lg"></i>
+                            <span class="text-sm font-medium">Admin</span>
+                        </a>
+                        {{-- Mobile admin icon --}}
+                        <a href="{{ route('admin.dashboard') }}" class="sm:hidden p-2 text-ink-600 hover:text-brand-600 transition">
+                            <i class="fas fa-shield-alt text-lg"></i>
+                        </a>
+                    @else
+                        {{-- Buyer/Vendor: Show account link --}}
+                        <a href="{{ route('buyer.dashboard') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
+                            <i class="fas fa-user text-lg"></i>
+                            <span class="text-sm font-medium">Account</span>
+                        </a>
+
+                        <a href="{{ route('buyer.wishlist.index') }}" class="relative p-2 text-ink-600 hover:text-coral-500 transition">
+                            <i class="fas fa-heart text-lg"></i>
+                            <span class="wishlist-count absolute -top-1 -right-1 bg-coral-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
+                        </a>
+
+                        <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-ink-600 hover:text-brand-600 transition">
+                            <i class="fas fa-shopping-cart text-lg"></i>
+                            <span class="cart-count absolute -top-1 -right-1 bg-brand-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
+                        </a>
+                    @endif
                 @else
-                <a href="{{ route('login') }}" class="hidden sm:flex items-center gap-2 text-ink-600 hover:text-brand-600 transition p-2">
-                    <i class="fas fa-user text-lg"></i>
-                    <span class="text-sm font-medium">Login</span>
-                </a>
+                    {{-- Guest: Show prominent login button (visible on all screens) --}}
+                    <a href="{{ route('login') }}" class="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white px-3 py-2 rounded-lg transition font-semibold text-sm">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </a>
+                    {{-- Register (desktop only) --}}
+                    <a href="{{ route('register') }}" class="hidden sm:flex items-center gap-1.5 border-2 border-brand-600 text-brand-600 hover:bg-brand-50 px-3 py-2 rounded-lg transition font-semibold text-sm">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Register</span>
+                    </a>
                 @endauth
-                
-                <a href="{{ route('buyer.wishlist.index') }}" class="relative p-2 text-ink-600 hover:text-coral-500 transition">
-                    <i class="fas fa-heart text-lg"></i>
-                    <span class="wishlist-count absolute -top-1 -right-1 bg-coral-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
-                </a>
-                
-                <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-ink-600 hover:text-brand-600 transition">
-                    <i class="fas fa-shopping-cart text-lg"></i>
-                    <span class="cart-count absolute -top-1 -right-1 bg-brand-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
-                </a>
             </div>
         </div>
     </div>

@@ -298,191 +298,260 @@
     <div class="container mx-auto px-4 py-6">
         <div class="flex flex-col lg:flex-row gap-6">
             <!-- Sidebar Filters -->
-            <aside class="lg:w-1/4 filter-sidebar">
-                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-filter text-primary mr-2"></i>Filters
-                    </h3>
-                    
-                    <!-- Categories -->
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-700 mb-3">Categories</h4>
-                        <div class="space-y-2">
-                            <a href="{{ route('marketplace.index', request()->except('category')) }}" 
-   class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ !request('category') ? 'active-filter' : 'text-gray-600' }}">
-    <span>All Categories</span>
-    <span class="text-sm opacity-75">{{ $totalProducts ?? 0 }}</span>
-</a>
-@foreach($categories as $category)
-    <a href="{{ route('marketplace.index', array_merge(request()->except('category'), ['category' => $category->id])) }}" 
-       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('category') == $category->id ? 'active-filter' : 'text-gray-600' }}">
-        <span>{{ $category->name }}</span>
-        <span class="text-sm opacity-75">{{ $category->listings_count ?? 0 }}</span>
-    </a>
-@endforeach
-                        </div>
+            <aside class="lg:w-64 xl:w-72 flex-shrink-0 filter-sidebar hidden lg:block">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                    <!-- Filter Header -->
+                    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-4">
+                        <h3 class="text-white font-bold flex items-center">
+                            <i class="fas fa-sliders-h mr-2"></i>Filters & Sort
+                        </h3>
                     </div>
-                    
-                    <!-- Price Range -->
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-700 mb-3">Price Range</h4>
-                        <form method="GET" action="{{ route('marketplace.index') }}" id="priceForm">
-                            <div class="mb-4">
-                                <input type="range" min="0" max="1000000000" step="100000" 
-                                       value="{{ request('max_price', 1000000) }}" 
-                                       class="price-range w-full" id="priceSlider">
-                            </div>
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-sm text-gray-600">UGX 0</span>
-                                <span class="text-sm font-semibold text-primary" id="priceValue">
-                                    UGX {{ number_format(request('max_price', 1000000)) }}
-                                </span>
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <input type="number" name="min_price" value="{{ request('min_price', 0) }}" 
-                                       placeholder="Min" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
-                                <input type="number" name="max_price" id="maxPriceInput" 
-                                       value="{{ request('max_price', 1000000) }}" 
-                                       placeholder="Max" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary">
-                            </div>
-                            <button type="submit" class="relative z-10 w-full mt-4 bg-primary text-white py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition">
-                                Apply Price Filter
-                            </button>
-                        </form>
-                    </div>
-                    
-                    <!-- Product Origin -->
-                    <div class="mb-6">
-                        <h4 class="font-semibold text-gray-700 mb-3">Product Origin</h4>
-                        <div class="space-y-2">
-                            <a href="{{ route('marketplace.index', request()->except('origin')) }}" 
-                               class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 {{ !request('origin') ? 'active-filter' : 'text-gray-600' }}">
-                                <i class="fas fa-globe-americas mr-2 text-sm"></i>
-                                <span>All Products</span>
-                            </a>
-                            <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'local'])) }}" 
-                               class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('origin') == 'local' ? 'active-filter' : 'text-gray-600' }}">
-                                <i class="fas fa-map-marker-alt mr-2 text-sm"></i>
-                                <span>Local Products</span>
-                            </a>
-                            <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'imported'])) }}" 
-                               class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('origin') == 'imported' ? 'active-filter' : 'text-gray-600' }}">
-                                <i class="fas fa-plane mr-2 text-sm"></i>
-                                <span>Imported Products</span>
-                            </a>
-                        </div>
-                    </div>
-                    
-                    <!-- Sort By -->
-                    <div>
-                        <h4 class="font-semibold text-gray-700 mb-3">Sort By</h4>
-                        <div class="space-y-2">
-                            @php
-                                $sortOptions = [
-                                    'newest' => ['label' => 'Newest First', 'icon' => 'calendar-plus'],
-                                    'price_low' => ['label' => 'Price: Low to High', 'icon' => 'arrow-up'],
-                                    'price_high' => ['label' => 'Price: High to Low', 'icon' => 'arrow-down'],
-                                    'popular' => ['label' => 'Most Popular', 'icon' => 'fire']
-                                ];
-                            @endphp
-                            @foreach($sortOptions as $value => $option)
-                                <a href="{{ route('marketplace.index', array_merge(request()->except('sort'), ['sort' => $value])) }}" 
-                                   class="flex items-center px-3 py-2 rounded-lg hover:bg-gray-50 {{ request('sort', 'newest') == $value ? 'active-filter' : 'text-gray-600' }}">
-                                    <i class="fas fa-{{ $option['icon'] }} mr-2 text-sm"></i>
-                                    <span>{{ $option['label'] }}</span>
+
+                    <div class="p-5 max-h-[calc(100vh-200px)] overflow-y-auto">
+                        <!-- Product Origin - Quick Toggle -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Product Type</h4>
+                            <div class="flex gap-2">
+                                <a href="{{ route('marketplace.index', request()->except('origin')) }}"
+                                   class="flex-1 py-2 px-3 text-center text-xs font-semibold rounded-lg transition {{ !request('origin') ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                                    All
                                 </a>
-                            @endforeach
+                                <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'local'])) }}"
+                                   class="flex-1 py-2 px-3 text-center text-xs font-semibold rounded-lg transition {{ request('origin') == 'local' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                                    <i class="fas fa-map-marker-alt mr-1"></i>Local
+                                </a>
+                                <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'imported'])) }}"
+                                   class="flex-1 py-2 px-3 text-center text-xs font-semibold rounded-lg transition {{ request('origin') == 'imported' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200' }}">
+                                    <i class="fas fa-plane mr-1"></i>Import
+                                </a>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <!-- Clear Filters -->
-                    @if(request()->anyFilled(['search', 'category', 'origin', 'min_price', 'max_price', 'sort']))
-                        <div class="mt-6 pt-6 border-t">
-                            <a href="{{ route('marketplace.index') }}" 
-                               class="flex items-center justify-center w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium">
+
+                        <!-- Sort By - Dropdown Style -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sort By</h4>
+                            <div class="grid grid-cols-2 gap-2">
+                                @php
+                                    $sortOptions = [
+                                        'newest' => ['label' => 'Newest', 'icon' => 'clock'],
+                                        'price_low' => ['label' => 'Price ↑', 'icon' => 'sort-amount-up'],
+                                        'price_high' => ['label' => 'Price ↓', 'icon' => 'sort-amount-down'],
+                                        'popular' => ['label' => 'Popular', 'icon' => 'fire']
+                                    ];
+                                @endphp
+                                @foreach($sortOptions as $value => $option)
+                                    <a href="{{ route('marketplace.index', array_merge(request()->except('sort'), ['sort' => $value])) }}"
+                                       class="py-2 px-3 text-xs font-medium rounded-lg transition flex items-center justify-center gap-1 {{ request('sort', 'newest') == $value ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300' : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200' }}">
+                                        <i class="fas fa-{{ $option['icon'] }} text-[10px]"></i>
+                                        {{ $option['label'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Price Range -->
+                        <div class="mb-5 pb-5 border-b border-gray-100">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Price Range</h4>
+                            <form method="GET" action="{{ route('marketplace.index') }}" id="priceForm">
+                                @foreach(request()->except(['min_price', 'max_price']) as $key => $value)
+                                    <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                                @endforeach
+                                <div class="flex items-center gap-2 mb-3">
+                                    <div class="flex-1">
+                                        <input type="number" name="min_price" value="{{ request('min_price', '') }}"
+                                               placeholder="Min"
+                                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+                                    </div>
+                                    <span class="text-gray-400">-</span>
+                                    <div class="flex-1">
+                                        <input type="number" name="max_price" value="{{ request('max_price', '') }}"
+                                               placeholder="Max"
+                                               class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition">
+                                    Apply Price
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Categories -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Categories</h4>
+                            <div class="space-y-1 max-h-48 overflow-y-auto">
+                                <a href="{{ route('marketplace.index', request()->except('category')) }}"
+                                   class="flex items-center justify-between px-3 py-2 rounded-lg text-sm transition {{ !request('category') ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
+                                    <span>All Categories</span>
+                                    <span class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{{ $totalProducts ?? 0 }}</span>
+                                </a>
+                                @foreach($categories as $category)
+                                    <a href="{{ route('marketplace.index', array_merge(request()->except('category'), ['category' => $category->id])) }}"
+                                       class="flex items-center justify-between px-3 py-2 rounded-lg text-sm transition {{ request('category') == $category->id ? 'bg-indigo-100 text-indigo-700 font-semibold' : 'text-gray-600 hover:bg-gray-50' }}">
+                                        <span class="truncate">{{ $category->name }}</span>
+                                        <span class="text-xs {{ request('category') == $category->id ? 'bg-indigo-200 text-indigo-700' : 'bg-gray-100 text-gray-500' }} px-2 py-0.5 rounded-full ml-2">{{ $category->listings_count ?? 0 }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Clear Filters -->
+                        @if(request()->anyFilled(['search', 'category', 'origin', 'min_price', 'max_price', 'sort']))
+                            <a href="{{ route('marketplace.index') }}"
+                               class="flex items-center justify-center w-full py-2.5 border-2 border-red-200 text-red-600 rounded-lg hover:bg-red-50 font-semibold text-sm transition">
                                 <i class="fas fa-times mr-2"></i>Clear All Filters
                             </a>
-                        </div>
-                    @endif
-                </div>
-                
-                <!-- Category Tags -->
-                <div class="bg-white rounded-xl shadow-sm p-6">
-                    <h3 class="text-lg font-bold text-gray-800 mb-4">Popular Categories</h3>
-                    <div class="flex flex-wrap gap-2">
-                        @foreach($categories->take(8) as $category)
-                            <a href="{{ route('marketplace.index', ['category' => $category->id]) }}" 
-                               class="category-tag inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full hover:bg-primary hover:text-white transition">
-                                <i class="fas fa-{{ $category->icon ?? 'tag' }} mr-1.5 text-xs"></i>
-                                <span class="text-sm">{{ $category->name }}</span>
-                            </a>
-                        @endforeach
+                        @endif
                     </div>
                 </div>
             </aside>
+
+            <!-- Mobile Filter Button -->
+            <div class="lg:hidden fixed bottom-20 left-4 right-4 z-40">
+                <button onclick="toggleMobileFilters()" class="w-full py-3 bg-indigo-600 text-white rounded-xl shadow-lg font-semibold flex items-center justify-center gap-2">
+                    <i class="fas fa-filter"></i>
+                    Filters & Sort
+                    @if(request()->anyFilled(['category', 'origin', 'min_price', 'max_price']))
+                        <span class="bg-white text-indigo-600 text-xs px-2 py-0.5 rounded-full">Active</span>
+                    @endif
+                </button>
+            </div>
+
+            <!-- Mobile Filters Panel -->
+            <div id="mobileFiltersPanel" class="fixed inset-0 z-50 hidden lg:hidden">
+                <div class="absolute inset-0 bg-black/50" onclick="toggleMobileFilters()"></div>
+                <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] overflow-hidden transform translate-y-full transition-transform duration-300" id="mobileFiltersContent">
+                    <div class="p-4 border-b border-gray-100 flex items-center justify-between">
+                        <h3 class="font-bold text-gray-800 text-lg">Filters & Sort</h3>
+                        <button onclick="toggleMobileFilters()" class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-times text-gray-600"></i>
+                        </button>
+                    </div>
+                    <div class="p-4 overflow-y-auto max-h-[70vh]">
+                        <!-- Same filter content as sidebar -->
+                        <!-- Product Origin -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Product Type</h4>
+                            <div class="flex gap-2">
+                                <a href="{{ route('marketplace.index', request()->except('origin')) }}"
+                                   class="flex-1 py-2.5 px-3 text-center text-sm font-semibold rounded-xl transition {{ !request('origin') ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600' }}">
+                                    All
+                                </a>
+                                <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'local'])) }}"
+                                   class="flex-1 py-2.5 px-3 text-center text-sm font-semibold rounded-xl transition {{ request('origin') == 'local' ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                                    Local
+                                </a>
+                                <a href="{{ route('marketplace.index', array_merge(request()->except('origin'), ['origin' => 'imported'])) }}"
+                                   class="flex-1 py-2.5 px-3 text-center text-sm font-semibold rounded-xl transition {{ request('origin') == 'imported' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600' }}">
+                                    Imported
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Sort -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Sort By</h4>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach($sortOptions as $value => $option)
+                                    <a href="{{ route('marketplace.index', array_merge(request()->except('sort'), ['sort' => $value])) }}"
+                                       class="py-2.5 px-3 text-sm font-medium rounded-xl transition flex items-center justify-center gap-1 {{ request('sort', 'newest') == $value ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $option['label'] }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <!-- Categories -->
+                        <div class="mb-5">
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Categories</h4>
+                            <div class="flex flex-wrap gap-2">
+                                <a href="{{ route('marketplace.index', request()->except('category')) }}"
+                                   class="px-3 py-1.5 rounded-full text-sm font-medium transition {{ !request('category') ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600' }}">
+                                    All
+                                </a>
+                                @foreach($categories->take(10) as $category)
+                                    <a href="{{ route('marketplace.index', array_merge(request()->except('category'), ['category' => $category->id])) }}"
+                                       class="px-3 py-1.5 rounded-full text-sm font-medium transition {{ request('category') == $category->id ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600' }}">
+                                        {{ $category->name }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        @if(request()->anyFilled(['search', 'category', 'origin', 'min_price', 'max_price']))
+                            <a href="{{ route('marketplace.index') }}"
+                               class="block w-full py-3 border-2 border-red-200 text-red-600 rounded-xl text-center font-semibold">
+                                <i class="fas fa-times mr-2"></i>Clear All Filters
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
             
             <!-- Main Products Section -->
-            <main class="lg:w-3/4">
+            <main class="flex-1 min-w-0">
                 <!-- Header -->
-                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                            <h1 class="heading-responsive font-bold text-gray-800 mb-1">
+                            <h1 class="text-lg sm:text-xl font-bold text-gray-800">
                                 @if(request('search'))
-                                    Search Results for "{{ request('search') }}"
+                                    Results for "{{ Str::limit(request('search'), 20) }}"
                                 @elseif(request('category') && $selectedCategory = $categories->firstWhere('id', request('category')))
                                     {{ $selectedCategory->name }}
                                 @else
                                     All Products
                                 @endif
                             </h1>
-                            <p class="text-gray-600">
+                            <p class="text-sm text-gray-500">
                                 @if($listings->total() > 0)
-                                    Showing {{ $listings->firstItem() }}-{{ $listings->lastItem() }} of {{ $listings->total() }} products
+                                    {{ $listings->total() }} products found
                                 @else
                                     No products found
                                 @endif
                             </p>
                         </div>
-                        
-                        <!-- Active Filters -->
+
+                        <!-- Active Filters - Compact -->
                         @if(request()->anyFilled(['search', 'category', 'origin', 'min_price', 'max_price']))
-                            <div class="flex flex-wrap gap-2">
+                            <div class="flex flex-wrap gap-1.5">
                                 @if(request('search'))
-                                    <span class="inline-flex items-center px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                                        Search: "{{ request('search') }}"
-                                        <a href="{{ route('marketplace.index', request()->except('search')) }}" class="ml-2 text-primary hover:text-indigo-700">
-                                            <i class="fas fa-times text-xs"></i>
+                                    <span class="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs font-medium">
+                                        "{{ Str::limit(request('search'), 10) }}"
+                                        <a href="{{ route('marketplace.index', request()->except('search')) }}" class="ml-1.5 hover:text-indigo-900">
+                                            <i class="fas fa-times"></i>
                                         </a>
                                     </span>
                                 @endif
-                                
+
                                 @if(request('category') && $selectedCategory)
-                                    <span class="inline-flex items-center px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                                        Category: {{ $selectedCategory->name }}
-                                        <a href="{{ route('marketplace.index', request()->except('category')) }}" class="ml-2 text-primary hover:text-indigo-700">
-                                            <i class="fas fa-times text-xs"></i>
+                                    <span class="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs font-medium">
+                                        {{ Str::limit($selectedCategory->name, 12) }}
+                                        <a href="{{ route('marketplace.index', request()->except('category')) }}" class="ml-1.5 hover:text-purple-900">
+                                            <i class="fas fa-times"></i>
                                         </a>
                                     </span>
                                 @endif
-                                
+
                                 @if(request('origin'))
-                                    <span class="inline-flex items-center px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                                        Origin: {{ ucfirst(request('origin')) }}
-                                        <a href="{{ route('marketplace.index', request()->except('origin')) }}" class="ml-2 text-primary hover:text-indigo-700">
-                                            <i class="fas fa-times text-xs"></i>
+                                    <span class="inline-flex items-center px-2 py-1 {{ request('origin') == 'local' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700' }} rounded text-xs font-medium">
+                                        {{ ucfirst(request('origin')) }}
+                                        <a href="{{ route('marketplace.index', request()->except('origin')) }}" class="ml-1.5">
+                                            <i class="fas fa-times"></i>
                                         </a>
                                     </span>
                                 @endif
-                                
+
                                 @if(request('min_price') || request('max_price'))
-                                    <span class="inline-flex items-center px-3 py-1.5 bg-primary/10 text-primary rounded-full text-sm">
-                                       Price: 
-                                        @if(request('min_price'))UGX {{ number_format(request('min_price')) }} @endif
-                                        @if(request('min_price') && request('max_price')) - @endif
-                                        @if(request('max_price'))UGX {{ number_format(request('max_price')) }} @endif
-                                        <a href="{{ route('marketplace.index', request()->except(['min_price', 'max_price'])) }}" class="ml-2 text-primary hover:text-indigo-700">
-                                            <i class="fas fa-times text-xs"></i>
+                                    <span class="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
+                                        @if(request('min_price') && request('max_price'))
+                                            {{ number_format(request('min_price')/1000) }}k-{{ number_format(request('max_price')/1000) }}k
+                                        @elseif(request('min_price'))
+                                            >{{ number_format(request('min_price')/1000) }}k
+                                        @else
+                                            <{{ number_format(request('max_price')/1000) }}k
+                                        @endif
+                                        <a href="{{ route('marketplace.index', request()->except(['min_price', 'max_price'])) }}" class="ml-1.5">
+                                            <i class="fas fa-times"></i>
                                         </a>
                                     </span>
                                 @endif
@@ -493,150 +562,96 @@
                 
                 <!-- Products Grid -->
                 @if($listings->count() > 0)
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         @foreach($listings as $listing)
-                            <div class="product-card bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                            <div class="product-card bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                                 <!-- Product Image -->
-                                <div class="relative overflow-hidden">
-                                    <a href="{{ route('marketplace.show', $listing) }}" class="block">
+                                <div class="relative overflow-hidden aspect-square">
+                                    <a href="{{ route('marketplace.show', $listing) }}" class="block h-full">
                                         @if($listing->images->first())
-                                            <img src="{{ asset('storage/' . $listing->images->first()->path) }}" 
-                                                 alt="{{ $listing->title }}" 
-                                                 class="w-full h-48 object-cover product-image">
+                                            <img src="{{ asset('storage/' . $listing->images->first()->path) }}"
+                                                 alt="{{ $listing->title }}"
+                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
                                         @else
-                                            <div class="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                <i class="fas fa-image text-gray-300 text-4xl"></i>
+                                            <div class="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                                <i class="fas fa-image text-gray-300 text-3xl"></i>
                                             </div>
                                         @endif
                                     </a>
-                                    
+
                                     <!-- Badges -->
-                                    <div class="absolute top-3 left-3">
+                                    <div class="absolute top-2 left-2">
                                         @if($listing->origin == 'imported')
-                                            <span class="inline-flex items-center px-2 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
-                                                <i class="fas fa-plane mr-1"></i> Imported
+                                            <span class="inline-flex items-center px-1.5 py-0.5 bg-blue-500 text-white text-[10px] font-bold rounded">
+                                                <i class="fas fa-plane mr-0.5"></i> Import
                                             </span>
                                         @else
-                                            <span class="inline-flex items-center px-2 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
-                                                <i class="fas fa-home mr-1"></i> Local
+                                            <span class="inline-flex items-center px-1.5 py-0.5 bg-green-500 text-white text-[10px] font-bold rounded">
+                                                <i class="fas fa-map-marker-alt mr-0.5"></i> Local
                                             </span>
                                         @endif
                                     </div>
-                                    
+
                                     <!-- Quick Actions -->
-                                    <div class="absolute top-3 right-3">
-                                        <button data-quick-wishlist data-listing-id="{{ $listing->id }}" 
-                                                class="w-8 h-8 bg-white rounded-full shadow flex items-center justify-center hover:bg-red-50 transition">
-                                            <i class="far fa-heart text-gray-600 hover:text-red-500"></i>
+                                    <div class="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button data-quick-wishlist data-listing-id="{{ $listing->id }}"
+                                                class="w-7 h-7 bg-white/90 backdrop-blur rounded-full shadow flex items-center justify-center hover:bg-red-50 transition">
+                                            <i class="far fa-heart text-gray-600 hover:text-red-500 text-sm"></i>
                                         </button>
+                                        @if($listing->stock > 0)
+                                        <button data-quick-cart data-listing-id="{{ $listing->id }}"
+                                                class="w-7 h-7 bg-indigo-600 text-white rounded-full shadow flex items-center justify-center hover:bg-indigo-700 transition">
+                                            <i class="fas fa-shopping-cart text-xs"></i>
+                                        </button>
+                                        @endif
                                     </div>
+
+                                    <!-- Stock Badge -->
+                                    @if($listing->stock <= 0)
+                                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                            <span class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">Out of Stock</span>
+                                        </div>
+                                    @elseif($listing->stock <= 5)
+                                        <div class="absolute bottom-2 left-2">
+                                            <span class="bg-orange-500 text-white px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                                Only {{ $listing->stock }} left
+                                            </span>
+                                        </div>
+                                    @endif
                                 </div>
-                                
+
                                 <!-- Product Info -->
-                                <div class="p-5">
+                                <div class="p-3">
                                     <!-- Category -->
-                                    <div class="mb-2">
-                                        <span class="text-xs text-gray-500 font-medium">
-                                            {{ $listing->category->name ?? 'General' }}
-                                        </span>
-                                    </div>
-                                    
+                                    <span class="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                                        {{ $listing->category->name ?? 'General' }}
+                                    </span>
+
                                     <!-- Title -->
                                     <a href="{{ route('marketplace.show', $listing) }}">
-                                        <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-primary transition">
+                                        <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 hover:text-indigo-600 transition mt-1 leading-tight">
                                             {{ $listing->title }}
                                         </h3>
                                     </a>
-                                    
-                                    <!-- Description -->
-                                    <p class="text-sm text-gray-600 mb-4 line-clamp-2">
-                                        {{ Str::limit($listing->description, 100) }}
-                                    </p>
-                                    
+
                                     <!-- Vendor Info -->
-                                    <div class="flex items-center mb-4">
-                                        <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-xs mr-3">
-                                            <i class="fas fa-store"></i>
-                                        </div>
-                                        <div>
-                                            <p class="text-sm font-medium text-gray-700 flex items-center">
-                                                {{ $listing->vendor->business_name ?? 'Vendor' }}
-                                                @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
-                                                    <svg class="ml-1.5" viewBox="0 0 24 24" style="width: 16px; height: 16px;" title="Verified Seller">
-                        <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
-                        <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
-                    </svg>
-                                                @endif
-                                            </p>
-                                            @if($listing->vendor && $listing->vendor->created_at)
-                                            @php
-                                                $totalDays = $listing->vendor->created_at->diffInDays(now());
-                                                $vendorYears = floor($totalDays / 365);
-                                                $vendorMonths = floor(($totalDays % 365) / 30);
-                                                if ($vendorYears == 0) {
-                                                    if ($vendorMonths == 0) {
-                                                        $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
-                                                    } else {
-                                                        $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
-                                                    }
-                                                } elseif ($vendorYears == 1) {
-                                                    $durationText = '1 year on BebaMart';
-                                                } else {
-                                                    $durationText = $vendorYears . '+ years on BebaMart';
-                                                }
-                                            @endphp
-                                            <p class="text-xs text-gray-500 flex items-center">
-                                                <i class="fas fa-user-clock mr-1"></i>{{ $durationText }}
-                                            </p>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Price and Actions -->
-                                    <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                                        <div>
-                                           <div class="text-xl font-bold text-primary">
-                                                UGX {{ number_format($listing->price, 0) }}
-                                            </div>
-                                            @if($listing->weight_kg)
-                                                <div class="text-xs text-gray-500 mt-1">
-                                                    <i class="fas fa-weight-hanging mr-1"></i>{{ $listing->weight_kg }}kg
-                                                </div>
-                                            @endif
-                                        </div>
-                                        
-                                        <div class="flex items-center gap-2">
-                                            @if($listing->stock > 0)
-                                                <button data-quick-cart data-listing-id="{{ $listing->id }}" 
-                                                        class="w-10 h-10 bg-primary text-white rounded-lg flex items-center justify-center hover:bg-indigo-700 transition">
-                                                    <i class="fas fa-shopping-cart"></i>
-                                                </button>
-                                            @endif
-                                            <a href="{{ route('marketplace.show', $listing) }}" 
-                                               class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium text-sm transition">
-                                                View Details
-                                            </a>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Stock Status -->
-                                    <div class="mt-4 pt-4 border-t border-gray-100">
-                                        @if($listing->stock > 10)
-                                            <div class="text-sm text-green-600 flex items-center">
-                                                <i class="fas fa-check-circle mr-2"></i>
-                                                In Stock ({{ $listing->stock }} available)
-                                            </div>
-                                        @elseif($listing->stock > 0)
-                                            <div class="text-sm text-yellow-600 flex items-center">
-                                                <i class="fas fa-exclamation-triangle mr-2"></i>
-                                                Only {{ $listing->stock }} left in stock
-                                            </div>
-                                        @else
-                                            <div class="text-sm text-red-600 flex items-center">
-                                                <i class="fas fa-times-circle mr-2"></i>
-                                                Out of Stock
-                                            </div>
+                                    <div class="flex items-center gap-1 mt-2">
+                                        <span class="text-[11px] text-gray-500 truncate">
+                                            {{ Str::limit($listing->vendor->business_name ?? 'Vendor', 15) }}
+                                        </span>
+                                        @if($listing->vendor && $listing->vendor->user && $listing->vendor->user->is_admin_verified)
+                                            <svg viewBox="0 0 24 24" class="w-3.5 h-3.5 flex-shrink-0" title="Verified">
+                                                <path fill="#1d9bf0" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.67-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.9-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z"></path>
+                                                <path fill="#ffffff" d="M10.5 16.5l-3.5-3.5 1.4-1.4 2.1 2.1 5.6-5.6 1.4 1.4-7 7z"></path>
+                                            </svg>
                                         @endif
+                                    </div>
+
+                                    <!-- Price -->
+                                    <div class="mt-2 pt-2 border-t border-gray-100">
+                                        <div class="text-base font-bold text-indigo-600">
+                                            UGX {{ number_format($listing->price, 0) }}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -711,26 +726,23 @@
                 
                 <!-- Browse Categories Section -->
                 @if(!request()->filled('category') && $categories->count() > 0)
-                    <div class="mt-12">
-                        <div class="bg-white rounded-xl shadow-sm p-6">
-                            <div class="flex items-center justify-between mb-6">
-                                <h2 class="text-xl font-bold text-gray-800">Browse by Category</h2>
-                                <a href="{{ route('categories.index') }}" class="text-primary hover:text-indigo-700 font-medium">
-                                    View All Categories <i class="fas fa-arrow-right ml-1"></i>
+                    <div class="mt-8">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                            <div class="flex items-center justify-between mb-5">
+                                <h2 class="text-lg font-bold text-gray-800">Browse by Category</h2>
+                                <a href="{{ route('categories.index') }}" class="text-indigo-600 hover:text-indigo-700 text-sm font-semibold">
+                                    View All <i class="fas fa-arrow-right ml-1"></i>
                                 </a>
                             </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-                                @foreach($categories->take(12) as $category)
-                                    <a href="{{ route('marketplace.index', ['category' => $category->id]) }}" 
-                                       class="category-card bg-gray-50 rounded-lg p-4 text-center hover:bg-primary hover:text-white transition group">
-                                        <div class="w-12 h-12 mx-auto mb-3 rounded-lg bg-white group-hover:bg-white/20 flex items-center justify-center">
-                                            <i class="fas fa-{{ $category->icon ?? 'tag' }} text-lg text-primary group-hover:text-white"></i>
+                            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3">
+                                @foreach($categories->take(16) as $category)
+                                    <a href="{{ route('marketplace.index', ['category' => $category->id]) }}"
+                                       class="group text-center p-3 rounded-xl hover:bg-indigo-50 transition">
+                                        <div class="w-10 h-10 mx-auto mb-2 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center group-hover:from-indigo-500 group-hover:to-purple-500 transition-all">
+                                            <i class="fas fa-{{ $category->icon ?? 'tag' }} text-sm text-indigo-600 group-hover:text-white"></i>
                                         </div>
-                                        <div class="font-medium text-gray-800 group-hover:text-white text-sm line-clamp-1">
+                                        <div class="font-medium text-gray-700 text-xs line-clamp-1 group-hover:text-indigo-600">
                                             {{ $category->name }}
-                                        </div>
-                                        <div class="text-xs text-gray-500 group-hover:text-white/80 mt-1">
-                                            {{ $category->listings_count ?? 0 }} products
                                         </div>
                                     </a>
                                 @endforeach
@@ -740,35 +752,45 @@
                 @endif
                 
                 <!-- Trust Badges -->
-                <div class="mt-8">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-white rounded-xl p-6 text-center shadow-sm border border-gray-100">
-                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-shield-alt text-green-600 text-xl"></i>
+                <div class="mt-8 hidden md:block">
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-4">
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-shield-alt text-green-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">Secure Escrow</h4>
+                                    <p class="text-xs text-gray-500">Protected payments</p>
+                                </div>
                             </div>
-                            <h4 class="font-bold text-gray-800 mb-1">Secure Escrow</h4>
-                            <p class="text-sm text-gray-600">Money protected until delivery</p>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 text-center shadow-sm border border-gray-100">
-                            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-truck text-blue-600 text-xl"></i>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-truck text-blue-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">Fast Delivery</h4>
+                                    <p class="text-xs text-gray-500">Nationwide shipping</p>
+                                </div>
                             </div>
-                            <h4 class="font-bold text-gray-800 mb-1">Fast Delivery</h4>
-                            <p class="text-sm text-gray-600">Nationwide shipping network</p>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 text-center shadow-sm border border-gray-100">
-                            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-headset text-purple-600 text-xl"></i>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-headset text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">24/7 Support</h4>
+                                    <p class="text-xs text-gray-500">Always here to help</p>
+                                </div>
                             </div>
-                            <h4 class="font-bold text-gray-800 mb-1">24/7 Support</h4>
-                            <p class="text-sm text-gray-600">Always here to help you</p>
-                        </div>
-                        <div class="bg-white rounded-xl p-6 text-center shadow-sm border border-gray-100">
-                            <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <i class="fas fa-undo text-yellow-600 text-xl"></i>
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-undo text-yellow-600"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-gray-800 text-sm">Easy Returns</h4>
+                                    <p class="text-xs text-gray-500">30-day policy</p>
+                                </div>
                             </div>
-                            <h4 class="font-bold text-gray-800 mb-1">Easy Returns</h4>
-                            <p class="text-sm text-gray-600">30-day return policy</p>
                         </div>
                     </div>
                 </div>
@@ -806,6 +828,26 @@
     <!-- JavaScript -->
 
 <script>
+    // Mobile filters toggle
+    function toggleMobileFilters() {
+        const panel = document.getElementById('mobileFiltersPanel');
+        const content = document.getElementById('mobileFiltersContent');
+
+        if (panel.classList.contains('hidden')) {
+            panel.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            setTimeout(() => {
+                content.style.transform = 'translateY(0)';
+            }, 10);
+        } else {
+            content.style.transform = 'translateY(100%)';
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                panel.classList.add('hidden');
+            }, 300);
+        }
+    }
+
     // Price range slider fix
     document.addEventListener('DOMContentLoaded', function() {
         const slider = document.getElementById('priceSlider');

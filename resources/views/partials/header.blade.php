@@ -36,26 +36,42 @@
             <!-- Actions -->
             <div class="flex items-center gap-2 sm:gap-3">
                 @auth
-                <a href="{{ route('buyer.dashboard') }}" class="hidden sm:flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-gray-50">
-                    <i class="fas fa-user text-lg"></i>
-                    <span class="text-sm font-medium">Account</span>
-                </a>
+                    @if(auth()->user()->role === 'admin')
+                        {{-- Admin: Show dashboard link instead of buyer links --}}
+                        <a href="{{ route('admin.dashboard') }}" class="hidden sm:flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-gray-50">
+                            <i class="fas fa-shield-alt text-lg"></i>
+                            <span class="text-sm font-medium">Admin Panel</span>
+                        </a>
+                    @else
+                        {{-- Buyer/Vendor: Show account link --}}
+                        <a href="{{ route('buyer.dashboard') }}" class="hidden sm:flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-gray-50">
+                            <i class="fas fa-user text-lg"></i>
+                            <span class="text-sm font-medium">Account</span>
+                        </a>
+
+                        {{-- Wishlist (only for non-admin) --}}
+                        <a href="{{ route('buyer.wishlist.index') }}" class="relative p-2 text-gray-600 hover:text-red-500 transition rounded-lg hover:bg-red-50">
+                            <i class="fas fa-heart text-lg"></i>
+                            <span class="wishlist-count absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
+                        </a>
+
+                        {{-- Cart (only for non-admin) --}}
+                        <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-gray-600 hover:text-indigo-600 transition rounded-lg hover:bg-indigo-50">
+                            <i class="fas fa-shopping-cart text-lg"></i>
+                            <span class="cart-count absolute -top-0.5 -right-0.5 bg-indigo-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
+                        </a>
+                    @endif
                 @else
-                <a href="{{ route('login') }}" class="hidden sm:flex items-center gap-2 text-gray-600 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-gray-50">
-                    <i class="fas fa-user text-lg"></i>
-                    <span class="text-sm font-medium text-gray-800">Login</span>
-                </a>
+                    {{-- Guest: Show login button (visible on mobile too) --}}
+                    <a href="{{ route('login') }}" class="flex items-center gap-2 text-white bg-indigo-600 hover:bg-indigo-700 transition px-3 py-2 rounded-lg">
+                        <i class="fas fa-sign-in-alt text-sm"></i>
+                        <span class="text-sm font-semibold">Login</span>
+                    </a>
+                    <a href="{{ route('register') }}" class="hidden sm:flex items-center gap-2 text-indigo-600 border border-indigo-600 hover:bg-indigo-50 transition px-3 py-2 rounded-lg">
+                        <i class="fas fa-user-plus text-sm"></i>
+                        <span class="text-sm font-semibold">Register</span>
+                    </a>
                 @endauth
-
-                <a href="{{ route('buyer.wishlist.index') }}" class="relative p-2 text-gray-600 hover:text-red-500 transition rounded-lg hover:bg-red-50">
-                    <i class="fas fa-heart text-lg"></i>
-                    <span class="wishlist-count absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
-                </a>
-
-                <a href="{{ route('buyer.cart.index') }}" class="relative p-2 text-gray-600 hover:text-indigo-600 transition rounded-lg hover:bg-indigo-50">
-                    <i class="fas fa-shopping-cart text-lg"></i>
-                    <span class="cart-count absolute -top-0.5 -right-0.5 bg-indigo-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold hidden">0</span>
-                </a>
 
                 <!-- Mobile Menu Toggle -->
                 <button class="lg:hidden p-2 text-gray-600 hover:text-indigo-600 transition rounded-lg hover:bg-gray-50" onclick="toggleMobileMenu()">
@@ -160,14 +176,34 @@
                 @if(Auth::user()->avatar)
                     <img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="w-12 h-12 rounded-full object-cover">
                 @else
-                    <i class="fas fa-user text-indigo-600 text-lg"></i>
+                    @if(Auth::user()->role === 'admin')
+                        <i class="fas fa-shield-alt text-indigo-600 text-lg"></i>
+                    @else
+                        <i class="fas fa-user text-indigo-600 text-lg"></i>
+                    @endif
                 @endif
             </div>
             <div class="flex-1 min-w-0">
                 <p class="font-semibold text-gray-800 truncate">{{ Auth::user()->name }}</p>
-                <a href="{{ route('buyer.dashboard') }}" class="text-sm text-indigo-600 hover:underline">View Dashboard</a>
+                @if(Auth::user()->role === 'admin')
+                    <span class="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-medium">Administrator</span>
+                @else
+                    <a href="{{ route('buyer.dashboard') }}" class="text-sm text-indigo-600 hover:underline">View Dashboard</a>
+                @endif
             </div>
         </div>
+
+        @if(Auth::user()->role === 'admin')
+        {{-- Admin Quick Links --}}
+        <div class="mt-3 grid grid-cols-2 gap-2">
+            <a href="{{ route('admin.dashboard') }}" class="py-2 bg-indigo-600 text-white rounded-lg text-center font-medium text-sm hover:bg-indigo-700 transition">
+                <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
+            </a>
+            <a href="{{ route('admin.vendors.pending') }}" class="py-2 bg-yellow-500 text-white rounded-lg text-center font-medium text-sm hover:bg-yellow-600 transition">
+                <i class="fas fa-store mr-1"></i> Vendors
+            </a>
+        </div>
+        @endif
         @else
         <div class="flex gap-3">
             <a href="{{ route('login') }}" class="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-center font-medium text-sm hover:bg-indigo-700 transition">

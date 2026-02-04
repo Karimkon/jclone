@@ -485,6 +485,9 @@ Route::middleware(['auth'])->group(function () {
         // Disputes
         Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
         Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
+        Route::patch('/disputes/{dispute}/status', [\App\Http\Controllers\Admin\DisputeController::class, 'updateStatus'])->name('disputes.updateStatus');
+        Route::post('/disputes/{dispute}/comment', [\App\Http\Controllers\Admin\DisputeController::class, 'addComment'])->name('disputes.comment');
+        Route::post('/disputes/{dispute}/request-evidence', [\App\Http\Controllers\Admin\DisputeController::class, 'requestEvidence'])->name('disputes.requestEvidence');
 
         // Escrow management
         Route::prefix('escrows')->name('escrows.')->group(function () {
