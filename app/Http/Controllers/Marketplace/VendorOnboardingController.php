@@ -62,24 +62,26 @@ class VendorOnboardingController extends Controller
             'vendor_type' => 'required|in:local_retail,china_supplier,dropship',
             'business_name' => 'required|string|max:255',
             'country' => 'required|string|max:100',
-            'city' => 'required|string|max:100',
-            'address' => 'required|string|max:500',
+            'city' => 'nullable|string|max:100',
+            'address' => 'nullable|string|max:500',
             'annual_turnover' => 'nullable|numeric|min:0',
             'preferred_currency' => 'required|string|size:3',
-            
-            // Document validations
+
+            // Document validations - Only National ID is required
             'national_id_front' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'national_id_back' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'bank_statement' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'proof_of_address' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            'guarantor_name' => 'required|string|max:255',
-            'guarantor_phone' => 'required|string|max:20',
-            'guarantor_id' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            
+
+            // Optional documents
+            'bank_statement' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'proof_of_address' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+            'guarantor_name' => 'nullable|string|max:255',
+            'guarantor_phone' => 'nullable|string|max:20',
+            'guarantor_id' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
+
             // Optional company docs
             'company_registration' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
             'tax_certificate' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120',
-            
+
             'terms' => 'required|accepted',
         ];
         
@@ -161,37 +163,47 @@ class VendorOnboardingController extends Controller
                 'vendor_type' => $validated['vendor_type'],
                 'business_name' => $validated['business_name'],
                 'country' => $validated['country'],
-                'city' => $validated['city'],
-                'address' => $validated['address'],
+                'city' => $validated['city'] ?? null,
+                'address' => $validated['address'] ?? null,
                 'annual_turnover' => $validated['annual_turnover'] ?? null,
                 'preferred_currency' => $validated['preferred_currency'],
                 'vetting_status' => 'pending',
                 'vetting_notes' => null,
-                'meta' => [
+                'meta' => !empty($validated['guarantor_name']) ? [
                     'guarantor' => [
                         'name' => $validated['guarantor_name'],
-                        'phone' => $validated['guarantor_phone'],
+                        'phone' => $validated['guarantor_phone'] ?? null,
                         'added_at' => now()->toDateTimeString(),
                     ]
-                ]
+                ] : null
             ]);
             
             Log::info('Vendor profile created', ['vendor_profile_id' => $vendorProfile->id]);
 
-            // Upload and save documents
+            // Upload and save documents - Required documents
             $documents = [
                 ['type' => 'national_id', 'file' => $request->file('national_id_front'), 'side' => 'front'],
                 ['type' => 'national_id', 'file' => $request->file('national_id_back'), 'side' => 'back'],
-                ['type' => 'bank_statement', 'file' => $request->file('bank_statement')],
-                ['type' => 'proof_of_address', 'file' => $request->file('proof_of_address')],
-                ['type' => 'guarantor_id', 'file' => $request->file('guarantor_id')],
             ];
+
+            // Add optional documents if provided
+            if ($request->hasFile('bank_statement')) {
+                $documents[] = ['type' => 'bank_statement', 'file' => $request->file('bank_statement')];
+            }
+
+            if ($request->hasFile('proof_of_address')) {
+                $documents[] = ['type' => 'proof_of_address', 'file' => $request->file('proof_of_address')];
+            }
+
+            if ($request->hasFile('guarantor_id')) {
+                $documents[] = ['type' => 'guarantor_id', 'file' => $request->file('guarantor_id')];
+            }
 
             // Add optional company documents
             if ($request->hasFile('company_registration')) {
                 $documents[] = ['type' => 'company_docs', 'file' => $request->file('company_registration'), 'subtype' => 'registration'];
             }
-            
+
             if ($request->hasFile('tax_certificate')) {
                 $documents[] = ['type' => 'company_docs', 'file' => $request->file('tax_certificate'), 'subtype' => 'tax'];
             }
@@ -236,16 +248,25 @@ class VendorOnboardingController extends Controller
             
             Log::info('Vendor documents uploaded', ['vendor_profile_id' => $vendorProfile->id, 'document_count' => count($documents)]);
 
-            // Create initial vendor score
+            // Create initial vendor score - base score for ID, bonus for optional docs
+            $scoreFactors = [
+                'id_uploaded' => true,
+                'bank_statement_uploaded' => $request->hasFile('bank_statement'),
+                'address_proof_uploaded' => $request->hasFile('proof_of_address'),
+                'guarantor_provided' => !empty($validated['guarantor_name']),
+            ];
+
+            // Calculate score: 15 base for ID, +5 for each optional document
+            $score = 15; // Base score for National ID
+            if ($scoreFactors['bank_statement_uploaded']) $score += 5;
+            if ($scoreFactors['address_proof_uploaded']) $score += 5;
+            if ($scoreFactors['guarantor_provided']) $score += 5;
+
+            $scoreFactors['initial_score'] = $score;
+
             $vendorProfile->scores()->create([
-                'score' => 25, // Starting score for submitting documents
-                'factors' => [
-                    'id_uploaded' => true,
-                    'bank_statement_uploaded' => true,
-                    'address_proof_uploaded' => true,
-                    'guarantor_provided' => true,
-                    'initial_score' => 25,
-                ]
+                'score' => $score,
+                'factors' => $scoreFactors
             ]);
 
             // Send notification to admin about new vendor

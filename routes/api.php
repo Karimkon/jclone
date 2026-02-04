@@ -3021,6 +3021,174 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
             'data' => $transactions,
         ]);
     });
+
+    // ==================== VENDOR SERVICES ====================
+    Route::prefix('services')->group(function () {
+
+        // Get all vendor services
+        Route::get('/', function (Request $request) {
+            $vendor = $request->user()->vendorProfile;
+
+            if (!$vendor) {
+                return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
+            }
+
+            $query = \App\Models\VendorService::where('vendor_profile_id', $vendor->id)
+                ->with('category');
+
+            if ($request->filled('status')) {
+                $query->where('is_active', $request->status === 'active');
+            }
+
+            $services = $query->latest()->paginate($request->get('per_page', 20));
+
+            return response()->json([
+                'success' => true,
+                'data' => $services->items(),
+                'current_page' => $services->currentPage(),
+                'last_page' => $services->lastPage(),
+                'total' => $services->total(),
+            ]);
+        });
+
+        // Create new service
+        Route::post('/', function (Request $request) {
+            $vendor = $request->user()->vendorProfile;
+
+            if (!$vendor) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must complete vendor onboarding before adding services.',
+                    'requires_onboarding' => true,
+                ], 403);
+            }
+
+            if ($vendor->vetting_status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your vendor application is pending approval.',
+                    'requires_approval' => true,
+                ], 403);
+            }
+
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'service_category_id' => 'nullable|exists:service_categories,id',
+                'description' => 'required|string|max:10000',
+                'pricing_type' => 'required|in:fixed,hourly,negotiable,starting_from,free_quote',
+                'price' => 'nullable|numeric|min:0',
+                'price_max' => 'nullable|numeric|min:0',
+                'duration' => 'nullable|string|max:100',
+                'location' => 'nullable|string|max:255',
+                'city' => 'required|string|max:100',
+                'is_mobile' => 'boolean',
+                'features' => 'nullable|string',
+                'images.*' => 'nullable|image|max:5120',
+            ]);
+
+            // Handle images
+            $images = [];
+            if ($request->hasFile('images')) {
+                foreach ($request->file('images') as $image) {
+                    $images[] = $image->store('vendor-services', 'public');
+                }
+            }
+
+            // Convert features text to array
+            $features = $request->features ? array_filter(array_map('trim', explode("\n", $request->features))) : null;
+
+            $service = \App\Models\VendorService::create([
+                'vendor_profile_id' => $vendor->id,
+                'service_category_id' => $request->service_category_id,
+                'title' => $request->title,
+                'slug' => \Illuminate\Support\Str::slug($request->title) . '-' . \Illuminate\Support\Str::random(4),
+                'description' => $request->description,
+                'pricing_type' => $request->pricing_type,
+                'price' => $request->price,
+                'price_max' => $request->price_max,
+                'duration' => $request->duration,
+                'location' => $request->location ?? $vendor->business_address,
+                'city' => $request->city,
+                'is_mobile' => $request->boolean('is_mobile'),
+                'features' => $features,
+                'images' => $images,
+                'is_active' => true,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service created successfully!',
+                'service' => $service,
+            ], 201);
+        });
+
+        // Toggle service status
+        Route::post('/{id}/toggle-status', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+            $service = \App\Models\VendorService::where('vendor_profile_id', $vendor->id)->findOrFail($id);
+
+            $service->is_active = !$service->is_active;
+            $service->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service status updated.',
+                'is_active' => $service->is_active,
+            ]);
+        });
+
+        // Delete service
+        Route::delete('/{id}', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+            $service = \App\Models\VendorService::where('vendor_profile_id', $vendor->id)->findOrFail($id);
+
+            // Delete images
+            if ($service->images) {
+                foreach ($service->images as $image) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($image);
+                }
+            }
+
+            $service->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Service deleted.',
+            ]);
+        });
+    });
+
+    // Get service categories
+    Route::get('/service-categories', function () {
+        $categories = \App\Models\ServiceCategory::active()
+            ->forServices()
+            ->parents()
+            ->with(['children' => function($q) {
+                $q->active()->forServices()->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $categories->map(function($cat) {
+                return [
+                    'id' => $cat->id,
+                    'name' => $cat->name,
+                    'slug' => $cat->slug,
+                    'icon' => $cat->icon,
+                    'children' => $cat->children->map(function($child) {
+                        return [
+                            'id' => $child->id,
+                            'name' => $child->name,
+                            'slug' => $child->slug,
+                            'icon' => $child->icon,
+                        ];
+                    }),
+                ];
+            }),
+        ]);
+    });
 });
 
 // ==================== CHAT/MESSAGING ROUTES ====================
@@ -3038,15 +3206,18 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             $vendorProfileId = $vendorProfile ? $vendorProfile->id : null;
         }
 
-        // Fetch ALL active conversations for this user/vendor
+        // Fetch ALL active conversations where user is EITHER buyer OR seller
         $allConversations = \DB::table('conversations')
-            ->where('status', 'active');
-            
-        if ($isVendor && $vendorProfileId) {
-            $allConversations->where('vendor_profile_id', $vendorProfileId);
-        } else {
-            $allConversations->where('buyer_id', $user->id);
-        }
+            ->where('status', 'active')
+            ->where(function ($query) use ($user, $isVendor, $vendorProfileId) {
+                // Always check if user is the buyer
+                $query->where('buyer_id', $user->id);
+
+                // Also check if user is the seller (if they have a vendor profile)
+                if ($isVendor && $vendorProfileId) {
+                    $query->orWhere('vendor_profile_id', $vendorProfileId);
+                }
+            });
 
         $conversations = $allConversations->orderBy('last_message_at', 'desc')->get();
 
@@ -3060,15 +3231,18 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         })->values();
 
         // Enrich with participant info and last message
-        $enriched = $grouped->map(function ($conv) use ($user, $isVendor) {
-            // Get other participant
-            if ($isVendor) {
+        $enriched = $grouped->map(function ($conv) use ($user, $isVendor, $vendorProfileId) {
+            // Determine if user is the seller in THIS specific conversation
+            $isSellerInConv = $isVendor && $vendorProfileId && $conv->vendor_profile_id == $vendorProfileId;
+
+            // Get other participant - show buyer if user is seller, show seller if user is buyer
+            if ($isSellerInConv) {
                 $otherUser = \DB::table('users')->where('id', $conv->buyer_id)->first();
-                $participantName = ($otherUser->name ?? 'Buyer') . ' +';
+                $participantName = $otherUser->name ?? 'Buyer';
                 $participantAvatar = $otherUser->avatar ?? null;
             } else {
                 $vendorProfile = \DB::table('vendor_profiles')->where('id', $conv->vendor_profile_id)->first();
-                $participantName = ($vendorProfile->business_name ?? 'Vendor') . ' +';
+                $participantName = $vendorProfile->business_name ?? 'Vendor';
                 $participantAvatar = $vendorProfile->logo ?? null;
             }
 
@@ -3206,6 +3380,103 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         ]);
     });
 
+    // Vendor starts conversation with buyer (for order inquiries)
+    Route::post('/conversations/with-buyer', function (Request $request) {
+        $request->validate([
+            'buyer_id' => 'required|exists:users,id',
+            'initial_message' => 'nullable|string|max:2000',
+            'subject' => 'nullable|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $isVendor = $user->role === 'vendor_local' || $user->role === 'vendor_international';
+
+        if (!$isVendor) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only vendors can use this endpoint',
+            ], 403);
+        }
+
+        // Get vendor profile
+        $vendorProfile = \DB::table('vendor_profiles')->where('user_id', $user->id)->first();
+        if (!$vendorProfile) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vendor profile not found',
+            ], 404);
+        }
+
+        $buyerId = $request->buyer_id;
+
+        // Prevent vendor from messaging themselves
+        if ($buyerId == $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot message yourself',
+            ], 400);
+        }
+
+        // Check if conversation already exists
+        $existing = \DB::table('conversations')
+            ->where('buyer_id', $buyerId)
+            ->where('vendor_profile_id', $vendorProfile->id)
+            ->first();
+
+        if ($existing) {
+            // Reactivate if archived
+            if ($existing->status !== 'active') {
+                \DB::table('conversations')
+                    ->where('id', $existing->id)
+                    ->update(['status' => 'active']);
+            }
+            $conversationId = $existing->id;
+        } else {
+            // Create new conversation
+            $conversationId = \DB::table('conversations')->insertGetId([
+                'buyer_id' => $buyerId,
+                'vendor_profile_id' => $vendorProfile->id,
+                'listing_id' => null,
+                'subject' => $request->subject,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Add automated safety message for new conversations
+            \DB::table('messages')->insert([
+                'conversation_id' => $conversationId,
+                'sender_id' => null,
+                'body' => 'Avoid paying in advance! Even for delivery',
+                'type' => 'system',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        // Send initial message if provided
+        if ($request->initial_message) {
+            \DB::table('messages')->insert([
+                'conversation_id' => $conversationId,
+                'sender_id' => $user->id,
+                'body' => $request->initial_message,
+                'type' => 'text',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            \DB::table('conversations')
+                ->where('id', $conversationId)
+                ->update(['last_message_at' => now()]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'conversation_id' => $conversationId,
+            'message' => $existing ? 'Existing conversation found' : 'Conversation created',
+        ]);
+    });
+
     // Get messages for a conversation
     Route::get('/conversations/{id}/messages', function (Request $request, $id) {
         $user = $request->user();
@@ -3225,14 +3496,11 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
         }
 
-        $hasAccess = false;
-        if ($isVendor && $vendorProfileId) {
-            $hasAccess = $conversation->vendor_profile_id == $vendorProfileId;
-        } else {
-            $hasAccess = $conversation->buyer_id == $user->id;
-        }
+        // User has access if they're EITHER the buyer OR the vendor (seller)
+        $isBuyer = $conversation->buyer_id == $user->id;
+        $isSeller = $isVendor && $vendorProfileId && $conversation->vendor_profile_id == $vendorProfileId;
 
-        if (!$hasAccess) {
+        if (!$isBuyer && !$isSeller) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
@@ -3262,8 +3530,10 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        // Get conversation details
-        if ($isVendor) {
+        // Get conversation details - show the OTHER participant
+        // If user is the seller in this conversation, show buyer info
+        // If user is the buyer in this conversation, show seller info
+        if ($isSeller) {
             $otherUser = \DB::table('users')->where('id', $conversation->buyer_id)->first();
             $participantName = $otherUser->name ?? 'Buyer';
             $participantAvatar = $otherUser->avatar ?? null;
@@ -3310,14 +3580,11 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
         }
 
-        $hasAccess = false;
-        if ($isVendor && $vendorProfileId) {
-            $hasAccess = $conversation->vendor_profile_id == $vendorProfileId;
-        } else {
-            $hasAccess = $conversation->buyer_id == $user->id;
-        }
+        // User has access if they're EITHER the buyer OR the vendor (seller)
+        $isBuyer = $conversation->buyer_id == $user->id;
+        $isSeller = $isVendor && $vendorProfileId && $conversation->vendor_profile_id == $vendorProfileId;
 
-        if (!$hasAccess) {
+        if (!$isBuyer && !$isSeller) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 

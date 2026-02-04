@@ -118,10 +118,10 @@
                         </select>
                     </div>
                     <div class="flex items-center">
-                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">City *</label>
-                        <input type="text" name="city" required value="{{ old('city') }}"
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">City</label>
+                        <input type="text" name="city" value="{{ old('city') }}"
                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="City">
+                               placeholder="City (optional)">
                     </div>
                     <div class="flex items-center">
                         <label class="w-24 text-sm text-gray-600 flex-shrink-0">Currency *</label>
@@ -133,10 +133,10 @@
                         </select>
                     </div>
                     <div class="flex items-center col-span-2">
-                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Address *</label>
-                        <input type="text" name="address" required value="{{ old('address') }}"
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0">Address</label>
+                        <input type="text" name="address" value="{{ old('address') }}"
                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="Full business address">
+                               placeholder="Business address (optional)">
                     </div>
                     <div class="flex items-center col-span-2">
                         <label class="w-24 text-sm text-gray-600 flex-shrink-0">Turnover</label>
@@ -150,22 +150,22 @@
                 </div>
             </div>
 
-            <!-- Required Documents -->
+            <!-- Documents Section -->
             <div class="bg-white rounded-lg shadow-sm p-4">
                 <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
-                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Required Documents
+                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Documents
                 </h2>
 
-                <!-- National ID - Side by Side -->
+                <!-- National ID - Required - Side by Side -->
                 <div class="flex items-start mb-3">
-                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">National ID *</label>
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">National ID <span class="text-red-500">*</span></label>
                     <div class="flex-1 grid grid-cols-2 gap-2">
                         <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
                              onclick="document.getElementById('national_id_front').click()">
                             <div id="frontPreview" class="text-center py-1">
                                 <i class="fas fa-id-card text-gray-400"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Front Side</p>
+                            <p class="text-xs text-gray-500">Front Side *</p>
                             <input type="file" name="national_id_front" id="national_id_front" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
                         </div>
                         <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
@@ -173,52 +173,52 @@
                             <div id="backPreview" class="text-center py-1">
                                 <i class="fas fa-id-card text-gray-400"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Back Side</p>
+                            <p class="text-xs text-gray-500">Back Side *</p>
                             <input type="file" name="national_id_back" id="national_id_back" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
                         </div>
                     </div>
                 </div>
 
-                <!-- Bank Statement & Proof of Address - Side by Side -->
+                <!-- Optional: Bank Statement & Proof of Address - Side by Side -->
                 <div class="flex items-start mb-3">
-                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Bank Stmt *</label>
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Financial</label>
                     <div class="flex-1 grid grid-cols-2 gap-2">
-                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                        <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-2 text-center cursor-pointer hover:border-gray-400 transition"
                              onclick="document.getElementById('bank_statement').click()">
                             <div id="bankPreview" class="text-center py-1">
-                                <i class="fas fa-file-invoice-dollar text-gray-400"></i>
+                                <i class="fas fa-file-invoice-dollar text-gray-300"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Last 3 months</p>
-                            <input type="file" name="bank_statement" id="bank_statement" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <p class="text-xs text-gray-400">Bank Statement (opt)</p>
+                            <input type="file" name="bank_statement" id="bank_statement" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
-                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                        <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-2 text-center cursor-pointer hover:border-gray-400 transition"
                              onclick="document.getElementById('proof_of_address').click()">
                             <div id="addressPreview" class="text-center py-1">
-                                <i class="fas fa-home text-gray-400"></i>
+                                <i class="fas fa-home text-gray-300"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Address Proof *</p>
-                            <input type="file" name="proof_of_address" id="proof_of_address" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <p class="text-xs text-gray-400">Address Proof (opt)</p>
+                            <input type="file" name="proof_of_address" id="proof_of_address" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                     </div>
                 </div>
 
-                <!-- Guarantor Section -->
+                <!-- Optional: Guarantor Section -->
                 <div class="flex items-start mb-3">
-                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Guarantor *</label>
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Guarantor</label>
                     <div class="flex-1 grid grid-cols-3 gap-2">
-                        <input type="text" name="guarantor_name" required value="{{ old('guarantor_name') }}"
+                        <input type="text" name="guarantor_name" value="{{ old('guarantor_name') }}"
                                class="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="Full name">
-                        <input type="tel" name="guarantor_phone" required value="{{ old('guarantor_phone') }}"
+                               placeholder="Name (optional)">
+                        <input type="tel" name="guarantor_phone" value="{{ old('guarantor_phone') }}"
                                class="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                               placeholder="Phone">
-                        <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
+                               placeholder="Phone (optional)">
+                        <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-2 text-center cursor-pointer hover:border-gray-400 transition"
                              onclick="document.getElementById('guarantor_id').click()">
                             <div id="guarantorPreview" class="text-center">
-                                <i class="fas fa-id-badge text-gray-400 text-sm"></i>
+                                <i class="fas fa-id-badge text-gray-300 text-sm"></i>
                             </div>
-                            <p class="text-xs text-gray-500">ID</p>
-                            <input type="file" name="guarantor_id" id="guarantor_id" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <p class="text-xs text-gray-400">ID (opt)</p>
+                            <input type="file" name="guarantor_id" id="guarantor_id" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                     </div>
                 </div>
