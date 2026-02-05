@@ -570,6 +570,9 @@ Route::get('/categories', function () {
     }
 });
 
+// Subscription Plans (Public)
+Route::get('/subscription-plans', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'plans']);
+
 // Category with listings
 Route::get('/categories/{slug}', function ($slug) {
     try {
@@ -867,10 +870,22 @@ Route::get('/marketplace', function (Request $request) {
                 'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
                 'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
                 'is_verified' => $listing->user->is_admin_verified ?? false,
+                'subscription' => [
+                    'plan_name' => method_exists($listing->user->vendorProfile, 'getSubscriptionPlanNameAttribute')
+                        ? ($listing->user->vendorProfile->subscription_plan_name ?? 'Free')
+                        : 'Free',
+                    'badge_text' => method_exists($listing->user->vendorProfile, 'getSubscriptionBadge')
+                        ? $listing->user->vendorProfile->getSubscriptionBadge()
+                        : null,
+                    'has_paid_subscription' => method_exists($listing->user->vendorProfile, 'hasPaidSubscription')
+                        ? $listing->user->vendorProfile->hasPaidSubscription()
+                        : false,
+                ],
             ] : null,
             'average_rating' => $listing->average_rating ?? 0,
             'reviews_count' => $listing->reviews_count ?? 0,
             'is_active' => $listing->is_active,
+            'ranking_score' => $listing->ranking_score ?? null,
         ];
     });
 
@@ -931,14 +946,16 @@ Route::get('/marketplace/{id}', function ($id) {
     ]);
 });
 
-// Featured listings
+// Featured listings (ranked by subscription boost + organic score)
 Route::get('/featured-listings', function () {
-    $listings = Listing::with(['images', 'category', 'user.vendorProfile'])
+    $rankingService = app(\App\Services\ListingRankingService::class);
+
+    $query = Listing::query()
         ->where('is_active', true)
         ->whereHas('user', fn($q) => $q->where('is_active', true))
-        ->orderBy('created_at', 'desc')
-        ->limit(20)
-        ->get()
+        ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
+
+    $listings = $rankingService->getRankedListings($query, 20)
         ->map(function ($listing) {
             return [
                 'id' => $listing->id,
@@ -950,16 +967,29 @@ Route::get('/featured-listings', function () {
                 'images' => $listing->images ? $listing->images->map(function($image) {
                     return ['id' => $image->id, 'listing_id' => $image->listing_id, 'path' => $image->path, 'sort_order' => $image->sort_order ?? 0];
                 })->toArray() : [],
-                'vendor' => $listing->user && $listing->user->vendorProfile ? [
-                    'id' => $listing->user->vendorProfile->id,
-                    'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
-                    'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
-                    'is_verified' => $listing->user->is_admin_verified ?? false,
+                'vendor' => $listing->vendor ? [
+                    'id' => $listing->vendor->id,
+                    'business_name' => $listing->vendor->business_name ?? 'Vendor',
+                    'created_at' => $listing->vendor->created_at?->toIso8601String(),
+                    'is_verified' => $listing->vendor->user?->is_admin_verified ?? false,
+                    'subscription' => [
+                        'plan_name' => method_exists($listing->vendor, 'getSubscriptionPlanNameAttribute')
+                            ? ($listing->vendor->subscription_plan_name ?? 'Free')
+                            : 'Free',
+                        'badge_text' => method_exists($listing->vendor, 'getSubscriptionBadge')
+                            ? $listing->vendor->getSubscriptionBadge()
+                            : null,
+                        'has_paid_subscription' => method_exists($listing->vendor, 'hasPaidSubscription')
+                            ? $listing->vendor->hasPaidSubscription()
+                            : false,
+                    ],
                 ] : null,
                 'category' => $listing->category ? ['id' => $listing->category->id, 'name' => $listing->category->name] : null,
                 'average_rating' => $listing->average_rating ?? 0,
                 'reviews_count' => $listing->reviews_count ?? 0,
                 'is_active' => $listing->is_active,
+                'ranking_score' => $listing->ranking_score ?? 0,
+                'boost_multiplier' => $listing->boost_multiplier ?? 1.0,
             ];
         });
 
@@ -3190,6 +3220,19 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
         ]);
     });
 });
+
+// ==================== VENDOR SUBSCRIPTION ROUTES ====================
+Route::middleware('auth:sanctum')->prefix('vendor/subscription')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'current']);
+    Route::post('/subscribe', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'subscribe']);
+    Route::post('/cancel', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'cancel']);
+    Route::post('/toggle-auto-renew', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'toggleAutoRenew']);
+    Route::get('/history', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'paymentHistory']);
+});
+
+// Subscription payment callbacks (no auth - external redirects)
+Route::get('/vendor/subscription/payment-callback', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'paymentCallback']);
+Route::match(['get', 'post'], '/vendor/subscription/ipn', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'ipn']);
 
 // ==================== CHAT/MESSAGING ROUTES ====================
 Route::middleware('auth:sanctum')->prefix('chat')->group(function () {

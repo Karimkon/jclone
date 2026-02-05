@@ -574,8 +574,27 @@ Route::middleware(['auth'])->group(function () {
         $logs = \App\Models\ActivityLog::orderBy('created_at', 'desc')->paginate(20);
         return view('admin.activity-logs.index', compact('logs'));
     })->name('activity-logs');
+
+    // Subscription Management
+    Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'index'])->name('index');
+        Route::get('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'showSubscription'])->name('show');
+        Route::post('/{id}/extend', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'extendSubscription'])->name('extend');
+        Route::post('/{id}/cancel', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'cancelSubscription'])->name('cancel');
+        Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'export'])->name('export');
+        Route::get('/revenue/analytics', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'revenue'])->name('revenue');
     });
-    
+
+    // Subscription Plans Management
+    Route::prefix('subscription-plans')->name('subscriptions.plans.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'plans'])->name('index');
+        Route::post('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'storePlan'])->name('store');
+        Route::put('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'updatePlan'])->name('update');
+        Route::delete('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'destroyPlan'])->name('destroy');
+        Route::post('/{id}/toggle', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'togglePlanStatus'])->name('toggle');
+    });
+});
+
     // ====================
     // LOGISTICS ROUTES
     // ====================

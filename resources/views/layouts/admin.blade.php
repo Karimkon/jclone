@@ -1040,7 +1040,7 @@
                 </div>
 
                 <div class="nav-item">
-                    <a href="{{ route('admin.advertisements.index') }}" 
+                    <a href="{{ route('admin.advertisements.index') }}"
                        class="nav-link {{ request()->routeIs('admin.advertisements.*') ? 'active' : '' }}">
                         <div class="nav-icon">
                             <i class="fas fa-bullhorn"></i>
@@ -1049,8 +1049,23 @@
                         <div class="nav-tooltip">Advertisements</div>
                     </a>
                 </div>
+
+                <div class="nav-item">
+                    <a href="{{ route('admin.subscriptions.index') }}"
+                       class="nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <span class="nav-text">Subscriptions</span>
+                        @php $activeSubscriptions = \App\Models\VendorSubscription::where('status', 'active')->count(); @endphp
+                        @if($activeSubscriptions > 0)
+                            <span class="badge">{{ $activeSubscriptions }}</span>
+                        @endif
+                        <div class="nav-tooltip">Subscriptions</div>
+                    </a>
+                </div>
             </div>
-            
+
             <!-- Finance -->
             <div class="nav-section">
                 <div class="nav-section-title">FINANCE</div>

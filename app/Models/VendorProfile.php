@@ -237,6 +237,91 @@ public function getPerformanceAttribute()
 }
 
 /**
+ * Get all subscriptions for this vendor
+ */
+public function subscriptions()
+{
+    return $this->hasMany(VendorSubscription::class);
+}
+
+/**
+ * Get the active subscription for this vendor
+ */
+public function activeSubscription()
+{
+    return $this->hasOne(VendorSubscription::class)
+        ->where('status', 'active')
+        ->where('expires_at', '>', now())
+        ->latest();
+}
+
+/**
+ * Get subscription payments
+ */
+public function subscriptionPayments()
+{
+    return $this->hasMany(SubscriptionPayment::class);
+}
+
+/**
+ * Get the current active subscription instance
+ */
+public function getCurrentSubscriptionAttribute()
+{
+    return $this->activeSubscription;
+}
+
+/**
+ * Get the boost multiplier from the active subscription
+ */
+public function getBoostMultiplier(): float
+{
+    $subscription = $this->activeSubscription;
+
+    if ($subscription && $subscription->plan) {
+        return (float) $subscription->plan->boost_multiplier;
+    }
+
+    return 1.0; // Default for free/no subscription
+}
+
+/**
+ * Get the subscription badge text
+ */
+public function getSubscriptionBadge(): ?string
+{
+    $subscription = $this->activeSubscription;
+
+    if ($subscription && $subscription->plan && $subscription->plan->badge_enabled) {
+        return $subscription->plan->badge_text;
+    }
+
+    return null;
+}
+
+/**
+ * Check if vendor has an active paid subscription
+ */
+public function hasPaidSubscription(): bool
+{
+    $subscription = $this->activeSubscription;
+
+    return $subscription &&
+           $subscription->plan &&
+           !$subscription->plan->is_free_plan;
+}
+
+/**
+ * Get subscription plan name
+ */
+public function getSubscriptionPlanNameAttribute(): string
+{
+    $subscription = $this->activeSubscription;
+
+    return $subscription?->plan?->name ?? 'Free';
+}
+
+/**
  * Get vendor's delivery rating (star-based)
  */
 public function getDeliveryRatingAttribute()
