@@ -547,6 +547,19 @@
             <!-- More Section -->
             <div class="nav-section-title">More</div>
 
+            <a href="{{ route('vendor.subscription.index') }}" class="nav-item {{ request()->is('vendor/subscription*') ? 'active' : '' }}">
+                <i class="fas fa-crown"></i> Subscription
+                @php
+                    $vendorSub = auth()->user()->vendorProfile?->activeSubscription;
+                    $subPlan = $vendorSub?->plan;
+                @endphp
+                @if($subPlan && !$subPlan->is_free_plan)
+                    <span class="nav-badge {{ $subPlan->slug == 'gold' ? 'bg-yellow-500' : ($subPlan->slug == 'silver' ? 'bg-gray-400' : 'bg-orange-500') }}">
+                        {{ strtoupper(substr($subPlan->name, 0, 1)) }}
+                    </span>
+                @endif
+            </a>
+
             <a href="{{ route('vendor.services.reviews') }}" class="nav-item {{ request()->is('vendor/services/reviews*') ? 'active' : '' }}">
                 <i class="fas fa-star"></i> Reviews
             </a>

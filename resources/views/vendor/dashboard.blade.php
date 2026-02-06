@@ -6,10 +6,21 @@
 @section('content')
 <div class="space-y-6">
     <!-- Welcome Message -->
+    @php
+        $vendorSubscription = auth()->user()->vendorProfile?->activeSubscription;
+        $subPlan = $vendorSubscription?->plan;
+    @endphp
     <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white rounded-2xl p-6 shadow-lg shadow-purple-500/20">
         <div class="flex flex-col md:flex-row items-center justify-between">
             <div class="md:w-2/3">
-                <h2 class="text-2xl font-bold mb-2">Welcome back, {{ auth()->user()->name }}!</h2>
+                <div class="flex items-center gap-3 mb-2">
+                    <h2 class="text-2xl font-bold">Welcome back, {{ auth()->user()->name }}!</h2>
+                    @if($subPlan && !$subPlan->is_free_plan)
+                        <span class="px-3 py-1 {{ $subPlan->slug == 'gold' ? 'bg-yellow-500' : ($subPlan->slug == 'silver' ? 'bg-gray-400' : 'bg-orange-500') }} rounded-full text-xs font-bold">
+                            <i class="fas fa-crown mr-1"></i>{{ $subPlan->name }}
+                        </span>
+                    @endif
+                </div>
                 <p class="text-white/90 mb-4">Manage your store, track sales, and grow your business with BebaMart.</p>
                 <div class="flex flex-wrap gap-3">
                     <a href="{{ route('vendor.listings.create') }}"
@@ -112,10 +123,17 @@
                     <i class="fas fa-arrow-right ml-auto"></i>
                 </a>
                 
-                <a href="{{ route('vendor.promotions.index') }}" 
+                <a href="{{ route('vendor.promotions.index') }}"
                    class="flex items-center p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition">
                     <i class="fas fa-bullhorn mr-3 text-xl"></i>
                     <span>Create Promotion</span>
+                    <i class="fas fa-arrow-right ml-auto"></i>
+                </a>
+
+                <a href="{{ route('vendor.subscription.index') }}"
+                   class="flex items-center p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition">
+                    <i class="fas fa-crown mr-3 text-xl"></i>
+                    <span>Boost Visibility</span>
                     <i class="fas fa-arrow-right ml-auto"></i>
                 </a>
             </div>

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Listing;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection as BaseCollection;
 
 class ListingRankingService
 {
@@ -109,31 +110,103 @@ class ListingRankingService
     }
 
     /**
-     * Get ranked listings from a query
+     * Fair exposure ratio - ensures free vendors get at least this percentage of visibility
+     * For every 10 products, at least 3 will be from free vendors (if available)
+     */
+    protected const FREE_VENDOR_RATIO = 0.30; // 30% guaranteed for free vendors
+
+    /**
+     * Get ranked listings from a query with fair exposure
      *
      * @param Builder $query
      * @param int $limit
      * @return Collection
      */
-    public function getRankedListings(Builder $query, int $limit = 20): Collection
+    public function getRankedListings(Builder $query, int $limit = 20): BaseCollection
     {
-        // Get listings with vendor subscription data eagerly loaded
-        $listings = $query->with([
-            'vendor.activeSubscription.plan',
-            'images',
-            'reviews',
-        ])->get();
+        // Get listings - try to load subscription data, but don't fail if table doesn't exist
+        try {
+            $listings = $query->with([
+                'vendor.activeSubscription.plan',
+                'images',
+                'reviews',
+            ])->get();
+        } catch (\Exception $e) {
+            // Subscription tables might not exist, load without them
+            $listings = $query->with(['vendor', 'images', 'reviews'])->get();
+        }
 
-        // Calculate scores and sort
-        return $listings->map(function ($listing) {
-            $listing->organic_score = $this->calculateOrganicScore($listing);
-            $listing->ranking_score = $this->calculateFinalScore($listing);
-            $listing->boost_multiplier = $this->getBoostMultiplier($listing);
+        // Calculate scores for all listings
+        $scoredListings = $listings->map(function ($listing) {
+            try {
+                $listing->organic_score = $this->calculateOrganicScore($listing);
+                $listing->ranking_score = $this->calculateFinalScore($listing);
+                $listing->boost_multiplier = $this->getBoostMultiplier($listing);
+                $listing->is_boosted = $listing->boost_multiplier > 1.0;
+            } catch (\Exception $e) {
+                // If scoring fails, use defaults
+                $listing->organic_score = 50;
+                $listing->ranking_score = 50;
+                $listing->boost_multiplier = 1.0;
+                $listing->is_boosted = false;
+            }
             return $listing;
-        })
-        ->sortByDesc('ranking_score')
-        ->take($limit)
-        ->values();
+        });
+
+        // Separate boosted (paid) and non-boosted (free) listings
+        $boostedListings = $scoredListings->filter(fn($l) => $l->is_boosted)->sortByDesc('ranking_score');
+        $freeListings = $scoredListings->filter(fn($l) => !$l->is_boosted)->sortByDesc('organic_score');
+
+        // Apply fair exposure: interleave free vendors to guarantee visibility
+        return $this->interleaveWithFairExposure($boostedListings, $freeListings, $limit);
+    }
+
+    /**
+     * Interleave paid and free listings to ensure fair exposure
+     * Free vendors get at least 30% of slots (configurable via FREE_VENDOR_RATIO)
+     *
+     * @param Collection $boostedListings
+     * @param Collection $freeListings
+     * @param int $limit
+     * @return Collection
+     */
+    protected function interleaveWithFairExposure(Collection $boostedListings, Collection $freeListings, int $limit): BaseCollection
+    {
+        $result = collect();
+        $boostedIndex = 0;
+        $freeIndex = 0;
+        $boostedCount = $boostedListings->count();
+        $freeCount = $freeListings->count();
+
+        // Calculate how many free slots we need to guarantee
+        $guaranteedFreeSlots = (int) ceil($limit * self::FREE_VENDOR_RATIO);
+        $freeSlotInterval = $guaranteedFreeSlots > 0 ? max(1, (int) floor($limit / $guaranteedFreeSlots)) : $limit + 1;
+        $freeSlotsUsed = 0;
+
+        for ($i = 0; $i < $limit; $i++) {
+            // Every Nth position (e.g., every 3rd), insert a free vendor listing
+            $shouldInsertFree = ($i > 0 && $i % $freeSlotInterval === 0 && $freeSlotsUsed < $guaranteedFreeSlots);
+
+            if ($shouldInsertFree && $freeIndex < $freeCount) {
+                // Insert free vendor listing
+                $result->push($freeListings->values()[$freeIndex]);
+                $freeIndex++;
+                $freeSlotsUsed++;
+            } elseif ($boostedIndex < $boostedCount) {
+                // Insert boosted (paid) listing
+                $result->push($boostedListings->values()[$boostedIndex]);
+                $boostedIndex++;
+            } elseif ($freeIndex < $freeCount) {
+                // No more boosted listings, fill with free
+                $result->push($freeListings->values()[$freeIndex]);
+                $freeIndex++;
+            } else {
+                // No more listings available
+                break;
+            }
+        }
+
+        return $result->values();
     }
 
     /**
@@ -170,12 +243,15 @@ class ListingRankingService
      * @param int $limit
      * @return Collection
      */
-    public function searchWithRanking(Builder $query, ?string $searchTerm = null, int $limit = 20): Collection
+    public function searchWithRanking(Builder $query, ?string $searchTerm = null, int $limit = 20): BaseCollection
     {
         if ($searchTerm) {
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('title', 'LIKE', "%{$searchTerm}%")
-                  ->orWhere('description', 'LIKE', "%{$searchTerm}%");
+                  ->orWhere('description', 'LIKE', "%{$searchTerm}%")
+                  ->orWhereHas('vendor', function ($vq) use ($searchTerm) {
+                      $vq->where('business_name', 'LIKE', "%{$searchTerm}%");
+                  });
             });
         }
 
@@ -188,7 +264,7 @@ class ListingRankingService
      * @param int $limit
      * @return Collection
      */
-    public function getFeaturedListings(int $limit = 10): Collection
+    public function getFeaturedListings(int $limit = 10): BaseCollection
     {
         $query = Listing::query()
             ->where('is_active', true)
@@ -207,7 +283,7 @@ class ListingRankingService
      * @param int $limit
      * @return Collection
      */
-    public function getListingsByCategory(int $categoryId, int $limit = 20): Collection
+    public function getListingsByCategory(int $categoryId, int $limit = 20): BaseCollection
     {
         $query = Listing::query()
             ->where('is_active', true)

@@ -19,13 +19,13 @@ class JobsServicesController extends Controller
     // ==========================================
 
     /**
-     * Jobs listing page
+     * Jobs listing page - WITH SUBSCRIPTION RANKING
      */
     public function jobs(Request $request)
     {
         $query = JobListing::active()
             ->notExpired()
-            ->with(['vendor', 'category']);
+            ->with(['vendor.activeSubscription.plan', 'category']);
 
         // Filters
         if ($request->filled('category')) {
@@ -41,22 +41,66 @@ class JobsServicesController extends Controller
             $query->where('is_remote', true);
         }
         if ($request->filled('q')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->q}%")
-                  ->orWhere('description', 'like', "%{$request->q}%");
+            $searchTerm = $request->q;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%")
+                  ->orWhereHas('vendor', function ($vq) use ($searchTerm) {
+                      $vq->where('business_name', 'like', "%{$searchTerm}%");
+                  });
             });
         }
 
-        // Sorting
-        $sort = $request->get('sort', 'newest');
-        match ($sort) {
-            'salary_high' => $query->orderByDesc('salary_max'),
-            'salary_low' => $query->orderBy('salary_min'),
-            'urgent' => $query->orderByDesc('is_urgent')->orderByDesc('created_at'),
-            default => $query->orderByDesc('is_featured')->orderByDesc('created_at'),
-        };
+        // Sorting with subscription ranking as default
+        $sort = $request->get('sort', 'recommended');
 
-        $jobs = $query->paginate(20)->withQueryString();
+        if ($sort === 'recommended') {
+            // Apply subscription-based ranking
+            $allJobs = $query->get()->map(function($job) {
+                $boost = ($job->vendor && method_exists($job->vendor, 'getBoostMultiplier'))
+                    ? $job->vendor->getBoostMultiplier()
+                    : 1.0;
+                $job->boost_multiplier = $boost;
+                $job->is_promoted = $boost > 1.0;
+                return $job;
+            });
+
+            // Separate boosted and free, then interleave
+            $boosted = $allJobs->filter(fn($j) => $j->is_promoted)->sortByDesc('boost_multiplier');
+            $free = $allJobs->filter(fn($j) => !$j->is_promoted)->sortByDesc('created_at');
+
+            $result = collect();
+            $bIdx = 0; $fIdx = 0;
+            $total = $boosted->count() + $free->count();
+            for ($i = 0; $i < $total; $i++) {
+                if ($i > 0 && $i % 3 === 0 && $fIdx < $free->count()) {
+                    $result->push($free->values()[$fIdx++]);
+                } elseif ($bIdx < $boosted->count()) {
+                    $result->push($boosted->values()[$bIdx++]);
+                } elseif ($fIdx < $free->count()) {
+                    $result->push($free->values()[$fIdx++]);
+                }
+            }
+
+            $page = $request->get('page', 1);
+            $perPage = 20;
+            $jobs = new \Illuminate\Pagination\LengthAwarePaginator(
+                $result->forPage($page, $perPage),
+                $result->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            match ($sort) {
+                'salary_high' => $query->orderByDesc('salary_max'),
+                'salary_low' => $query->orderBy('salary_min'),
+                'urgent' => $query->orderByDesc('is_urgent')->orderByDesc('created_at'),
+                'newest' => $query->orderByDesc('created_at'),
+                default => $query->orderByDesc('is_featured')->orderByDesc('created_at'),
+            };
+            $jobs = $query->paginate(20)->withQueryString();
+        }
 
         $categories = ServiceCategory::active()->forJobs()->withCount([
             'jobs' => fn($q) => $q->active()->notExpired()
@@ -144,12 +188,12 @@ class JobsServicesController extends Controller
     // ==========================================
 
     /**
-     * Services listing page
+     * Services listing page - WITH SUBSCRIPTION RANKING
      */
     public function services(Request $request)
     {
         $query = VendorService::active()
-            ->with(['vendor', 'category'])
+            ->with(['vendor.activeSubscription.plan', 'category'])
             ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
 
         // Filters
@@ -166,23 +210,66 @@ class JobsServicesController extends Controller
             $query->where(fn($q) => $q->where('price', '<=', $request->price_max)->orWhereNull('price'));
         }
         if ($request->filled('q')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('title', 'like', "%{$request->q}%")
-                  ->orWhere('description', 'like', "%{$request->q}%");
+            $searchTerm = $request->q;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('title', 'like', "%{$searchTerm}%")
+                  ->orWhere('description', 'like', "%{$searchTerm}%")
+                  ->orWhereHas('vendor', function ($vq) use ($searchTerm) {
+                      $vq->where('business_name', 'like', "%{$searchTerm}%");
+                  });
             });
         }
 
-        // Sorting
-        $sort = $request->get('sort', 'popular');
-        match ($sort) {
-            'price_low' => $query->orderBy('price'),
-            'price_high' => $query->orderByDesc('price'),
-            'rating' => $query->orderByDesc('average_rating'),
-            'newest' => $query->orderByDesc('created_at'),
-            default => $query->orderByDesc('views_count'),
-        };
+        // Sorting with subscription ranking as default
+        $sort = $request->get('sort', 'recommended');
 
-        $services = $query->paginate(20)->withQueryString();
+        if ($sort === 'recommended' || $sort === 'popular') {
+            // Apply subscription-based ranking
+            $allServices = $query->get()->map(function($service) {
+                $boost = ($service->vendor && method_exists($service->vendor, 'getBoostMultiplier'))
+                    ? $service->vendor->getBoostMultiplier()
+                    : 1.0;
+                $service->boost_multiplier = $boost;
+                $service->is_promoted = $boost > 1.0;
+                return $service;
+            });
+
+            // Separate boosted and free, then interleave
+            $boosted = $allServices->filter(fn($s) => $s->is_promoted)->sortByDesc('boost_multiplier');
+            $free = $allServices->filter(fn($s) => !$s->is_promoted)->sortByDesc('views_count');
+
+            $result = collect();
+            $bIdx = 0; $fIdx = 0;
+            $total = $boosted->count() + $free->count();
+            for ($i = 0; $i < $total; $i++) {
+                if ($i > 0 && $i % 3 === 0 && $fIdx < $free->count()) {
+                    $result->push($free->values()[$fIdx++]);
+                } elseif ($bIdx < $boosted->count()) {
+                    $result->push($boosted->values()[$bIdx++]);
+                } elseif ($fIdx < $free->count()) {
+                    $result->push($free->values()[$fIdx++]);
+                }
+            }
+
+            $page = $request->get('page', 1);
+            $perPage = 20;
+            $services = new \Illuminate\Pagination\LengthAwarePaginator(
+                $result->forPage($page, $perPage),
+                $result->count(),
+                $perPage,
+                $page,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            match ($sort) {
+                'price_low' => $query->orderBy('price'),
+                'price_high' => $query->orderByDesc('price'),
+                'rating' => $query->orderByDesc('average_rating'),
+                'newest' => $query->orderByDesc('created_at'),
+                default => $query->orderByDesc('views_count'),
+            };
+            $services = $query->paginate(20)->withQueryString();
+        }
 
         $categories = ServiceCategory::active()->forServices()->withCount([
             'services' => fn($q) => $q->active()

@@ -411,7 +411,16 @@ Route::middleware(['auth'])->group(function () {
         // Vendor profile
         Route::get('/profile', [\App\Http\Controllers\Vendor\VendorProfileController::class, 'show'])->name('profile.show');
         Route::put('/profile', [\App\Http\Controllers\Vendor\VendorProfileController::class, 'update'])->name('profile.update');
-        
+
+        // Vendor subscription
+        Route::prefix('subscription')->name('subscription.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Vendor\VendorSubscriptionController::class, 'index'])->name('index');
+            Route::post('/subscribe', [\App\Http\Controllers\Vendor\VendorSubscriptionController::class, 'subscribe'])->name('subscribe');
+            Route::get('/callback', [\App\Http\Controllers\Vendor\VendorSubscriptionController::class, 'paymentCallback'])->name('callback');
+            Route::post('/toggle-auto-renew', [\App\Http\Controllers\Vendor\VendorSubscriptionController::class, 'toggleAutoRenew'])->name('toggle-auto-renew');
+            Route::post('/cancel', [\App\Http\Controllers\Vendor\VendorSubscriptionController::class, 'cancel'])->name('cancel');
+        });
+
         // Vendor analytics
         Route::get('/analytics', function () {
             return view('vendor.analytics.index');

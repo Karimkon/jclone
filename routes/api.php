@@ -573,35 +573,46 @@ Route::get('/categories', function () {
 // Subscription Plans (Public)
 Route::get('/subscription-plans', [\App\Http\Controllers\Marketplace\SubscriptionController::class, 'plans']);
 
-// Category with listings
+// Category with listings - WITH SUBSCRIPTION RANKING
 Route::get('/categories/{slug}', function ($slug) {
     try {
+        // Use ranking service for subscription-boosted sorting
+        $rankingService = app(\App\Services\ListingRankingService::class);
+
         $category = Category::where('slug', $slug)
             ->where('is_active', true)
             ->with(['children' => function($query) {
                 $query->where('is_active', true);
             }])
             ->first();
-        
+
         if (!$category) {
             return response()->json([
                 'success' => false,
                 'message' => 'Category not found',
             ], 404);
         }
-        
+
         $categoryIds = [$category->id];
         if ($category->children->isNotEmpty()) {
             $categoryIds = array_merge($categoryIds, $category->children->pluck('id')->toArray());
         }
-        
-        $listings = Listing::with(['images', 'category', 'user.vendorProfile'])
+
+        // Build query
+        $query = Listing::with(['images', 'category', 'user.vendorProfile'])
             ->whereIn('category_id', $categoryIds)
             ->where('is_active', true)
-            ->whereHas('user', fn($q) => $q->where('is_active', true))
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($listing) {
+            ->whereHas('user', fn($q) => $q->where('is_active', true));
+
+        // Try to apply ranking, fall back to simple sort if it fails
+        try {
+            $rankedListings = $rankingService->getRankedListings($query, 100);
+        } catch (\Exception $e) {
+            // Ranking failed, use simple sort
+            $rankedListings = $query->orderBy('created_at', 'desc')->limit(100)->get();
+        }
+
+        $listings = $rankedListings->map(function ($listing) {
                 return [
                     'id' => $listing->id,
                     'vendor_profile_id' => $listing->vendor_profile_id ?? 1,
@@ -624,6 +635,17 @@ Route::get('/categories/{slug}', function ($slug) {
                         'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
                         'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
                         'is_verified' => $listing->user->is_admin_verified ?? false,
+                        'subscription' => [
+                            'plan_name' => method_exists($listing->user->vendorProfile, 'getSubscriptionPlanNameAttribute')
+                                ? ($listing->user->vendorProfile->subscription_plan_name ?? 'Free')
+                                : 'Free',
+                            'badge_text' => method_exists($listing->user->vendorProfile, 'getSubscriptionBadge')
+                                ? $listing->user->vendorProfile->getSubscriptionBadge()
+                                : null,
+                            'has_paid_subscription' => method_exists($listing->user->vendorProfile, 'hasPaidSubscription')
+                                ? $listing->user->vendorProfile->hasPaidSubscription()
+                                : false,
+                        ],
                     ] : null,
                     'category' => $listing->category ? [
                         'id' => $listing->category->id,
@@ -634,6 +656,8 @@ Route::get('/categories/{slug}', function ($slug) {
                     'reviews_count' => $listing->reviews_count ?? 0,
                     'stock' => $listing->stock,
                     'is_active' => $listing->is_active,
+                    'ranking_score' => $listing->ranking_score ?? null,
+                    'boost_multiplier' => $listing->boost_multiplier ?? 1.0,
                 ];
             })->values();
         
@@ -709,18 +733,57 @@ Route::get('/service-categories', function (Request $request) {
     ]);
 });
 
+// Services with subscription-based ranking (FAIL-SAFE)
 Route::get('/marketplace/services', function (Request $request) {
     try {
-        $query = \App\Models\VendorService::active()
+        $services = \App\Models\VendorService::active()
             ->with(['vendor', 'category'])
-            ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
-            
+            ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'))
+            ->get()
+            ->map(function($service) {
+                // Calculate boost from vendor subscription (safely)
+                $boostMultiplier = 1.0;
+                try {
+                    if ($service->vendor && method_exists($service->vendor, 'getBoostMultiplier')) {
+                        $boostMultiplier = $service->vendor->getBoostMultiplier();
+                    }
+                } catch (\Exception $e) {
+                    $boostMultiplier = 1.0;
+                }
+                $service->boost_multiplier = $boostMultiplier;
+                $service->is_boosted = $boostMultiplier > 1.0;
+                return $service;
+            });
+
+        // Separate boosted and free services
+        $boosted = $services->filter(fn($s) => $s->is_boosted)->sortByDesc('boost_multiplier');
+        $free = $services->filter(fn($s) => !$s->is_boosted)->sortByDesc('created_at');
+
+        // Interleave with fair exposure (30% for free vendors)
+        $result = collect();
+        $bIdx = 0; $fIdx = 0;
+        $bCount = $boosted->count(); $fCount = $free->count();
+        $total = $bCount + $fCount;
+        $freeInterval = 3; // Every 3rd slot for free vendors
+
+        for ($i = 0; $i < $total; $i++) {
+            if ($i > 0 && $i % $freeInterval === 0 && $fIdx < $fCount) {
+                $result->push($free->values()[$fIdx++]);
+            } elseif ($bIdx < $bCount) {
+                $result->push($boosted->values()[$bIdx++]);
+            } elseif ($fIdx < $fCount) {
+                $result->push($free->values()[$fIdx++]);
+            }
+        }
+
+        // Paginate
         $perPage = $request->get('per_page', 10);
-        $services = $query->latest()->paginate($perPage);
-        
+        $page = $request->get('page', 1);
+        $paginated = $result->forPage($page, $perPage);
+
         return response()->json([
             'success' => true,
-            'data' => $services->getCollection()->map(function($service) {
+            'data' => $paginated->map(function($service) {
                 return [
                     'id' => $service->id,
                     'title' => $service->title,
@@ -733,18 +796,32 @@ Route::get('/marketplace/services', function (Request $request) {
                     'vendor' => [
                         'id' => $service->vendor->id,
                         'business_name' => $service->vendor->business_name,
+                        'subscription' => [
+                            'plan_name' => method_exists($service->vendor, 'getSubscriptionPlanNameAttribute')
+                                ? ($service->vendor->subscription_plan_name ?? 'Free')
+                                : 'Free',
+                            'badge_text' => method_exists($service->vendor, 'getSubscriptionBadge')
+                                ? $service->vendor->getSubscriptionBadge()
+                                : null,
+                            'has_paid_subscription' => method_exists($service->vendor, 'hasPaidSubscription')
+                                ? $service->vendor->hasPaidSubscription()
+                                : false,
+                        ],
                     ],
                     'category' => $service->category ? [
                         'id' => $service->category->id,
                         'name' => $service->category->name,
                         'slug' => $service->category->slug,
                     ] : null,
+                    'boost_multiplier' => $service->boost_multiplier ?? 1.0,
+                    'is_promoted' => $service->is_boosted ?? false,
                 ];
-            }),
+            })->values(),
             'meta' => [
-                'current_page' => $services->currentPage(),
-                'last_page' => $services->lastPage(),
-                'total' => $services->total(),
+                'current_page' => (int)$page,
+                'last_page' => (int)ceil($result->count() / $perPage),
+                'per_page' => (int)$perPage,
+                'total' => $result->count(),
             ]
         ]);
     } catch (\Exception $e) {
@@ -752,16 +829,56 @@ Route::get('/marketplace/services', function (Request $request) {
     }
 });
 
+// Jobs with subscription-based ranking (FAIL-SAFE)
 Route::get('/marketplace/jobs', function (Request $request) {
     try {
-        $query = \App\Models\JobListing::active()->notExpired()->with(['vendor', 'category']);
-        
+        $jobs = \App\Models\JobListing::active()->notExpired()
+            ->with(['vendor', 'category'])
+            ->get()
+            ->map(function($job) {
+                // Calculate boost from vendor subscription (safely)
+                $boostMultiplier = 1.0;
+                try {
+                    if ($job->vendor && method_exists($job->vendor, 'getBoostMultiplier')) {
+                        $boostMultiplier = $job->vendor->getBoostMultiplier();
+                    }
+                } catch (\Exception $e) {
+                    $boostMultiplier = 1.0;
+                }
+                $job->boost_multiplier = $boostMultiplier;
+                $job->is_boosted = $boostMultiplier > 1.0;
+                return $job;
+            });
+
+        // Separate boosted and free jobs
+        $boosted = $jobs->filter(fn($j) => $j->is_boosted)->sortByDesc('boost_multiplier');
+        $free = $jobs->filter(fn($j) => !$j->is_boosted)->sortByDesc('created_at');
+
+        // Interleave with fair exposure (30% for free vendors)
+        $result = collect();
+        $bIdx = 0; $fIdx = 0;
+        $bCount = $boosted->count(); $fCount = $free->count();
+        $total = $bCount + $fCount;
+        $freeInterval = 3;
+
+        for ($i = 0; $i < $total; $i++) {
+            if ($i > 0 && $i % $freeInterval === 0 && $fIdx < $fCount) {
+                $result->push($free->values()[$fIdx++]);
+            } elseif ($bIdx < $bCount) {
+                $result->push($boosted->values()[$bIdx++]);
+            } elseif ($fIdx < $fCount) {
+                $result->push($free->values()[$fIdx++]);
+            }
+        }
+
+        // Paginate
         $perPage = $request->get('per_page', 10);
-        $jobs = $query->latest()->paginate($perPage);
-        
+        $page = $request->get('page', 1);
+        $paginated = $result->forPage($page, $perPage);
+
         return response()->json([
             'success' => true,
-            'data' => $jobs->getCollection()->map(function($job) {
+            'data' => $paginated->map(function($job) {
                 return [
                     'id' => $job->id,
                     'title' => $job->title,
@@ -777,18 +894,32 @@ Route::get('/marketplace/jobs', function (Request $request) {
                     'vendor' => [
                         'id' => $job->vendor->id,
                         'business_name' => $job->vendor->business_name,
+                        'subscription' => [
+                            'plan_name' => method_exists($job->vendor, 'getSubscriptionPlanNameAttribute')
+                                ? ($job->vendor->subscription_plan_name ?? 'Free')
+                                : 'Free',
+                            'badge_text' => method_exists($job->vendor, 'getSubscriptionBadge')
+                                ? $job->vendor->getSubscriptionBadge()
+                                : null,
+                            'has_paid_subscription' => method_exists($job->vendor, 'hasPaidSubscription')
+                                ? $job->vendor->hasPaidSubscription()
+                                : false,
+                        ],
                     ],
                     'category' => $job->category ? [
                         'id' => $job->category->id,
                         'name' => $job->category->name,
                         'slug' => $job->category->slug,
                     ] : null,
+                    'boost_multiplier' => $job->boost_multiplier ?? 1.0,
+                    'is_promoted' => $job->is_boosted ?? false,
                 ];
-            }),
+            })->values(),
             'meta' => [
-                'current_page' => $jobs->currentPage(),
-                'last_page' => $jobs->lastPage(),
-                'total' => $jobs->total(),
+                'current_page' => (int)$page,
+                'last_page' => (int)ceil($result->count() / $perPage),
+                'per_page' => (int)$perPage,
+                'total' => $result->count(),
             ]
         ]);
     } catch (\Exception $e) {
@@ -796,49 +927,85 @@ Route::get('/marketplace/jobs', function (Request $request) {
     }
 });
 
-// Marketplace/Listings (Public)
+// Marketplace/Listings (Public) - WITH SUBSCRIPTION RANKING (FAIL-SAFE)
 Route::get('/marketplace', function (Request $request) {
-    $query = Listing::with(['category', 'user.vendorProfile', 'images'])
-        ->where('is_active', true)
-        ->whereHas('user', fn($q) => $q->where('is_active', true));
+    try {
+        $query = Listing::with(['category', 'user.vendorProfile', 'images'])
+            ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true));
 
-    if ($request->has('search')) {
-        $search = $request->search;
-        $query->where(function ($q) use ($search) {
-            $q->where('title', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%");
-        });
-    }
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhereHas('user.vendorProfile', function ($vq) use ($search) {
+                      $vq->where('business_name', 'like', "%{$search}%");
+                  });
+            });
+        }
 
-    if ($request->has('category_id')) {
-        $query->where('category_id', $request->category_id);
-    }
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
 
-    // Exclude specific product (for related products)
-    if ($request->has('exclude')) {
-        $query->where('id', '!=', $request->exclude);
-    }
+        // Exclude specific product (for related products)
+        if ($request->has('exclude')) {
+            $query->where('id', '!=', $request->exclude);
+        }
 
-    // Filter by vendor
-    if ($request->has('vendor_id')) {
-        $query->whereHas('user.vendorProfile', function($q) use ($request) {
-            $q->where('id', $request->vendor_id);
-        });
-    }
+        // Filter by vendor
+        if ($request->has('vendor_id')) {
+            $query->whereHas('user.vendorProfile', function($q) use ($request) {
+                $q->where('id', $request->vendor_id);
+            });
+        }
 
-    if ($request->has('min_price')) {
-        $query->where('price', '>=', $request->min_price);
-    }
-    if ($request->has('max_price')) {
-        $query->where('price', '<=', $request->max_price);
-    }
+        if ($request->has('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->has('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
 
-    $sortBy = $request->get('sort_by', 'created_at');
-    $sortOrder = $request->get('sort_order', 'desc');
-    $query->orderBy($sortBy, $sortOrder);
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $perPage = $request->get('per_page', 20);
 
-    $perPage = $request->get('per_page', 20);
-    $listings = $query->paginate($perPage);
+        // Try to use ranking service, fall back to simple sorting if it fails
+        $useRanking = ($sortBy === 'ranking' || $sortBy === 'recommended');
+
+        if ($useRanking) {
+            try {
+                $rankingService = app(\App\Services\ListingRankingService::class);
+                $page = $request->get('page', 1);
+                $ranked = $rankingService->getRankedListingsPaginated($query, $perPage, $page);
+                $listings = collect($ranked['data']);
+                $meta = [
+                    'current_page' => $ranked['current_page'],
+                    'last_page' => $ranked['last_page'],
+                    'per_page' => $ranked['per_page'],
+                    'total' => $ranked['total'],
+                ];
+            } catch (\Exception $e) {
+                // Ranking failed, fall back to simple sorting
+                \Log::warning('Ranking service failed: ' . $e->getMessage());
+                $useRanking = false;
+            }
+        }
+
+        if (!$useRanking) {
+            // Simple sorting (fallback or explicit)
+            $query->orderBy($sortBy === 'ranking' ? 'created_at' : $sortBy, $sortOrder);
+            $paginated = $query->paginate($perPage);
+            $listings = $paginated->getCollection();
+            $meta = [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ];
+        }
 
     $data = $listings->map(function ($listing) {
         return [
@@ -880,25 +1047,33 @@ Route::get('/marketplace', function (Request $request) {
                     'has_paid_subscription' => method_exists($listing->user->vendorProfile, 'hasPaidSubscription')
                         ? $listing->user->vendorProfile->hasPaidSubscription()
                         : false,
+                    'boost_multiplier' => method_exists($listing->user->vendorProfile, 'getBoostMultiplier')
+                        ? $listing->user->vendorProfile->getBoostMultiplier()
+                        : 1.0,
                 ],
             ] : null,
             'average_rating' => $listing->average_rating ?? 0,
             'reviews_count' => $listing->reviews_count ?? 0,
             'is_active' => $listing->is_active,
             'ranking_score' => $listing->ranking_score ?? null,
+            'boost_multiplier' => $listing->boost_multiplier ?? 1.0,
+            'is_promoted' => ($listing->boost_multiplier ?? 1.0) > 1.0, // For badge display in app
         ];
     });
 
-    return response()->json([
-        'success' => true,
-        'data' => $data,
-        'meta' => [
-            'current_page' => $listings->currentPage(),
-            'last_page' => $listings->lastPage(),
-            'per_page' => $listings->perPage(),
-            'total' => $listings->total(),
-        ],
-    ]);
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'meta' => $meta,
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Marketplace API error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to load products',
+            'error' => config('app.debug') ? $e->getMessage() : null,
+        ], 500);
+    }
 });
 
 Route::get('/marketplace/{id}', function ($id) {
@@ -948,14 +1123,27 @@ Route::get('/marketplace/{id}', function ($id) {
 
 // Featured listings (ranked by subscription boost + organic score)
 Route::get('/featured-listings', function () {
-    $rankingService = app(\App\Services\ListingRankingService::class);
+    try {
+        $rankingService = app(\App\Services\ListingRankingService::class);
 
-    $query = Listing::query()
-        ->where('is_active', true)
-        ->whereHas('user', fn($q) => $q->where('is_active', true))
-        ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
+        $query = Listing::query()
+            ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
+            ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'));
 
-    $listings = $rankingService->getRankedListings($query, 20)
+        $listings = $rankingService->getRankedListings($query, 20);
+    } catch (\Exception $e) {
+        // Ranking failed, fall back to simple query
+        $listings = Listing::with(['images', 'vendor'])
+            ->where('is_active', true)
+            ->whereHas('user', fn($q) => $q->where('is_active', true))
+            ->whereHas('vendor', fn($q) => $q->where('vetting_status', 'approved'))
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get();
+    }
+
+    $listings = $listings
         ->map(function ($listing) {
             return [
                 'id' => $listing->id,
@@ -3357,6 +3545,16 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         $vendorProfileId = $request->vendor_profile_id;
         $listingId = $request->listing_id;
 
+        // Prevent users from messaging their own vendor profile
+        $targetVendor = \DB::table('vendor_profiles')->where('id', $vendorProfileId)->first();
+        if ($targetVendor && $targetVendor->user_id == $user->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'You cannot message yourself',
+            ], 400);
+        }
+
+        try {
         // Check if conversation already exists between these participants
         $existing = \DB::table('conversations')
             ->where('buyer_id', $user->id)
@@ -3421,6 +3619,13 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             'conversation_id' => $conversationId,
             'message' => $existing ? 'Existing conversation found' : 'Conversation created',
         ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to start conversation: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start conversation. Please try again.',
+            ], 500);
+        }
     });
 
     // Vendor starts conversation with buyer (for order inquiries)

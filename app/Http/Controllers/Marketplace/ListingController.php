@@ -13,28 +13,34 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Services\ListingRankingService;
 
 class ListingController extends Controller
 {
     /**
-     * Display public marketplace
+     * Display public marketplace - WITH SUBSCRIPTION RANKING
      */
     public function indexPublic(Request $request)
     {
-        $query = Listing::with(['images', 'vendor.user', 'category'])
+        $rankingService = app(ListingRankingService::class);
+
+        $query = Listing::with(['images', 'vendor.user', 'vendor.activeSubscription.plan', 'category'])
             ->where('is_active', true)
             ->whereHas('user', fn($q) => $q->where('is_active', true));
-        
-        // Search filter
+
+        // Search filter - searches products AND vendor/business names
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
                   ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                  ->orWhere('sku', 'like', "%{$search}%")
+                  ->orWhereHas('vendor', function ($vq) use ($search) {
+                      $vq->where('business_name', 'like', "%{$search}%");
+                  });
             });
         }
-        
+
         // Category filter
         $selectedCategory = null;
         if ($request->has('category') && $request->category) {
@@ -49,12 +55,12 @@ class ListingController extends Controller
         if ($request->has('origin') && $request->origin) {
             $query->where('origin', $request->origin);
         }
-        
+
         // Condition filter
         if ($request->has('condition') && $request->condition) {
             $query->where('condition', $request->condition);
         }
-        
+
         // Price range filter
         if ($request->has('min_price') && $request->min_price) {
             $query->where('price', '>=', $request->min_price);
@@ -62,25 +68,37 @@ class ListingController extends Controller
         if ($request->has('max_price') && $request->max_price) {
             $query->where('price', '<=', $request->max_price);
         }
-        
-        // Sort options
-        $sort = $request->get('sort', 'newest');
-        switch ($sort) {
-            case 'price_low':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_high':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'popular':
-                // In real app, you'd sort by views/sales
-                $query->orderBy('created_at', 'desc');
-                break;
-            default:
-                $query->orderBy('created_at', 'desc');
+
+        // Sort options - DEFAULT is now 'recommended' (subscription-boosted ranking)
+        $sort = $request->get('sort', 'recommended');
+        $page = $request->get('page', 1);
+        $perPage = 24;
+
+        if ($sort === 'recommended' || $sort === 'popular') {
+            // Use ranking service for subscription-boosted sorting
+            $ranked = $rankingService->getRankedListingsPaginated($query, $perPage, $page);
+            $listings = new \Illuminate\Pagination\LengthAwarePaginator(
+                $ranked['data'],
+                $ranked['total'],
+                $ranked['per_page'],
+                $ranked['current_page'],
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            // Traditional sorting (price, newest)
+            switch ($sort) {
+                case 'price_low':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'newest':
+                default:
+                    $query->orderBy('created_at', 'desc');
+            }
+            $listings = $query->paginate($perPage);
         }
-        
-        $listings = $query->paginate(24);
          $categories = Category::where('is_active', true)
         ->whereNull('parent_id')
         ->with(['children' => function($query) {

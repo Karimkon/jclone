@@ -43,10 +43,25 @@
     </script>
     
     <style>
-        
+
         * { -webkit-font-smoothing: antialiased; }
         body { font-family: 'Outfit', sans-serif; }
         h1, h2, h3, h4, h5, h6, .font-display { font-family: 'Sora', sans-serif; }
+
+        /* Search input text visibility fix */
+        #desktopSearchInput,
+        #mobileSearchInput,
+        input[name="search"] {
+            color: #0f172a !important;
+            caret-color: #0f172a !important;
+            -webkit-text-fill-color: #0f172a !important;
+        }
+        #desktopSearchInput::placeholder,
+        #mobileSearchInput::placeholder,
+        input[name="search"]::placeholder {
+            color: #94a3b8 !important;
+            -webkit-text-fill-color: #94a3b8 !important;
+        }
         
         /* Category Sidebar with Subcategory on Hover - FIXED Z-INDEX */
         .cat-sidebar-item { 
@@ -613,14 +628,17 @@ main {
 </a>
             
             <!-- Search - IMPROVED WITH FORM -->
-            <div class="hidden md:flex flex-1 max-w-xl mx-6">
+            <div class="hidden md:flex flex-1 max-w-xl mx-6 relative z-40">
                 <form method="GET" action="{{ route('marketplace.index') }}" class="relative w-full" id="searchForm">
-                    <input type="text" 
-                           name="search" 
-                           placeholder="Search products, brands, categories..." 
-                           class="w-full pl-10 pr-24 py-3 bg-ink-50 border border-ink-200 rounded-xl focus:border-brand-500 focus:bg-white focus:outline-none transition text-sm"
+                    <input type="text"
+                           name="search"
+                           id="desktopSearchInput"
+                           autocomplete="off"
+                           placeholder="Search products, brands, categories..."
+                           class="w-full pl-10 pr-24 py-3 bg-ink-50 border border-ink-200 rounded-xl focus:border-brand-500 focus:bg-white focus:outline-none transition text-sm text-ink-900"
+                           style="color: #0f172a !important; caret-color: #0f172a;"
                            value="{{ request('search') ?? '' }}">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"></i>
+                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none"></i>
                     <button type="submit" class="absolute right-1.5 top-1/2 -translate-y-1/2 btn-primary px-4 py-2 rounded-lg font-semibold text-sm">Search</button>
                 </form>
             </div>
@@ -719,13 +737,16 @@ main {
     
     <!-- Mobile Search - IMPROVED WITH FORM -->
     <div class="md:hidden px-4 py-2 bg-ink-50 border-t">
-        <form method="GET" action="{{ route('marketplace.index') }}" class="relative">
-            <input type="text" 
-                   name="search" 
-                   placeholder="Search products..." 
-                   class="w-full pl-9 pr-4 py-2.5 bg-white border border-ink-200 rounded-lg focus:border-brand-500 focus:outline-none text-sm"
+        <form method="GET" action="{{ route('marketplace.index') }}" class="relative" id="mobileSearchForm">
+            <input type="text"
+                   name="search"
+                   id="mobileSearchInput"
+                   autocomplete="off"
+                   placeholder="Search products..."
+                   class="w-full pl-9 pr-4 py-2.5 bg-white border border-ink-200 rounded-lg focus:border-brand-500 focus:outline-none text-sm text-ink-900"
+                   style="color: #0f172a !important; caret-color: #0f172a;"
                    value="{{ request('search') ?? '' }}">
-            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 text-sm"></i>
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 text-sm pointer-events-none"></i>
         </form>
     </div>
 </header>
@@ -1825,12 +1846,12 @@ function toggleSubcategoryProducts(toggleBtn) {
 
 function setupSearchForm() {
     // Setup desktop search
-    const desktopSearchForm = document.querySelector('#searchForm');
-    const desktopSearchInput = desktopSearchForm?.querySelector('input[name="search"]');
-    
+    const desktopSearchForm = document.getElementById('searchForm');
+    const desktopSearchInput = document.getElementById('desktopSearchInput');
+
     // Setup mobile search
-    const mobileSearchForm = document.querySelector('.md\\:hidden form');
-    const mobileSearchInput = mobileSearchForm?.querySelector('input[name="search"]');
+    const mobileSearchForm = document.getElementById('mobileSearchForm');
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
     
     // Handle desktop search
     if (desktopSearchForm) {
