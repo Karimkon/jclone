@@ -47,11 +47,20 @@ Route::get('/', [LandingController::class, 'index'])->name('welcome');
 
 // Marketplace browsing (public)
 Route::get('/marketplace', [ListingController::class, 'indexPublic'])->name('marketplace.index');
-Route::get('/marketplace/{listing}', [ListingController::class, 'showPublic'])->name('marketplace.show');
+Route::get('/marketplace/{listing:slug}', [ListingController::class, 'showPublic'])->name('marketplace.show');
 
 // Categories (public)
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::get('/categories/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
+
+// Sitemap routes
+Route::get('/sitemap.xml', [\App\Http\Controllers\SitemapController::class, 'index'])->name('sitemap.index');
+Route::get('/sitemap-pages.xml', [\App\Http\Controllers\SitemapController::class, 'pages'])->name('sitemap.pages');
+Route::get('/sitemap-products.xml', [\App\Http\Controllers\SitemapController::class, 'products'])->name('sitemap.products');
+Route::get('/sitemap-categories.xml', [\App\Http\Controllers\SitemapController::class, 'categories'])->name('sitemap.categories');
+Route::get('/sitemap-vendors.xml', [\App\Http\Controllers\SitemapController::class, 'vendors'])->name('sitemap.vendors');
+Route::get('/sitemap-jobs.xml', [\App\Http\Controllers\SitemapController::class, 'jobs'])->name('sitemap.jobs');
+Route::get('/sitemap-services.xml', [\App\Http\Controllers\SitemapController::class, 'services'])->name('sitemap.services');
 
 // Account Deletion Request (Google Play Store requirement)
 Route::get('/delete-account', function () {

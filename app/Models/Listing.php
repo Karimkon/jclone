@@ -4,15 +4,16 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
-class Listing extends Model 
+class Listing extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'vendor_profile_id', 'title', 'description', 'sku', 'price', 
-        'weight_kg', 'origin', 'condition', 'category_id', 'stock', 
-        'attributes', 'is_active',  'view_count', 'click_count', 'wishlist_count', 
+        'vendor_profile_id', 'title', 'slug', 'description', 'sku', 'price',
+        'weight_kg', 'origin', 'condition', 'category_id', 'stock',
+        'attributes', 'is_active',  'view_count', 'click_count', 'wishlist_count',
         'cart_add_count', 'purchase_count', 'share_count', 'last_viewed_at'
     ];
 
@@ -23,6 +24,67 @@ class Listing extends Model
         'is_active' => 'boolean',
         'last_viewed_at' => 'datetime',
     ];
+
+    /**
+     * Boot the model - auto-generate slug
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($listing) {
+            if (empty($listing->slug)) {
+                $listing->slug = $listing->generateUniqueSlug($listing->title);
+            }
+        });
+
+        static::updating(function ($listing) {
+            // Regenerate slug if title changed and slug wasn't manually set
+            if ($listing->isDirty('title') && !$listing->isDirty('slug')) {
+                $listing->slug = $listing->generateUniqueSlug($listing->title);
+            }
+        });
+    }
+
+    /**
+     * Generate a unique slug
+     */
+    public function generateUniqueSlug(string $title): string
+    {
+        $baseSlug = Str::slug($title);
+        $slug = $baseSlug;
+        $counter = 1;
+
+        while (static::where('slug', $slug)->where('id', '!=', $this->id ?? 0)->exists()) {
+            $slug = $baseSlug . '-' . $counter;
+            $counter++;
+        }
+
+        return $slug;
+    }
+
+    /**
+     * Get the route key name for Laravel route model binding
+     */
+    public function getRouteKeyName()
+    {
+        return 'slug';
+    }
+
+    /**
+     * Resolve the model by slug or ID for backward compatibility
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        // If field is explicitly set, use it
+        if ($field) {
+            return $this->where($field, $value)->first();
+        }
+
+        // Try slug first, then ID (for backward compatibility with API)
+        return $this->where('slug', $value)->first()
+            ?? $this->where('id', $value)->first();
+    }
 
     public function vendor() 
     {

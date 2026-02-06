@@ -3,8 +3,40 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>@yield('title', config('app.name'))</title>
 
+<!-- SEO Meta Tags -->
+<meta name="description" content="@yield('meta_description', 'BebaMart - Uganda\'s trusted online marketplace. Shop local and imported products with escrow protection. Buy electronics, fashion, home goods and more with confidence.')">
+<meta name="keywords" content="@yield('meta_keywords', 'BebaMart, online shopping Uganda, marketplace, buy online, electronics, fashion, escrow payment, trusted sellers')">
+<meta name="author" content="BebaMart">
+<meta name="robots" content="@yield('meta_robots', 'index, follow')">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="@yield('canonical_url', url()->current())">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="@yield('og_type', 'website')">
+<meta property="og:url" content="@yield('og_url', url()->current())">
+<meta property="og:title" content="@yield('og_title', 'BebaMart - Your Trusted Marketplace')">
+<meta property="og:description" content="@yield('og_description', 'Shop securely with escrow protection. Buy local and imported products with confidence on BebaMart.')">
+<meta property="og:image" content="@yield('og_image', asset('images/og-default.jpg'))">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="BebaMart">
+<meta property="og:locale" content="en_UG">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="@yield('twitter_card', 'summary_large_image')">
+<meta name="twitter:url" content="@yield('og_url', url()->current())">
+<meta name="twitter:title" content="@yield('og_title', 'BebaMart - Your Trusted Marketplace')">
+<meta name="twitter:description" content="@yield('og_description', 'Shop securely with escrow protection. Buy local and imported products with confidence on BebaMart.')">
+<meta name="twitter:image" content="@yield('og_image', asset('images/og-default.jpg'))">
+
+<!-- Favicon -->
 <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}?v=2">
 <link rel="shortcut icon" href="{{ asset('favicon.png') }}?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ asset('favicon.png') }}?v=2">
+
+<!-- JSON-LD Structured Data -->
+@stack('structured_data')
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">

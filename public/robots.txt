@@ -1,2 +1,16 @@
+# BebaMart Robots.txt
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin/
+Disallow: /vendor/
+Disallow: /buyer/
+Disallow: /api/
+Disallow: /login
+Disallow: /register
+Disallow: /password
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /chat/
+
+# Sitemap
+Sitemap: https://bebamart.com/sitemap.xml

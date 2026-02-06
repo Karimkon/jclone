@@ -110,25 +110,38 @@
         
         <!-- Rating -->
         @if($showRating)
+        @php
+            $rating = $product->average_rating ?? $product->rating ?? 0;
+            $reviewCount = $product->reviews_count ?? 0;
+            $fullStars = floor($rating);
+            $hasHalfStar = ($rating - $fullStars) >= 0.5;
+        @endphp
+        @if($reviewCount > 0)
         <div class="flex items-center gap-1 mb-2">
             <div class="flex text-yellow-400">
-                @php
-                    $rating = $product->rating ?? rand(35, 50) / 10;
-                    $fullStars = floor($rating);
-                    $hasHalfStar = ($rating - $fullStars) >= 0.5;
-                @endphp
                 @for($i = 0; $i < 5; $i++)
                     @if($i < $fullStars)
                         <i class="fas fa-star text-xs"></i>
                     @elseif($hasHalfStar && $i == $fullStars)
                         <i class="fas fa-star-half-alt text-xs"></i>
                     @else
-                        <i class="far fa-star text-xs"></i>
+                        <i class="far fa-star text-xs text-gray-300"></i>
                     @endif
                 @endfor
             </div>
-            <span class="text-xs text-gray-400">({{ $product->reviews_count ?? rand(10, 200) }})</span>
+            <span class="text-xs text-gray-500">{{ number_format($rating, 1) }}</span>
+            <span class="text-xs text-gray-400">({{ $reviewCount }})</span>
         </div>
+        @else
+        <div class="flex items-center gap-1 mb-2">
+            <div class="flex text-gray-300">
+                @for($i = 0; $i < 5; $i++)
+                    <i class="far fa-star text-xs"></i>
+                @endfor
+            </div>
+            <span class="text-xs text-gray-400">No reviews</span>
+        </div>
+        @endif
         @endif
         
         <!-- Price & Add to Cart -->

@@ -5,7 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name') }} - Your Trusted Marketplace</title>
-    <meta name="description" content="Shop securely with escrow protection. Buy local and imported products with confidence.">
+    <meta name="description" content="BebaMart - Uganda's trusted online marketplace. Shop local and imported products with escrow protection.">
+    <meta name="keywords" content="BebaMart, online shopping Uganda, marketplace, buy online, electronics, fashion, escrow payment, trusted sellers">
+    <meta name="author" content="BebaMart">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="{{ url('/') }}">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url('/') }}">
+    <meta property="og:title" content="{{ config('app.name') }} - Your Trusted Marketplace">
+    <meta property="og:description" content="Shop local and imported products with escrow protection on Uganda's trusted marketplace.">
+    <meta property="og:image" content="{{ asset('images/og-image.png') }}">
+    <meta property="og:site_name" content="BebaMart">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ config('app.name') }} - Your Trusted Marketplace">
+    <meta name="twitter:description" content="Shop local and imported products with escrow protection.">
+    <meta name="twitter:image" content="{{ asset('images/og-image.png') }}">
+
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json">
+    {
+        "{{ '@' }}context": "https://schema.org",
+        "{{ '@' }}type": "Organization",
+        "name": "BebaMart",
+        "url": "{{ url('/') }}",
+        "logo": "{{ asset('images/logo.png') }}",
+        "description": "Uganda's trusted online marketplace with escrow protection"
+    }
+    </script>
      <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon.png') }}?v=2">
 <link rel="shortcut icon" href="{{ asset('favicon.png') }}?v=2">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -839,45 +869,52 @@ main {
                                                 <span class="text-xs text-ink-400">{{ $subChild->listings_count ?? 0 }}</span>
                                             </div>
 
-                                            <!-- Sub-subcategory Products (3 max) -->
-                                            @if($subChild->top_products && $subChild->top_products->count() > 0)
-                                            <div class="space-y-1">
-                                                @foreach($subChild->top_products->take(3) as $product)
-                                                <a href="{{ route('marketplace.show', $product) }}"
-                                                   class="flex items-center gap-2 p-1.5 hover:bg-ink-50 rounded transition">
-                                                    @if($product->images && $product->images->first())
-                                                        <img src="{{ asset('storage/' . $product->images->first()->path) }}"
-                                                             alt="{{ $product->title }}"
-                                                             class="w-6 h-6 object-cover rounded border border-ink-100">
-                                                    @else
-                                                        <div class="w-6 h-6 bg-ink-100 rounded flex items-center justify-center">
-                                                            <i class="fas fa-image text-ink-300 text-xs"></i>
-                                                        </div>
-                                                    @endif
-                                                    <div class="flex-1 min-w-0">
-                                                        <div class="text-xs text-ink-600 truncate">{{ Str::limit($product->title, 18) }}</div>
-                                                        <div class="text-xs font-bold text-brand-600">UGX {{ number_format($product->price) }}</div>
-                                                    </div>
-                                                </a>
-                                                @endforeach
-                                                @if(($subChild->listings_count ?? 0) > 3)
-                                                <a href="{{ route('marketplace.index', ['category' => $subChild->id]) }}"
-                                                   class="text-xs text-brand-500 hover:underline pl-1">
-                                                    +{{ ($subChild->listings_count ?? 3) - 3 }} more →
-                                                </a>
-                                                @endif
-                                            </div>
-                                            @endif
-                                        </div>
-                                        @endforeach
-                                        @if($child->children->count() > 4)
-                                        <a href="{{ route('marketplace.index', ['category' => $child->id]) }}"
-                                           class="text-xs text-brand-600 font-medium hover:underline pl-3">
-                                            View all {{ $child->children->count() }} subcategories →
-                                        </a>
-                                        @endif
-                                    </div>
-                                @endif
+                                           <!-- Sub-subcategory Products (3 max) -->
+@if($subChild->top_products && $subChild->top_products->count() > 0)
+<div class="space-y-1">
+    @foreach($subChild->top_products->take(3) as $product)
+        {{-- Check if product is valid before generating route --}}
+        @if($product && $product->exists && ($product->slug || $product->id))
+            @php
+                // Safely get the route parameter
+                $routeParam = $product->slug ?? $product->id;
+            @endphp
+            <a href="{{ route('marketplace.show', $routeParam) }}"
+               class="flex items-center gap-2 p-1.5 hover:bg-ink-50 rounded transition">
+                @if($product->images && $product->images->first())
+                    <img src="{{ asset('storage/' . $product->images->first()->path) }}"
+                         alt="{{ $product->title }}"
+                         class="w-6 h-6 object-cover rounded border border-ink-100">
+                @else
+                    <div class="w-6 h-6 bg-ink-100 rounded flex items-center justify-center">
+                        <i class="fas fa-image text-ink-300 text-xs"></i>
+                    </div>
+                @endif
+                <div class="flex-1 min-w-0">
+                    <div class="text-xs text-ink-600 truncate">{{ Str::limit($product->title, 18) }}</div>
+                    <div class="text-xs font-bold text-brand-600">UGX {{ number_format($product->price) }}</div>
+                </div>
+            </a>
+        @endif
+    @endforeach
+    @if(($subChild->listings_count ?? 0) > 3)
+    <a href="{{ route('marketplace.index', ['category' => $subChild->id]) }}"
+       class="text-xs text-brand-500 hover:underline pl-1">
+        +{{ ($subChild->listings_count ?? 3) - 3 }} more →
+    </a>
+    @endif
+</div>
+@endif
+</div> {{-- This closes: <div class="flex flex-col gap-1 p-2"> --}}
+@endforeach
+@if($child->children->count() > 4)
+<a href="{{ route('marketplace.index', ['category' => $child->id]) }}"
+   class="text-xs text-brand-600 font-medium hover:underline pl-3">
+    View all {{ $child->children->count() }} subcategories →
+</a>
+@endif
+</div> {{-- This closes: <div class="grid grid-cols-2 gap-3"> --}}
+@endif
 
                                 <!-- Direct Products in this subcategory (Level 2) - Always show if available -->
                                 @php
@@ -889,29 +926,36 @@ main {
                                         @if($hasSubcategories)
                                         <p class="text-xs text-ink-500 font-medium">Top in {{ $child->name }}:</p>
                                         @endif
-                                        @foreach($child->top_products->take($productsToShow) as $product)
-                                        <a href="{{ route('marketplace.show', $product) }}"
-                                           class="subcategory-product-item flex items-center gap-2 p-2 hover:bg-ink-50 rounded-lg transition">
-                                            @if($product->images && $product->images->first())
-                                                <img src="{{ asset('storage/' . $product->images->first()->path) }}"
-                                                    alt="{{ $product->title }}"
-                                                    class="subcategory-product-image w-8 h-8 object-cover rounded border border-ink-100">
-                                            @else
-                                                <div class="w-8 h-8 bg-ink-100 rounded border border-ink-200 flex items-center justify-center">
-                                                    <i class="fas fa-image text-ink-300 text-xs"></i>
-                                                </div>
-                                            @endif
-                                            <div class="flex-1 min-w-0">
-                                                <div class="subcategory-product-name text-xs text-ink-600 font-medium truncate"
-                                                     title="{{ $product->title }}">
-                                                    {{ Str::limit($product->title, 20) }}
-                                                </div>
-                                                <div class="subcategory-product-price text-xs font-bold text-brand-600">
-                                                    UGX {{ number_format($product->price) }}
-                                                </div>
-                                            </div>
-                                        </a>
-                                        @endforeach
+                                       @foreach($child->top_products->take($productsToShow) as $product)
+    {{-- Check if product is valid before generating route --}}
+    @if($product && $product->exists && ($product->slug || $product->id))
+        @php
+            // Safely get the route parameter
+            $routeParam = $product->slug ?? $product->id;
+        @endphp
+        <a href="{{ route('marketplace.show', $routeParam) }}"
+           class="subcategory-product-item flex items-center gap-2 p-2 hover:bg-ink-50 rounded-lg transition">
+            @if($product->images && $product->images->first())
+                <img src="{{ asset('storage/' . $product->images->first()->path) }}"
+                    alt="{{ $product->title }}"
+                    class="subcategory-product-image w-8 h-8 object-cover rounded border border-ink-100">
+            @else
+                <div class="w-8 h-8 bg-ink-100 rounded border border-ink-200 flex items-center justify-center">
+                    <i class="fas fa-image text-ink-300 text-xs"></i>
+                </div>
+            @endif
+            <div class="flex-1 min-w-0">
+                <div class="subcategory-product-name text-xs text-ink-600 font-medium truncate"
+                     title="{{ $product->title }}">
+                    {{ Str::limit($product->title, 20) }}
+                </div>
+                <div class="subcategory-product-price text-xs font-bold text-brand-600">
+                    UGX {{ number_format($product->price) }}
+                </div>
+            </div>
+        </a>
+    @endif
+@endforeach
 
                                         <!-- Show More Link -->
                                         @if(($child->listings_count ?? 0) > $productsToShow)
@@ -952,22 +996,29 @@ main {
                         </div>
                         <div class="space-y-2">
                             @foreach($cat->top_products->take(5) as $index => $product)
-                            <a href="{{ route('marketplace.show', $product) }}" 
-                               class="top-product-item flex items-center gap-3 p-2 hover:bg-brand-50 rounded-lg transition">
-                                <span class="top-product-rank w-6 h-6 bg-brand-100 text-brand-600 text-xs font-bold rounded-full flex items-center justify-center">
-                                    {{ $index + 1 }}
-                                </span>
-                                <div class="flex-1 min-w-0">
-                                    <div class="top-product-name text-sm font-medium text-ink-700 truncate" 
-                                         title="{{ $product->title }}">
-                                        {{ Str::limit($product->title, 30) }}
-                                    </div>
-                                    <div class="top-product-price text-sm font-bold text-brand-600">
-                                        UGX {{ number_format($product->price) }}
-                                    </div>
-                                </div>
-                            </a>
-                            @endforeach
+    {{-- Check if product is valid before generating route --}}
+    @if($product && $product->exists && ($product->slug || $product->id))
+        @php
+            // Safely get the route parameter
+            $routeParam = $product->slug ?? $product->id;
+        @endphp
+        <a href="{{ route('marketplace.show', $routeParam) }}" 
+           class="top-product-item flex items-center gap-3 p-2 hover:bg-brand-50 rounded-lg transition">
+            <span class="top-product-rank w-6 h-6 bg-brand-100 text-brand-600 text-xs font-bold rounded-full flex items-center justify-center">
+                {{ $index + 1 }}
+            </span>
+            <div class="flex-1 min-w-0">
+                <div class="top-product-name text-sm font-medium text-ink-700 truncate" 
+                     title="{{ $product->title }}">
+                    {{ Str::limit($product->title, 30) }}
+                </div>
+                <div class="top-product-price text-sm font-bold text-brand-600">
+                    UGX {{ number_format($product->price) }}
+                </div>
+            </div>
+        </a>
+    @endif
+@endforeach
                         </div>
                     </div>
                     @endif
@@ -1464,11 +1515,49 @@ main {
                     <span class="text-lg font-bold font-display">{{ config('app.name') }}</span>
                 </div>
                 <p class="text-ink-400 text-xs mb-4 leading-relaxed">Your trusted marketplace with escrow protection.</p>
-                <div class="flex gap-2">
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-brand-600 transition text-sm"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-sm"><i class="fab fa-twitter"></i></a>
-                    <a href="#" class="w-8 h-8 bg-ink-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-sm"><i class="fab fa-instagram"></i></a>
-                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-4">Follow Us</h3>
+    <div class="flex flex-wrap gap-2">
+        <a href="https://www.facebook.com/share/1AmT9d3Xji/?mibextid=wwXIfr" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-blue-600 transition text-white text-sm">
+            <i class="fab fa-facebook-f"></i>
+        </a>
+
+        <a href="https://x.com/BebamartGlobal" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-sky-500 transition text-white text-sm">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+        </a>
+
+        <a href="http://instagram.com/bebamartglobal" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-pink-600 transition text-white text-sm">
+            <i class="fab fa-instagram"></i>
+        </a>
+
+        <a href="https://www.tiktok.com/@bebamart.global?lang=en" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-black transition text-white text-sm">
+            <i class="fab fa-tiktok"></i>
+        </a>
+
+        <a href="https://www.linkedin.com/company/beba-mart-global-limited" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-blue-700 transition text-white text-sm">
+            <i class="fab fa-linkedin-in"></i>
+        </a>
+
+        <a href="https://www.youtube.com/@bebamartglobal" 
+           target="_blank" rel="noopener noreferrer" 
+           class="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center hover:bg-red-600 transition text-white text-sm">
+            <i class="fab fa-youtube"></i>
+        </a>
+    </div>
+    <p class="text-sm text-gray-500 mt-4">Stay updated with our latest news and offers!</p>
+</div>
             </div>
             
             <div>

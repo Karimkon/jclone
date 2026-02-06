@@ -1,7 +1,19 @@
 @extends('layouts.app')
 
 @section('title', $listing->title . ' - ' . config('app.name'))
-@section('description', Str::limit($listing->description, 160))
+@section('meta_description', Str::limit(strip_tags($listing->description), 160))
+@section('meta_keywords', $listing->title . ', ' . ($listing->category?->name ?? 'products') . ', BebaMart, buy online Uganda')
+
+{{-- Open Graph / Social Sharing --}}
+@section('og_type', 'product')
+@section('og_url', route('marketplace.show', $listing))
+@section('og_title', $listing->title . ' - BebaMart')
+@section('og_description', Str::limit(strip_tags($listing->description), 200))
+@if($listing->images && $listing->images->first())
+@section('og_image', asset('storage/' . $listing->images->first()->path))
+@endif
+
+@section('canonical_url', route('marketplace.show', $listing))
 
 @php
     // Get review statistics
@@ -110,6 +122,117 @@ if ($listing->vendor && method_exists($listing->vendor, 'performance')) {
         $availableSizes = array_unique($availableSizes);
     }
 @endphp
+
+{{-- JSON-LD Structured Data for Products --}}
+@push('structured_data')
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "Product",
+    "name": "{{ $listing->title }}",
+    "description": "{{ Str::limit(strip_tags($listing->description), 500) }}",
+    "sku": "{{ $listing->sku ?? 'BM-' . $listing->id }}",
+    "url": "{{ route('marketplace.show', $listing) }}",
+    @if($listing->images && $listing->images->first())
+    "image": [
+        @foreach($listing->images->take(5) as $image)
+        "{{ asset('storage/' . $image->path) }}"@if(!$loop->last),@endif
+        @endforeach
+    ],
+    @endif
+    "brand": {
+        "@@type": "Brand",
+        "name": "{{ $listing->vendor?->business_name ?? 'BebaMart Vendor' }}"
+    },
+    "offers": {
+        "@@type": "Offer",
+        "url": "{{ route('marketplace.show', $listing) }}",
+        "priceCurrency": "UGX",
+        "price": "{{ $listing->price }}",
+        "priceValidUntil": "{{ now()->addMonths(3)->format('Y-m-d') }}",
+        "availability": "{{ $listing->stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' }}",
+        "itemCondition": "{{ $listing->condition == 'new' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition' }}",
+        "seller": {
+            "@@type": "Organization",
+            "name": "{{ $listing->vendor?->business_name ?? 'BebaMart Vendor' }}"
+        }
+    }
+    @if($reviewStats['count'] > 0)
+    ,"aggregateRating": {
+        "@@type": "AggregateRating",
+        "ratingValue": "{{ number_format($reviewStats['average'], 1) }}",
+        "reviewCount": "{{ $reviewStats['count'] }}",
+        "bestRating": "5",
+        "worstRating": "1"
+    }
+    @endif
+    @if($reviews && $reviews->count() > 0)
+    ,"review": [
+        @foreach($reviews->take(3) as $review)
+        {
+            "@@type": "Review",
+            "author": {
+                "@@type": "Person",
+                "name": "{{ $review->user?->name ?? 'BebaMart Customer' }}"
+            },
+            "datePublished": "{{ $review->created_at->format('Y-m-d') }}",
+            "reviewBody": "{{ Str::limit($review->comment, 200) }}",
+            "reviewRating": {
+                "@@type": "Rating",
+                "ratingValue": "{{ $review->rating }}",
+                "bestRating": "5",
+                "worstRating": "1"
+            }
+        }@if(!$loop->last),@endif
+        @endforeach
+    ]
+    @endif
+}
+</script>
+
+{{-- BreadcrumbList Schema --}}
+<script type="application/ld+json">
+{
+    "@@context": "https://schema.org",
+    "@@type": "BreadcrumbList",
+    "itemListElement": [
+        {
+            "@@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "{{ url('/') }}"
+        },
+        {
+            "@@type": "ListItem",
+            "position": 2,
+            "name": "Marketplace",
+            "item": "{{ route('marketplace.index') }}"
+        },
+        @if($listing->category)
+        {
+            "@@type": "ListItem",
+            "position": 3,
+            "name": "{{ $listing->category->name }}",
+            "item": "{{ route('categories.show', $listing->category) }}"
+        },
+        {
+            "@@type": "ListItem",
+            "position": 4,
+            "name": "{{ $listing->title }}",
+            "item": "{{ route('marketplace.show', $listing) }}"
+        }
+        @else
+        {
+            "@@type": "ListItem",
+            "position": 3,
+            "name": "{{ $listing->title }}",
+            "item": "{{ route('marketplace.show', $listing) }}"
+        }
+        @endif
+    ]
+}
+</script>
+@endpush
 
 @push('styles')
 <style>
@@ -1420,7 +1543,6 @@ button[onclick="closeOptionsModal()"]:hover {
         </a>
     @endif
 </div>
-    </div>
     
    <!-- Delivery Performance Info -->
 @if($deliveryPerformance && $deliveryPerformance->delivered_orders >= 5)
@@ -1443,7 +1565,7 @@ button[onclick="closeOptionsModal()"]:hover {
     </div>
 </div>
 @endif
-</div> 
+
       <!-- Vendor Stats -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
     <div class="text-center p-3 bg-gray-50 rounded-xl">
@@ -1735,7 +1857,7 @@ button[onclick="closeOptionsModal()"]:hover {
                                name="phone" 
                                id="callback_phone"
                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" 
-                               placeholder="700 000 000"
+                               placeholder="782 971912"
                                required>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">We'll use this number to contact you</p>

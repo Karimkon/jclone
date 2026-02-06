@@ -143,7 +143,7 @@
                 <div class="mt-6 space-y-2">
                     <a href="tel:+256700000000" class="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition">
                         <i class="fas fa-phone text-indigo-400"></i>
-                        +256 700 000 000
+                        +256 782 971912
                     </a>
                     <a href="mailto:support@bebamart.com" class="flex items-center gap-2 text-gray-400 hover:text-white text-sm transition">
                         <i class="fas fa-envelope text-indigo-400"></i>
