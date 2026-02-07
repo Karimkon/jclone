@@ -66,6 +66,10 @@ class VendorListingController extends Controller
             'condition' => 'required|in:new,used,refurbished',
             'sku' => 'nullable|string|max:100|unique:listings,sku',
 
+            // Tax / Import charges
+            'tax_amount' => 'nullable|numeric|min:0',
+            'tax_description' => 'nullable|string|max:255',
+
             // Attributes
             'attributes.brand' => 'nullable|string|max:100',
             'attributes.model' => 'nullable|string|max:100',
@@ -116,6 +120,8 @@ class VendorListingController extends Controller
                 'description' => $validated['description'],
                 'category_id' => $validated['category_id'],
                 'price' => $validated['price'],
+                'tax_amount' => $validated['tax_amount'] ?? 0,
+                'tax_description' => $validated['tax_description'] ?? null,
                 'stock' => $validated['stock'],
                 'weight_kg' => $validated['weight_kg'],
                 'origin' => $validated['origin'],
@@ -258,12 +264,16 @@ class VendorListingController extends Controller
             'sku' => 'nullable|string|max:100|unique:listings,sku,' . $listing->id,
             'is_active' => 'boolean',
             
+            // Tax / Import charges
+            'tax_amount' => 'nullable|numeric|min:0',
+            'tax_description' => 'nullable|string|max:255',
+
             // Attributes
             'attributes.brand' => 'nullable|string|max:100',
             'attributes.model' => 'nullable|string|max:100',
             'attributes.color' => 'nullable|string|max:50',
             'attributes.size' => 'nullable|string|max:50',
-            
+
             // New images/videos
             'new_media' => 'nullable|array|max:5',
             'new_media.*' => 'mimetypes:image/jpeg,image/png,image/jpg,image/webp,video/mp4,video/mpeg,video/quicktime|max:20480',
@@ -293,6 +303,8 @@ class VendorListingController extends Controller
                 'description' => $validated['description'],
                 'category_id' => $validated['category_id'],
                 'price' => $validated['price'],
+                'tax_amount' => $validated['tax_amount'] ?? 0,
+                'tax_description' => $validated['tax_description'] ?? null,
                 'stock' => $validated['stock'],
                 'weight_kg' => $validated['weight_kg'],
                 'origin' => $validated['origin'],

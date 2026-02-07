@@ -112,7 +112,7 @@
                         <!-- Company Logo -->
                         <div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                             @if($job->vendor->logo)
-                                <img src="{{ asset('storage/' . $job->vendor->logo) }}" alt="{{ $job->vendor->business_name }}" class="w-full h-full object-cover">
+                                <img src="{{ $job->vendor->logo }}" alt="{{ $job->vendor->business_name }}" class="w-full h-full object-cover">
                             @else
                                 <i class="fas fa-building text-gray-400 text-xl"></i>
                             @endif

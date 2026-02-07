@@ -234,24 +234,28 @@
                     <div class="space-y-2 mb-4 pt-4 border-t">
                         <div class="flex justify-between text-gray-600">
                             <span>Subtotal</span>
-                            <span>UGX{{ number_format($cart->subtotal, 2) }}</span>
+                            <span>UGX {{ number_format($cart->subtotal, 2) }}</span>
                         </div>
+                        @if($cart->tax > 0)
                         <div class="flex justify-between text-gray-600">
-                            <span>Shipping</span>
-                            <span>UGX {{ number_format($cart->shipping, 2) }}</span>
-                        </div>
-                        <div class="flex justify-between text-gray-600">
-                            <span>Tax</span>
+                            <span>Import/Tax Charges</span>
                             <span>UGX {{ number_format($cart->tax, 2) }}</span>
                         </div>
+                        @endif
                         <div class="flex justify-between font-bold text-lg pt-2 border-t">
                             <span>Total</span>
                             <span class="text-indigo-600">UGX {{ number_format($cart->total, 2) }}</span>
                         </div>
                     </div>
-                    
+
+                    <!-- Safety Warning -->
+                    <div class="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
+                        <i class="fas fa-exclamation-triangle text-amber-600"></i>
+                        <span class="text-amber-800 text-sm font-medium">Avoid paying in advance! Even for delivery.</span>
+                    </div>
+
                     <!-- Place Order Button -->
-                    <button type="submit" 
+                    <button type="submit"
                             class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center justify-center">
                         <i class="fas fa-lock mr-2"></i>
                         Place Order

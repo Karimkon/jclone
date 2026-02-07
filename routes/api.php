@@ -77,9 +77,20 @@ Route::post('/login', function (Request $request) {
                 'id' => $user->vendorProfile->id,
                 'user_id' => $user->vendorProfile->user_id,
                 'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
-                'store_name' => $user->vendorProfile->store_name,
+                'business_description' => $user->vendorProfile->business_description,
+                'business_address' => $user->vendorProfile->address,
+                'phone' => $user->vendorProfile->business_phone,
+                'email' => $user->vendorProfile->email ?? $user->email,
+                'logo' => $user->vendorProfile->logo,
+                'banner' => $user->vendorProfile->banner,
+                'vendor_type' => $user->vendorProfile->vendor_type,
                 'vetting_status' => $user->vendorProfile->vetting_status,
+                'country' => $user->vendorProfile->country,
+                'city' => $user->vendorProfile->city,
+                'rating' => $user->vendorProfile->rating ?? 0,
+                'total_sales' => $user->vendorProfile->total_sales ?? 0,
                 'created_at' => $user->vendorProfile->created_at?->toIso8601String(),
+                'updated_at' => $user->vendorProfile->updated_at?->toIso8601String(),
             ] : null,
         ],
     ]);
@@ -259,8 +270,20 @@ Route::post('/auth/google', function (Request $request) {
                     'id' => $user->vendorProfile->id,
                     'user_id' => $user->vendorProfile->user_id,
                     'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
-                    'store_name' => $user->vendorProfile->store_name,
+                    'business_description' => $user->vendorProfile->business_description,
+                    'business_address' => $user->vendorProfile->address,
+                    'phone' => $user->vendorProfile->business_phone,
+                    'email' => $user->vendorProfile->email ?? $user->email,
+                    'logo' => $user->vendorProfile->logo,
+                    'banner' => $user->vendorProfile->banner,
+                    'vendor_type' => $user->vendorProfile->vendor_type,
                     'vetting_status' => $user->vendorProfile->vetting_status,
+                    'country' => $user->vendorProfile->country,
+                    'city' => $user->vendorProfile->city,
+                    'rating' => $user->vendorProfile->rating ?? 0,
+                    'total_sales' => $user->vendorProfile->total_sales ?? 0,
+                    'created_at' => $user->vendorProfile->created_at?->toIso8601String(),
+                    'updated_at' => $user->vendorProfile->updated_at?->toIso8601String(),
                 ] : null,
             ],
         ]);
@@ -358,8 +381,20 @@ Route::post('/auth/apple', function (Request $request) {
                     'id' => $user->vendorProfile->id,
                     'user_id' => $user->vendorProfile->user_id,
                     'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
-                    'store_name' => $user->vendorProfile->store_name,
+                    'business_description' => $user->vendorProfile->business_description,
+                    'business_address' => $user->vendorProfile->address,
+                    'phone' => $user->vendorProfile->business_phone,
+                    'email' => $user->vendorProfile->email ?? $user->email,
+                    'logo' => $user->vendorProfile->logo,
+                    'banner' => $user->vendorProfile->banner,
+                    'vendor_type' => $user->vendorProfile->vendor_type,
                     'vetting_status' => $user->vendorProfile->vetting_status,
+                    'country' => $user->vendorProfile->country,
+                    'city' => $user->vendorProfile->city,
+                    'rating' => $user->vendorProfile->rating ?? 0,
+                    'total_sales' => $user->vendorProfile->total_sales ?? 0,
+                    'created_at' => $user->vendorProfile->created_at?->toIso8601String(),
+                    'updated_at' => $user->vendorProfile->updated_at?->toIso8601String(),
                 ] : null,
             ],
         ]);
@@ -621,7 +656,10 @@ Route::get('/categories', function () {
             ->whereNull('parent_id')  // ONLY parent categories
             ->with(['children' => function($query) {
                 $query->where('is_active', true)
-                    ->orderBy('order');
+                    ->orderBy('order')
+                    ->with(['children' => function($q) {
+                        $q->where('is_active', true)->orderBy('order');
+                    }]);
             }])
             ->orderBy('order')
             ->get()
@@ -644,8 +682,20 @@ Route::get('/categories', function () {
                             'description' => $child->description,
                             'icon' => $child->icon ?? 'category',
                             'parent_id' => $child->parent_id,
-                            'is_parent' => false,
+                            'is_parent' => $child->children->isNotEmpty(),
                             'listings_count' => $child->total_listings_count,
+                            'children' => $child->children->map(function ($grandchild) {
+                                return [
+                                    'id' => $grandchild->id,
+                                    'name' => $grandchild->name,
+                                    'slug' => $grandchild->slug,
+                                    'description' => $grandchild->description,
+                                    'icon' => $grandchild->icon ?? 'category',
+                                    'parent_id' => $grandchild->parent_id,
+                                    'is_parent' => false,
+                                    'listings_count' => $grandchild->total_listings_count,
+                                ];
+                            })->values()->toArray(),
                         ];
                     })->values()->toArray(),
                 ];
@@ -1725,6 +1775,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 'quantity' => $item['quantity'],
                 'thumbnail' => $listing->images && $listing->images->isNotEmpty() ? $listing->images->first()->path : null,
                 'stock' => $listing->stock,
+                'tax_amount' => $listing->tax_amount ?? 0,
+                'tax_description' => $listing->tax_description,
             ];
 
             // Include variant info if present
@@ -1757,7 +1809,8 @@ Route::middleware('auth:sanctum')->group(function () {
             return $cartItem;
         })->filter()->values();
         $subtotal = $items->sum(fn($item) => $item['price'] * $item['quantity']);
-        return response()->json(['success' => true, 'data' => ['items' => $items, 'subtotal' => $subtotal, 'total' => $subtotal]]);
+        $totalTax = $items->sum(fn($item) => ($item['tax_amount'] ?? 0) * $item['quantity']);
+        return response()->json(['success' => true, 'data' => ['items' => $items, 'subtotal' => $subtotal, 'tax' => $totalTax, 'total' => $subtotal + $totalTax]]);
     });
 
     Route::post('/cart/add/{listingId}', function (Request $request, $listingId) {
@@ -1817,6 +1870,8 @@ Route::middleware('auth:sanctum')->group(function () {
                 'quantity' => $quantity,
                 'price' => $price,
                 'title' => $listing->title,
+                'tax_amount' => $listing->tax_amount ?? 0,
+                'tax_description' => $listing->tax_description,
             ];
 
             // Add variant info if present
@@ -2178,6 +2233,8 @@ Route::middleware('auth:sanctum')->group(function () {
                     $thumbnail = $listing->images->first()->path;
                 }
 
+                $itemTax = ($listing->tax_amount ?? 0) * $item['quantity'];
+
                 $orderItems[] = [
                     'listing_id' => $listing->id,
                     'title' => $item['title'] ?? $listing->title,
@@ -2189,14 +2246,18 @@ Route::middleware('auth:sanctum')->group(function () {
                         'color' => $item['color'] ?? null,
                         'size' => $item['size'] ?? null,
                         'variant_id' => $item['variant_id'] ?? null,
+                        'tax_amount' => $listing->tax_amount ?? 0,
+                        'tax_description' => $listing->tax_description,
                     ],
                 ];
             }
 
-            $shipping = 0; // Free shipping for now
-            $taxes = $subtotal * 0.18; // 18% VAT
-            $platformCommission = $subtotal * 0.15; // 15% commission
-            $total = $subtotal + $shipping + $taxes;
+            $shipping = 0;
+            $taxes = collect($orderItems)->sum(function ($item) {
+                return ($item['attributes']['tax_amount'] ?? 0) * $item['quantity'];
+            });
+            $platformCommission = $subtotal * 0.15; // 15% commission on subtotal only
+            $total = $subtotal + $taxes;
 
             // Generate order number
             $orderNumber = 'BM-' . strtoupper(uniqid()) . '-' . date('Ymd');
@@ -2803,6 +2864,8 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'condition' => 'nullable|in:new,used,refurbished',
                 'images' => 'nullable|array',
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+                'tax_amount' => 'nullable|numeric|min:0',
+                'tax_description' => 'nullable|string|max:255',
             ]);
 
             // Create slug
@@ -2816,6 +2879,8 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'slug' => $slug,
                 'description' => $request->description,
                 'price' => $request->price,
+                'tax_amount' => $request->tax_amount ?? 0,
+                'tax_description' => $request->tax_description,
                 'stock' => $request->stock ?? $request->quantity ?? 1,
                 'weight_kg' => $request->weight ?? null,
                 'condition' => $request->condition ?? 'new',
@@ -2907,12 +2972,25 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'price' => 'sometimes|required|numeric|min:0',
                 'category_id' => 'sometimes|required|exists:categories,id',
                 'quantity' => 'nullable|integer|min:1',
+                'stock' => 'nullable|integer|min:0',
                 'condition' => 'nullable|in:new,used,refurbished',
+                'tax_amount' => 'nullable|numeric|min:0',
+                'tax_description' => 'nullable|string|max:255',
             ]);
 
-            $listing->update($request->only([
-                'title', 'description', 'price', 'category_id', 'quantity', 'condition'
-            ]));
+            $updateData = $request->only([
+                'title', 'description', 'price', 'category_id', 'condition',
+                'tax_amount', 'tax_description'
+            ]);
+
+            // Map quantity to stock (DB column is 'stock')
+            if ($request->has('quantity')) {
+                $updateData['stock'] = $request->quantity;
+            } elseif ($request->has('stock')) {
+                $updateData['stock'] = $request->stock;
+            }
+
+            $listing->update($updateData);
 
             // Handle new images
             if ($request->hasFile('images')) {

@@ -90,6 +90,8 @@ public function addItem($listing, $quantity = 1, $variantId = null, $color = nul
             'origin' => $listing->origin,
             'added_at' => now()->toDateTimeString(),
             'stock' => $stock,
+            'tax_amount' => $listing->tax_amount ?? 0,
+            'tax_description' => $listing->tax_description,
         ];
         
         // Add variant info if provided
@@ -200,24 +202,18 @@ private function findItemKey($items, $listingId, $variantId, $color, $size)
     {
         $items = $this->items ?? [];
         $subtotal = 0;
-        $totalWeight = 0;
-        
+        $totalTax = 0;
+
         foreach ($items as $item) {
             $subtotal += $item['total'] ?? 0;
-            $totalWeight += ($item['weight_kg'] ?? 0) * ($item['quantity'] ?? 0);
+            $totalTax += ($item['tax_amount'] ?? 0) * ($item['quantity'] ?? 1);
         }
-        
-        // Calculate shipping (simplified for MVP)
-        $shipping = $this->calculateShipping($totalWeight);
-        
-        // Calculate tax (simplified for MVP)
-        $tax = $subtotal * 0.18; // 18% VAT
-        
+
         $this->subtotal = $subtotal;
-        $this->shipping = $shipping;
-        $this->tax = $tax;
-        $this->total = $subtotal + $shipping + $tax;
-        
+        $this->shipping = 0;
+        $this->tax = $totalTax;
+        $this->total = $subtotal + $totalTax;
+
         return $this;
     }
 

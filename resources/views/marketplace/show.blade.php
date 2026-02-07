@@ -1503,8 +1503,8 @@ button[onclick="closeOptionsModal()"]:hover {
         {{-- Right Side: Profile Picture --}}
         <div class="w-14 h-14 flex-shrink-0">
             @if($listing->vendor && $listing->vendor->logo)
-                <img src="{{ asset('storage/' . $listing->vendor->logo) }}" 
-                     alt="{{ $listing->vendor->business_name }}" 
+                <img src="{{ $listing->vendor->logo }}"
+                     alt="{{ $listing->vendor->business_name }}"
                      class="w-full h-full object-cover rounded-xl shadow-sm border border-gray-100">
             @else
                 <div class="w-full h-full bg-gradient-to-br from-primary to-purple-600 text-white rounded-xl flex items-center justify-center shadow-sm">

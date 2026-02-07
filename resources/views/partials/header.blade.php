@@ -277,10 +277,24 @@
             <i class="fas fa-comments text-teal-500 w-5"></i>
             <span class="font-medium">FAQ</span>
         </a>
+        @auth
+            @if(Auth::user()->isVendor())
+            <a href="{{ route('vendor.dashboard') }}" class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 transition" onclick="toggleMobileMenu()">
+                <i class="fas fa-store text-pink-500 w-5"></i>
+                <span class="font-medium">Vendor Dashboard</span>
+            </a>
+            @else
+            <a href="{{ route('vendor.onboard.create') }}" class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 transition" onclick="toggleMobileMenu()">
+                <i class="fas fa-store text-pink-500 w-5"></i>
+                <span class="font-medium">Become a Seller</span>
+            </a>
+            @endif
+        @else
         <a href="{{ route('vendor.onboard.create') }}" class="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 transition" onclick="toggleMobileMenu()">
             <i class="fas fa-store text-pink-500 w-5"></i>
             <span class="font-medium">Become a Seller</span>
         </a>
+        @endauth
 
         @auth
         <div class="px-3 mt-4 border-t border-gray-100 pt-4">

@@ -156,6 +156,47 @@
                 </div>
             </div>
 
+            <!-- Import / Tax Charges -->
+            <div class="p-6 border-b border-gray-200">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Import / Tax Charges</h2>
+                <p class="text-sm text-gray-500 mb-4">If this product has import duties, customs fees, or other tax charges, specify them here. These will be shown separately to buyers at checkout.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Tax Amount -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Tax / Import Charge per unit (UGX)
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-3 text-gray-500">UGX</span>
+                            <input type="number" name="tax_amount" step="0.01" min="0"
+                                   class="w-full pl-12 border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                   placeholder="0.00"
+                                   value="{{ old('tax_amount', $listing->tax_amount ?? 0) }}">
+                        </div>
+                        <p class="mt-1 text-sm text-gray-500">Leave as 0 if no tax applies</p>
+                        @error('tax_amount')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <!-- Tax Description -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Tax Description
+                        </label>
+                        <input type="text" name="tax_description"
+                               class="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                               placeholder="e.g., Import duty & customs clearance"
+                               value="{{ old('tax_description', $listing->tax_description) }}">
+                        <p class="mt-1 text-sm text-gray-500">Brief description shown to buyers</p>
+                        @error('tax_description')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
             <!-- Product Details -->
             <div class="p-6 border-b border-gray-200">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Product Details</h2>

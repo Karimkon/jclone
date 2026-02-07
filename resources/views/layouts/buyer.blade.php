@@ -376,7 +376,7 @@
                     </div>
                     <div class="flex-1 min-w-0">
                         <div class="font-semibold text-sm truncate">{{ Auth::user()->name }}</div>
-                        <div class="text-xs text-white/60">Buyer Account</div>
+                        <div class="text-xs text-white/60">{{ Auth::user()->isVendor() ? 'Vendor Account' : 'Buyer Account' }}</div>
                     </div>
                 </div>
 
@@ -484,9 +484,21 @@
                     <i class="fas fa-tags"></i> Categories
                 </a>
 
+                @if(Auth::user()->isVendor())
+                <a href="{{ route('vendor.dashboard') }}" class="nav-item">
+                    <i class="fas fa-store"></i> Vendor Dashboard
+                </a>
+                <a href="{{ route('vendor.listings.index') }}" class="nav-item">
+                    <i class="fas fa-box-open"></i> My Products
+                </a>
+                <a href="{{ route('vendor.orders.index') }}" class="nav-item">
+                    <i class="fas fa-receipt"></i> My Sales
+                </a>
+                @else
                 <a href="{{ route('vendor.onboard.create') }}" class="nav-item">
                     <i class="fas fa-store-alt"></i> Become a Seller
                 </a>
+                @endif
             </nav>
 
             <!-- Footer -->

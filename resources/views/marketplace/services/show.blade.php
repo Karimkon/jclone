@@ -156,7 +156,7 @@
                     <div class="flex items-center gap-4 pb-4 border-b">
                         <div class="w-16 h-16 rounded-lg bg-gray-200 overflow-hidden">
                             @if($service->vendor->logo)
-                                <img src="{{ asset('storage/' . $service->vendor->logo) }}" class="w-full h-full object-cover">
+                                <img src="{{ $service->vendor->logo }}" class="w-full h-full object-cover">
                             @else
                                 <div class="w-full h-full bg-purple-500 flex items-center justify-center text-white text-xl font-bold">
                                     {{ strtoupper(substr($service->vendor->business_name, 0, 1)) }}

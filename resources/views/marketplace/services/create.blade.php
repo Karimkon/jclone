@@ -24,7 +24,7 @@
                     <div class="flex items-start gap-4">
                         <div class="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0">
                             @if($job->vendor->logo)
-                                <img src="{{ asset('storage/' . $job->vendor->logo) }}" class="w-full h-full object-cover">
+                                <img src="{{ $job->vendor->logo }}" class="w-full h-full object-cover">
                             @else
                                 <i class="fas fa-building text-gray-400 text-2xl"></i>
                             @endif
@@ -238,7 +238,7 @@
                     <div class="flex items-center gap-4 pb-4 border-b">
                         <div class="w-14 h-14 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
                             @if($job->vendor->logo)
-                                <img src="{{ asset('storage/' . $job->vendor->logo) }}" class="w-full h-full object-cover">
+                                <img src="{{ $job->vendor->logo }}" class="w-full h-full object-cover">
                             @else
                                 <i class="fas fa-building text-gray-400 text-xl"></i>
                             @endif
@@ -302,7 +302,7 @@
                     <div class="flex items-center gap-3 mb-3">
                         <div class="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
                             @if($sj->vendor->logo)
-                            <img src="{{ asset('storage/' . $sj->vendor->logo) }}" class="w-full h-full object-cover">
+                            <img src="{{ $sj->vendor->logo }}" class="w-full h-full object-cover">
                             @else
                             <i class="fas fa-building text-gray-400"></i>
                             @endif
