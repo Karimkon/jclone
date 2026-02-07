@@ -128,7 +128,7 @@
             <!-- Actions -->
             <div class="flex items-center gap-2">
                 @if($conversation->listing)
-                    <a href="{{ route('marketplace.show', $conversation->listing) }}" 
+                    <a href="{{ $conversation->listing->category ? route('marketplace.show.category', ['category_slug' => $conversation->listing->category->slug, 'listing' => $conversation->listing->slug]) : route('marketplace.show', $conversation->listing) }}" 
                        class="hidden sm:flex items-center gap-2 px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
                        title="View Product">
                         <i class="fas fa-external-link-alt"></i>

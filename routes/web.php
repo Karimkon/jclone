@@ -47,6 +47,7 @@ Route::get('/', [LandingController::class, 'index'])->name('welcome');
 
 // Marketplace browsing (public)
 Route::get('/marketplace', [ListingController::class, 'indexPublic'])->name('marketplace.index');
+Route::get('/marketplace/{category_slug}/{listing:slug}', [ListingController::class, 'showPublicWithCategory'])->name('marketplace.show.category');
 Route::get('/marketplace/{listing:slug}', [ListingController::class, 'showPublic'])->name('marketplace.show');
 
 // Categories (public)

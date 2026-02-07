@@ -1055,7 +1055,7 @@ main {
                         @foreach($featuredProducts->take(10) as $product)
                         <div class="product-card shadow-sm border border-ink-100">
                             <div class="relative aspect-square overflow-hidden bg-ink-50">
-                                <a href="{{ route('marketplace.show', $product) }}">
+                                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     @if($product->images->first())
                                     <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
                                     @else
@@ -1077,7 +1077,7 @@ main {
                             </div>
                             <div class="p-3">
                                 <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
-                                <a href="{{ route('marketplace.show', $product) }}">
+                                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">{{ $product->title }}</h3>
                                 </a>
                                 <div class="flex items-center gap-1 mb-2">
@@ -1177,7 +1177,7 @@ main {
                         @foreach($newArrivals as $index => $product)
                         <div class="product-card shadow-sm border border-ink-100">
                             <div class="relative aspect-square overflow-hidden bg-ink-50">
-                                <a href="{{ route('marketplace.show', $product) }}">
+                                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     @if($product->images->first())
                                     <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
                                     @else
@@ -1202,7 +1202,7 @@ main {
                             </div>
                             <div class="p-3">
                                 <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
-                                <a href="{{ route('marketplace.show', $product) }}">
+                                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">{{ $product->title }}</h3>
                                 </a>
                                 <div class="flex items-center gap-1 mb-2">
@@ -1268,7 +1268,7 @@ main {
         @foreach($recentProducts->take(6) as $product)
         <div class="product-card shadow-sm border border-ink-100">
             <div class="relative aspect-square overflow-hidden bg-ink-50">
-                <a href="{{ route('marketplace.show', $product) }}">
+                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                     @if($product->images->first())
                     <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
                          alt="{{ $product->title }}" 
@@ -1293,7 +1293,7 @@ main {
             <!-- UPDATED: Add price AND cart button -->
             <div class="p-3">
                 <p class="text-xs text-ink-400 mb-1">{{ $product->category->name ?? 'General' }}</p>
-                <a href="{{ route('marketplace.show', $product) }}">
+                <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                     <h3 class="text-sm font-medium text-ink-700 line-clamp-2 mb-2 hover:text-brand-600 transition h-10">
                         {{ $product->title }}
                     </h3>
@@ -1484,7 +1484,7 @@ main {
                         </h4>
                         <div class="space-y-3">
                             @foreach(($topSelling ?? $newArrivals)->take(4) as $i => $product)
-                            <a href="{{ route('marketplace.show', $product) }}" class="flex items-center gap-2 group">
+                            <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}" class="flex items-center gap-2 group">
                                 <span class="w-5 h-5 rounded flex items-center justify-center text-xs font-bold 
                                     {{ $i == 0 ? 'bg-gold-100 text-gold-600' : 'bg-ink-100 text-ink-500' }}">
                                     {{ $i + 1 }}

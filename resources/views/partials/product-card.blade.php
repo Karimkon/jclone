@@ -13,7 +13,7 @@
 <div class="product-card bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 group">
     <!-- Product Image -->
     <div class="relative aspect-square overflow-hidden bg-gray-100">
-        <a href="{{ route('marketplace.show', $product) }}">
+        <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
             @if($product->images && $product->images->first())
             <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
                  alt="{{ $product->title }}"
@@ -102,7 +102,7 @@
         @endif
         
         <!-- Title -->
-        <a href="{{ route('marketplace.show', $product) }}">
+        <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
             <h3 class="text-sm font-medium text-gray-700 line-clamp-2 mb-2 hover:text-primary transition-colors {{ $cardSize == 'small' ? 'text-xs' : 'text-sm' }}">
                 {{ $product->title }}
             </h3>
@@ -182,7 +182,7 @@
             <span class="text-xs font-semibold text-gray-700 truncate max-w-[140px]">
                 {{ $product->vendor->business_name ?? 'Vendor' }}
             </span>
-            @if($product->vendor->is_verified ?? true) {{-- Assuming verified by default based on your UI --}}
+            @if($product->vendor->is_verified ?? false)
                 <i class="fas fa-check-circle text-blue-500 text-[10px]"></i>
             @endif
         </div>
@@ -190,7 +190,7 @@
         {{-- Time on BebaMart --}}
         <div class="flex items-center gap-1.5 text-[10px] text-gray-500">
             <i class="fas fa-user-clock opacity-70"></i>
-            <span>{{ $product->vendor->created_at ? $product->vendor->created_at->diffForHumans(null, true) : '1 month' }} on BebaMart</span>
+            <span>{{ $product->vendor->created_at ? $product->vendor->created_at->diffForHumans(null, true) : 'New' }} on BebaMart</span>
         </div>
     </div>
 </div>

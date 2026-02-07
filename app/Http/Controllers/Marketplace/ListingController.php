@@ -122,7 +122,23 @@ class ListingController extends Controller
     }
 
    /**
- * Display single listing (public)
+ * Display single listing with category slug in URL (canonical)
+ */
+public function showPublicWithCategory(string $category_slug, Listing $listing)
+{
+    // Verify category slug matches the listing's category
+    if ($listing->category && $listing->category->slug !== $category_slug) {
+        return redirect()->route('marketplace.show.category', [
+            'category_slug' => $listing->category->slug,
+            'listing' => $listing->slug,
+        ], 301);
+    }
+
+    return $this->renderPublicListing($listing);
+}
+
+   /**
+ * Display single listing (public) - redirects to category URL if available
  */
 public function showPublic(Listing $listing)
 {
@@ -131,6 +147,30 @@ public function showPublic(Listing $listing)
     }
 
     // Check if vendor is deactivated
+    if ($listing->user && !$listing->user->is_active) {
+        abort(404, 'This product is currently unavailable');
+    }
+
+    // 301 redirect to category-prefixed URL if category exists
+    if ($listing->category) {
+        return redirect()->route('marketplace.show.category', [
+            'category_slug' => $listing->category->slug,
+            'listing' => $listing->slug,
+        ], 301);
+    }
+
+    return $this->renderPublicListing($listing);
+}
+
+   /**
+ * Render a public listing page (shared logic)
+ */
+private function renderPublicListing(Listing $listing)
+{
+    if (!$listing->is_active) {
+        abort(404);
+    }
+
     if ($listing->user && !$listing->user->is_active) {
         abort(404, 'This product is currently unavailable');
     }
@@ -145,10 +185,10 @@ public function showPublic(Listing $listing)
     // Get vendor delivery performance data
     $deliveryPerformance = null;
     $deliveryStats = [
-        'score' => 50,
+        'score' => null,
         'avg_time' => 0,
         'on_time_rate' => 0,
-        'rating' => 3,
+        'rating' => null,
         'delivered_orders' => 0
     ];
     
@@ -174,7 +214,7 @@ public function showPublic(Listing $listing)
     $vendorStats = [
         'rating' => $listing->vendor->average_rating ?? 0,
         'reviews' => $listing->vendor->total_reviews ?? 0,
-        'positive' => $listing->vendor->positive_rating_percentage ?? 98,
+        'positive' => $listing->vendor->positive_rating_percentage ?? 0,
     ];
     
     // Get review statistics

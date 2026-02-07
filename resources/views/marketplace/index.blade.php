@@ -567,7 +567,7 @@
                             <div class="product-card bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                                 <!-- Product Image -->
                                 <div class="relative overflow-hidden aspect-square">
-                                    <a href="{{ route('marketplace.show', $listing) }}" class="block h-full">
+                                    <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}" class="block h-full">
                                         @if($listing->images->first())
                                             <img src="{{ asset('storage/' . $listing->images->first()->path) }}"
                                                  alt="{{ $listing->title }}"
@@ -628,7 +628,7 @@
                                     </span>
 
                                     <!-- Title -->
-                                    <a href="{{ route('marketplace.show', $listing) }}">
+                                    <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}">
                                         <h3 class="font-semibold text-gray-800 text-sm line-clamp-2 hover:text-indigo-600 transition mt-1 leading-tight">
                                             {{ $listing->title }}
                                         </h3>

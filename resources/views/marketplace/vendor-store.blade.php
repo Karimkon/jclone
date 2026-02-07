@@ -432,7 +432,7 @@
                     <div class="product-card bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
                         <!-- Product Image -->
                         <div class="relative overflow-hidden">
-                            <a href="{{ route('marketplace.show', $product) }}" class="block">
+                            <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}" class="block">
                                 @if($product->images->first())
                                     <img src="{{ asset('storage/' . $product->images->first()->path) }}" 
                                          alt="{{ $product->title }}" 
@@ -477,7 +477,7 @@
                             </div>
                             
                             <!-- Title -->
-                            <a href="{{ route('marketplace.show', $product) }}">
+                            <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                 <h3 class="font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-primary transition">
                                     {{ $product->title }}
                                 </h3>
@@ -1252,15 +1252,18 @@
 
     @if($vendor->latitude && $vendor->longitude)
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Pass data safely using json_encode to avoid syntax errors
-        const mapData = @json([
+    @php
+        $mapData = [
             'lat' => (float) $vendor->latitude,
             'lng' => (float) $vendor->longitude,
             'name' => $vendor->business_name,
-            'address' => $vendor->address
-        ]);
+            'address' => $vendor->address ?? '',
+        ];
+    @endphp
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pass data safely using json_encode to avoid syntax errors
+        const mapData = @json($mapData);
 
         console.log('Initializing vendor store map with data:', mapData);
         

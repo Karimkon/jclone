@@ -273,6 +273,105 @@ Route::post('/auth/google', function (Request $request) {
     }
 });
 
+// Apple Authentication
+Route::post('/auth/apple', function (Request $request) {
+    try {
+        $request->validate([
+            'email' => 'nullable|email',
+            'name' => 'nullable|string|max:255',
+            'apple_user_id' => 'required|string',
+            'identity_token' => 'nullable|string',
+            'authorization_code' => 'nullable|string',
+        ]);
+
+        // Find existing user by apple_user_id first, then by email
+        $user = User::where('apple_user_id', $request->apple_user_id)->first();
+
+        if (!$user && $request->email) {
+            $user = User::where('email', $request->email)->first();
+        }
+
+        if (!$user) {
+            // Apple may not provide email on subsequent sign-ins
+            $email = $request->email;
+            if (!$email) {
+                // Generate a private relay-style placeholder
+                $email = 'apple_' . $request->apple_user_id . '@privaterelay.bebamart.com';
+            }
+
+            $name = $request->name;
+            if (!$name || trim($name) === '') {
+                $name = 'Apple User';
+            }
+
+            $user = User::create([
+                'name' => $name,
+                'email' => $email,
+                'password' => Hash::make(\Str::random(32)),
+                'phone' => 'apple_' . substr($request->apple_user_id, 0, 20),
+                'role' => 'buyer',
+                'is_verified' => true,
+                'email_verified_at' => now(),
+                'apple_user_id' => $request->apple_user_id,
+            ]);
+        } else {
+            // Update Apple user ID if not set
+            $updated = false;
+            if (!$user->apple_user_id) {
+                $user->apple_user_id = $request->apple_user_id;
+                $updated = true;
+            }
+            if ($request->name && trim($request->name) !== '' && $user->name === 'Apple User') {
+                $user->name = $request->name;
+                $updated = true;
+            }
+            if (!$user->email_verified_at) {
+                $user->email_verified_at = now();
+                $user->is_verified = true;
+                $updated = true;
+            }
+            if ($updated) {
+                $user->save();
+            }
+        }
+
+        // Load vendor profile
+        $user->load('vendorProfile');
+
+        // Create token
+        $token = $user->createToken('mobile-app')->plainTextToken;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Apple sign-in successful',
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'email_verified_at' => $user->email_verified_at,
+                'created_at' => $user->created_at,
+                'vendor_profile' => $user->vendorProfile ? [
+                    'id' => $user->vendorProfile->id,
+                    'user_id' => $user->vendorProfile->user_id,
+                    'business_name' => $user->vendorProfile->business_name ?? $user->vendorProfile->store_name,
+                    'store_name' => $user->vendorProfile->store_name,
+                    'vetting_status' => $user->vendorProfile->vetting_status,
+                ] : null,
+            ],
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Apple sign-in error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
+        return response()->json([
+            'success' => false,
+            'message' => 'Apple sign-in failed: ' . $e->getMessage(),
+        ], 500);
+    }
+});
+
 // Verify OTP (supports both email and phone verification)
 Route::post('/verify-otp', function (Request $request) {
     $request->validate([
@@ -2013,6 +2112,9 @@ Route::middleware('auth:sanctum')->group(function () {
             'shipping_address_id' => 'required|exists:shipping_addresses,id',
             'payment_method' => 'required|string',
             'notes' => 'nullable|string',
+            'selected_items' => 'nullable|array',
+            'selected_items.*.listing_id' => 'integer',
+            'selected_items.*.variant_id' => 'nullable|integer',
         ]);
 
         $user = $request->user();
@@ -2022,13 +2124,30 @@ Route::middleware('auth:sanctum')->group(function () {
             return response()->json(['success' => false, 'message' => 'Cart is empty'], 400);
         }
 
+        // If selected_items provided, filter cart to only include those items
+        $cartItems = $cart->items;
+        if ($request->has('selected_items') && !empty($request->selected_items)) {
+            $selectedKeys = collect($request->selected_items)->map(function ($si) {
+                return $si['listing_id'] . '_' . ($si['variant_id'] ?? 0);
+            })->toArray();
+
+            $cartItems = array_values(array_filter($cartItems, function ($item) use ($selectedKeys) {
+                $key = $item['listing_id'] . '_' . ($item['variant_id'] ?? 0);
+                return in_array($key, $selectedKeys);
+            }));
+
+            if (empty($cartItems)) {
+                return response()->json(['success' => false, 'message' => 'No matching items found in cart'], 400);
+            }
+        }
+
         $shippingAddress = \App\Models\ShippingAddress::find($request->shipping_address_id);
         if (!$shippingAddress || $shippingAddress->user_id != $user->id) {
             return response()->json(['success' => false, 'message' => 'Invalid shipping address'], 400);
         }
 
         // Check if any vendor in cart is deactivated
-        foreach ($cart->items as $item) {
+        foreach ($cartItems as $item) {
             $listing = Listing::with('user')->find($item['listing_id']);
             if ($listing && $listing->user && !$listing->user->is_active) {
                 return response()->json([
@@ -2045,7 +2164,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $subtotal = 0;
             $orderItems = [];
 
-            foreach ($cart->items as $item) {
+            foreach ($cartItems as $item) {
                 $listing = Listing::with('images')->find($item['listing_id']);
                 if (!$listing) continue;
 
@@ -2083,7 +2202,7 @@ Route::middleware('auth:sanctum')->group(function () {
             $orderNumber = 'BM-' . strtoupper(uniqid()) . '-' . date('Ymd');
 
             // Get vendor profile ID from first listing
-            $firstListing = Listing::find($cart->items[0]['listing_id']);
+            $firstListing = Listing::find($cartItems[0]['listing_id']);
             $vendorProfileId = $firstListing ? $firstListing->vendor_profile_id : 1;
 
             $order = Order::create([
@@ -2127,8 +2246,33 @@ Route::middleware('auth:sanctum')->group(function () {
                 Listing::where('id', $item['listing_id'])->decrement('stock', $item['quantity']);
             }
 
-            // Clear cart
-            $cart->update(['items' => []]);
+            // Remove ordered items from cart (keep unselected items)
+            if ($request->has('selected_items') && !empty($request->selected_items)) {
+                $orderedKeys = collect($cartItems)->map(function ($item) {
+                    return $item['listing_id'] . '_' . ($item['variant_id'] ?? 0);
+                })->toArray();
+
+                $remainingItems = array_values(array_filter($cart->items, function ($item) use ($orderedKeys) {
+                    $key = $item['listing_id'] . '_' . ($item['variant_id'] ?? 0);
+                    return !in_array($key, $orderedKeys);
+                }));
+
+                // Recalculate cart totals for remaining items
+                $remainingSubtotal = 0;
+                foreach ($remainingItems as $ri) {
+                    $remainingSubtotal += ($ri['price'] ?? 0) * ($ri['quantity'] ?? 1);
+                }
+
+                $cart->update([
+                    'items' => $remainingItems,
+                    'subtotal' => $remainingSubtotal,
+                    'tax' => $remainingSubtotal * 0.18,
+                    'total' => $remainingSubtotal + ($remainingSubtotal * 0.18),
+                ]);
+            } else {
+                // No selected_items sent = order all, clear cart
+                $cart->update(['items' => []]);
+            }
 
             \DB::commit();
 

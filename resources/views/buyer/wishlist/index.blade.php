@@ -26,7 +26,7 @@
              data-listing-id="{{ $item->listing_id }}">
             <div class="relative">
                 <!-- Product Image -->
-                <a href="{{ route('marketplace.show', $item->listing) }}">
+                <a href="{{ $item->listing->category ? route('marketplace.show.category', ['category_slug' => $item->listing->category->slug, 'listing' => $item->listing->slug]) : route('marketplace.show', $item->listing) }}">
                     @if($item->listing->images->first())
                     <img src="{{ asset('storage/' . $item->listing->images->first()->path) }}" 
                          alt="{{ $item->listing->title }}" 
@@ -83,7 +83,7 @@
                 </div>
                 
                 <!-- Title -->
-                <a href="{{ route('marketplace.show', $item->listing) }}">
+                <a href="{{ $item->listing->category ? route('marketplace.show.category', ['category_slug' => $item->listing->category->slug, 'listing' => $item->listing->slug]) : route('marketplace.show', $item->listing) }}">
                     <h3 class="font-bold text-gray-800 mb-2 line-clamp-2 hover:text-primary">
                         {{ $item->listing->title }}
                     </h3>
@@ -133,7 +133,7 @@
                     </button>
                     @endif
                     
-                    <a href="{{ route('marketplace.show', $item->listing) }}"
+                    <a href="{{ $item->listing->category ? route('marketplace.show.category', ['category_slug' => $item->listing->category->slug, 'listing' => $item->listing->slug]) : route('marketplace.show', $item->listing) }}"
                        class="block w-full px-4 py-2 text-center border border-primary text-primary rounded-lg hover:bg-primary hover:text-white font-medium transition">
                         <i class="fas fa-eye mr-2"></i> View Details
                     </a>

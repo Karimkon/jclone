@@ -207,7 +207,7 @@
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 border border-ink-100">
                         <div class="relative">
                             <!-- Product Image -->
-                            <a href="{{ route('marketplace.show', $listing) }}">
+                            <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}">
                                 @if($listing->images->first())
                                 <img src="{{ asset('storage/' . $listing->images->first()->path) }}" 
                                      alt="{{ $listing->title }}" 
@@ -236,7 +236,7 @@
                         <!-- Product Info -->
                         <div class="p-4">
                             <!-- Title -->
-                            <a href="{{ route('marketplace.show', $listing) }}">
+                            <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}">
                                 <h3 class="font-bold text-ink-800 mb-2 line-clamp-1 hover:text-brand-600 transition-colors duration-300 font-display">
                                     {{ $listing->title }}
                                 </h3>
@@ -258,7 +258,7 @@
                                     </div>
                                 </div>
                                 
-                                <a href="{{ route('marketplace.show', $listing) }}" 
+                                <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}" 
                                    class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium text-sm transition-all duration-300 font-body">
                                     View Details
                                 </a>

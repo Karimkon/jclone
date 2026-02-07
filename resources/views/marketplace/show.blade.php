@@ -6,14 +6,14 @@
 
 {{-- Open Graph / Social Sharing --}}
 @section('og_type', 'product')
-@section('og_url', route('marketplace.show', $listing))
+@section('og_url', $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing))
 @section('og_title', $listing->title . ' - BebaMart')
 @section('og_description', Str::limit(strip_tags($listing->description), 200))
 @if($listing->images && $listing->images->first())
 @section('og_image', asset('storage/' . $listing->images->first()->path))
 @endif
 
-@section('canonical_url', route('marketplace.show', $listing))
+@section('canonical_url', $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing))
 
 @php
     // Get review statistics
@@ -54,16 +54,16 @@
 $vendorStats = [
     'rating' => \App\Models\Review::getVendorAverageRating($listing->vendor_profile_id),
     'reviews' => \App\Models\Review::getVendorReviewsCount($listing->vendor_profile_id),
-    'positive' => $listing->vendor ? ($listing->vendor->positive_rating_percentage ?? 98) : 98,
+    'positive' => $listing->vendor ? ($listing->vendor->positive_rating_percentage ?? 0) : 0,
 ];
 
 // Get vendor delivery performance
 $deliveryPerformance = null;
 $deliveryStats = [
-    'score' => 50,
+    'score' => null,
     'avg_time' => 0,
     'on_time_rate' => 0,
-    'rating' => 3,
+    'rating' => null,
     'delivered_orders' => 0
 ];
 
@@ -125,112 +125,89 @@ if ($listing->vendor && method_exists($listing->vendor, 'performance')) {
 
 {{-- JSON-LD Structured Data for Products --}}
 @push('structured_data')
-<script type="application/ld+json">
-{
-    "@@context": "https://schema.org",
-    "@@type": "Product",
-    "name": "{{ $listing->title }}",
-    "description": "{{ Str::limit(strip_tags($listing->description), 500) }}",
-    "sku": "{{ $listing->sku ?? 'BM-' . $listing->id }}",
-    "url": "{{ route('marketplace.show', $listing) }}",
-    @if($listing->images && $listing->images->first())
-    "image": [
-        @foreach($listing->images->take(5) as $image)
-        "{{ asset('storage/' . $image->path) }}"@if(!$loop->last),@endif
-        @endforeach
+@php
+$jsonLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'Product',
+    'name' => $listing->title,
+    'description' => Str::limit(strip_tags($listing->description), 500),
+    'sku' => $listing->sku ?? 'BM-' . $listing->id,
+    'url' => $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing),
+    'brand' => [
+        '@type' => 'Brand',
+        'name' => $listing->vendor?->business_name ?? 'BebaMart Vendor',
     ],
-    @endif
-    "brand": {
-        "@@type": "Brand",
-        "name": "{{ $listing->vendor?->business_name ?? 'BebaMart Vendor' }}"
-    },
-    "offers": {
-        "@@type": "Offer",
-        "url": "{{ route('marketplace.show', $listing) }}",
-        "priceCurrency": "UGX",
-        "price": "{{ $listing->price }}",
-        "priceValidUntil": "{{ now()->addMonths(3)->format('Y-m-d') }}",
-        "availability": "{{ $listing->stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock' }}",
-        "itemCondition": "{{ $listing->condition == 'new' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition' }}",
-        "seller": {
-            "@@type": "Organization",
-            "name": "{{ $listing->vendor?->business_name ?? 'BebaMart Vendor' }}"
-        }
-    }
-    @if($reviewStats['count'] > 0)
-    ,"aggregateRating": {
-        "@@type": "AggregateRating",
-        "ratingValue": "{{ number_format($reviewStats['average'], 1) }}",
-        "reviewCount": "{{ $reviewStats['count'] }}",
-        "bestRating": "5",
-        "worstRating": "1"
-    }
-    @endif
-    @if($reviews && $reviews->count() > 0)
-    ,"review": [
-        @foreach($reviews->take(3) as $review)
-        {
-            "@@type": "Review",
-            "author": {
-                "@@type": "Person",
-                "name": "{{ $review->user?->name ?? 'BebaMart Customer' }}"
-            },
-            "datePublished": "{{ $review->created_at->format('Y-m-d') }}",
-            "reviewBody": "{{ Str::limit($review->comment, 200) }}",
-            "reviewRating": {
-                "@@type": "Rating",
-                "ratingValue": "{{ $review->rating }}",
-                "bestRating": "5",
-                "worstRating": "1"
-            }
-        }@if(!$loop->last),@endif
-        @endforeach
-    ]
-    @endif
+    'offers' => [
+        '@type' => 'Offer',
+        'url' => $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing),
+        'priceCurrency' => 'UGX',
+        'price' => $listing->price,
+        'priceValidUntil' => now()->addMonths(3)->format('Y-m-d'),
+        'availability' => $listing->stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        'itemCondition' => $listing->condition == 'new' ? 'https://schema.org/NewCondition' : 'https://schema.org/UsedCondition',
+        'seller' => [
+            '@type' => 'Organization',
+            'name' => $listing->vendor?->business_name ?? 'BebaMart Vendor',
+        ],
+    ],
+];
+
+if ($listing->images && $listing->images->first()) {
+    $jsonLd['image'] = $listing->images->take(5)->map(fn($img) => asset('storage/' . $img->path))->values()->toArray();
 }
+
+if ($reviewStats['count'] > 0) {
+    $jsonLd['aggregateRating'] = [
+        '@type' => 'AggregateRating',
+        'ratingValue' => number_format($reviewStats['average'], 1),
+        'reviewCount' => $reviewStats['count'],
+        'bestRating' => '5',
+        'worstRating' => '1',
+    ];
+}
+
+if ($reviews && $reviews->count() > 0) {
+    $jsonLd['review'] = $reviews->take(3)->map(fn($review) => [
+        '@type' => 'Review',
+        'author' => [
+            '@type' => 'Person',
+            'name' => $review->user?->name ?? 'BebaMart Customer',
+        ],
+        'datePublished' => $review->created_at?->format('Y-m-d'),
+        'reviewBody' => Str::limit($review->comment, 200),
+        'reviewRating' => [
+            '@type' => 'Rating',
+            'ratingValue' => (string) $review->rating,
+            'bestRating' => '5',
+            'worstRating' => '1',
+        ],
+    ])->values()->toArray();
+}
+@endphp
+<script type="application/ld+json">
+{!! json_encode($jsonLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
 </script>
 
 {{-- BreadcrumbList Schema --}}
-<script type="application/ld+json">
-{
-    "@@context": "https://schema.org",
-    "@@type": "BreadcrumbList",
-    "itemListElement": [
-        {
-            "@@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "{{ url('/') }}"
-        },
-        {
-            "@@type": "ListItem",
-            "position": 2,
-            "name": "Marketplace",
-            "item": "{{ route('marketplace.index') }}"
-        },
-        @if($listing->category)
-        {
-            "@@type": "ListItem",
-            "position": 3,
-            "name": "{{ $listing->category->name }}",
-            "item": "{{ route('categories.show', $listing->category) }}"
-        },
-        {
-            "@@type": "ListItem",
-            "position": 4,
-            "name": "{{ $listing->title }}",
-            "item": "{{ route('marketplace.show', $listing) }}"
-        }
-        @else
-        {
-            "@@type": "ListItem",
-            "position": 3,
-            "name": "{{ $listing->title }}",
-            "item": "{{ route('marketplace.show', $listing) }}"
-        }
-        @endif
-    ]
+@php
+$breadcrumbItems = [
+    ['@type' => 'ListItem', 'position' => 1, 'name' => 'Home', 'item' => url('/')],
+    ['@type' => 'ListItem', 'position' => 2, 'name' => 'Marketplace', 'item' => route('marketplace.index')],
+];
+if ($listing->category) {
+    $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 3, 'name' => $listing->category->name, 'item' => route('categories.show', $listing->category)];
+    $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 4, 'name' => $listing->title, 'item' => $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing)];
+} else {
+    $breadcrumbItems[] = ['@type' => 'ListItem', 'position' => 3, 'name' => $listing->title, 'item' => $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing)];
 }
+$breadcrumbLd = [
+    '@context' => 'https://schema.org',
+    '@type' => 'BreadcrumbList',
+    'itemListElement' => $breadcrumbItems,
+];
+@endphp
+<script type="application/ld+json">
+{!! json_encode($breadcrumbLd, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) !!}
 </script>
 @endpush
 
@@ -878,7 +855,7 @@ button[onclick="closeOptionsModal()"]:hover {
                     </div>
                     
                     <!-- Title -->
-                    <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 leading-tight">
+                    <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 mb-4 leading-tight break-words">
                         {{ $listing->title }}
                     </h1>
 
@@ -914,7 +891,9 @@ button[onclick="closeOptionsModal()"]:hover {
                             {{ $reviewStats['count'] }} {{ Str::plural('Review', $reviewStats['count']) }}
                         </a>
                         <span class="text-gray-300">|</span>
-                        <span class="text-sm text-green-600">{{ rand(50, 500) }}+ Sold</span>
+                        @if($listing->purchase_count > 0)
+                        <span class="text-sm text-green-600">{{ $listing->purchase_count }}+ Sold</span>
+                        @endif
                     </div>
                     
                     <!-- Price Section -->
@@ -1174,7 +1153,7 @@ button[onclick="closeOptionsModal()"]:hover {
                         <!-- Description Tab -->
                         <div id="tab-description" class="tab-content">
                             <h3 class="text-xl font-bold text-gray-900 mb-4">Product Description</h3>
-                            <div class="prose prose-gray max-w-none">
+                            <div class="prose prose-gray max-w-none break-words overflow-hidden">
                                 {!! nl2br(e($listing->description)) !!}
                             </div>
                             
@@ -1395,7 +1374,7 @@ button[onclick="closeOptionsModal()"]:hover {
                                                         <i class="fas fa-star text-sm {{ $i <= $review->rating ? 'text-yellow-400' : 'text-gray-200' }}"></i>
                                                         @endfor
                                                     </div>
-                                                    <span class="text-sm text-gray-500">{{ $review->created_at->diffForHumans() }}</span>
+                                                    <span class="text-sm text-gray-500">{{ $review->created_at?->diffForHumans() }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -1432,7 +1411,7 @@ button[onclick="closeOptionsModal()"]:hover {
                             
                             @if($reviewStats['count'] > 5)
                             <div class="mt-6 text-center">
-                                <a href="{{ route('marketplace.show', $listing) }}?tab=reviews&page=all" 
+                                <a href="{{ $listing->category ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug]) : route('marketplace.show', $listing) }}?tab=reviews&page=all" 
                                    class="px-6 py-3 border-2 border-primary text-primary rounded-xl font-medium hover:bg-primary hover:text-white transition inline-block">
                                     View All {{ $reviewStats['count'] }} Reviews
                                 </a>
@@ -1569,22 +1548,22 @@ button[onclick="closeOptionsModal()"]:hover {
       <!-- Vendor Stats -->
 <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
     <div class="text-center p-3 bg-gray-50 rounded-xl">
-        <div class="text-xl font-bold text-primary">{{ $vendorStats['positive'] }}%</div>
+        <div class="text-xl font-bold text-primary">{{ $vendorStats['positive'] > 0 ? $vendorStats['positive'] . '%' : 'N/A' }}</div>
         <div class="text-xs text-gray-500">Positive</div>
     </div>
     <div class="text-center p-3 bg-gray-50 rounded-xl">
-        <div class="text-xl font-bold text-primary">{{ $vendorStats['reviews'] > 0 ? $vendorStats['reviews'] : rand(100, 500) }}+</div>
+        <div class="text-xl font-bold text-primary">{{ $vendorStats['reviews'] > 0 ? $vendorStats['reviews'] : 0 }}</div>
         <div class="text-xs text-gray-500">Reviews</div>
     </div>
     <div class="text-center p-3 bg-gray-50 rounded-xl">
-        <div class="text-xl font-bold text-primary">{{ number_format($vendorStats['rating'] ?: 4.5, 1) }}</div>
+        <div class="text-xl font-bold text-primary">{{ $vendorStats['rating'] > 0 ? number_format($vendorStats['rating'], 1) : 'N/A' }}</div>
         <div class="text-xs text-gray-500">Rating</div>
     </div>
     <!-- Delivery Performance -->
     <div class="text-center p-3 bg-gray-50 rounded-xl" title="Based on {{ $deliveryStats['delivered_orders'] ?? 0 }} deliveries">
         <div class="flex items-center justify-center gap-1 mb-1">
             @for($i = 1; $i <= 5; $i++)
-                <i class="fas fa-star text-xs {{ $i <= $deliveryStats['rating'] ? 'text-yellow-400' : 'text-gray-300' }}"></i>
+                <i class="fas fa-star text-xs {{ $deliveryStats['rating'] !== null && $i <= $deliveryStats['rating'] ? 'text-yellow-400' : 'text-gray-300' }}"></i>
             @endfor
         </div>
         <div class="text-sm text-gray-600">
@@ -1626,7 +1605,7 @@ button[onclick="closeOptionsModal()"]:hover {
                     
                     <div class="space-y-4">
                         @foreach($related as $relatedItem)
-                        <a href="{{ route('marketplace.show', $relatedItem) }}" class="related-card flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition">
+                        <a href="{{ $relatedItem->category ? route('marketplace.show.category', ['category_slug' => $relatedItem->category->slug, 'listing' => $relatedItem->slug]) : route('marketplace.show', $relatedItem) }}" class="related-card flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition">
                             <div class="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                                 @if($relatedItem->images->first())
                                 <img src="{{ asset('storage/' . $relatedItem->images->first()->path) }}" 

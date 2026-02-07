@@ -56,13 +56,17 @@ class SitemapController extends Controller
     public function products()
     {
         $listings = Listing::where('is_active', true)
-            ->select('slug', 'updated_at')
+            ->select('slug', 'updated_at', 'category_id')
+            ->with('category:id,slug')
             ->orderBy('updated_at', 'desc')
             ->limit(50000)
             ->get()
             ->map(function ($listing) {
+                $loc = $listing->category
+                    ? route('marketplace.show.category', ['category_slug' => $listing->category->slug, 'listing' => $listing->slug])
+                    : route('marketplace.show', $listing->slug);
                 return [
-                    'loc' => route('marketplace.show', $listing->slug),
+                    'loc' => $loc,
                     'lastmod' => $listing->updated_at->toDateString(),
                     'priority' => '0.7',
                     'changefreq' => 'weekly',

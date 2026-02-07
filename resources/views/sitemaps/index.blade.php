@@ -2,7 +2,7 @@
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 @foreach($sitemaps as $sitemap)
     <sitemap>
-        <loc>{{ $sitemap['loc'] }}</loc>
+        <loc>{!! htmlspecialchars($sitemap['loc'], ENT_XML1, 'UTF-8') !!}</loc>
         <lastmod>{{ $sitemap['lastmod'] }}</lastmod>
     </sitemap>
 @endforeach
