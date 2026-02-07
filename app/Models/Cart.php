@@ -164,37 +164,113 @@ private function findItemKey($items, $listingId, $variantId, $color, $size)
    public function removeVariantItem($listingId, $variantId = null, $color = null, $size = null)
 {
     $items = $this->items ?? [];
-    
+
     $targetKey = $this->generateItemKey($listingId, $variantId, $color, $size);
-    
+
     if (isset($items[$targetKey])) {
         unset($items[$targetKey]);
-        $this->items = $items; // Keep as associative array
+        $this->items = $items;
         $this->recalculateTotals();
         $this->save();
         return $this;
     }
-    
+
+    // Fallback: search by matching fields (handles legacy numeric-keyed carts)
+    foreach ($items as $key => $item) {
+        if (($item['listing_id'] ?? null) == $listingId
+            && ($item['variant_id'] ?? null) == $variantId
+            && ($item['color'] ?? null) == $color
+            && ($item['size'] ?? null) == $size
+        ) {
+            unset($items[$key]);
+            $this->items = $items;
+            $this->recalculateTotals();
+            $this->save();
+            return $this;
+        }
+    }
+
+    // Last resort: match by listing_id only if no variant info provided
+    if (!$variantId && !$color && !$size) {
+        foreach ($items as $key => $item) {
+            if (($item['listing_id'] ?? null) == $listingId) {
+                unset($items[$key]);
+                $this->items = $items;
+                $this->recalculateTotals();
+                $this->save();
+                return $this;
+            }
+        }
+    }
+
     return $this;
 }
+
+    /**
+     * Remove specific items by their keys
+     */
+    public function removeByKeys(array $keys)
+    {
+        $items = $this->items ?? [];
+
+        foreach ($keys as $key) {
+            unset($items[$key]);
+        }
+
+        $this->items = $items;
+        $this->recalculateTotals();
+        $this->save();
+
+        return $this;
+    }
+
+    /**
+     * Get only items matching the given keys
+     */
+    public function getSelectedItems(array $selectedKeys)
+    {
+        $items = $this->items ?? [];
+        $selected = [];
+
+        foreach ($selectedKeys as $key) {
+            if (isset($items[$key])) {
+                $selected[$key] = $items[$key];
+            }
+        }
+
+        return $selected;
+    }
 
     public function updateQuantity($listingId, $quantity, $variantId = null, $color = null, $size = null)
 {
     $items = $this->items ?? [];
     $itemKey = $this->findItemKey($items, $listingId, $variantId, $color, $size);
-    
+
+    // Fallback: search by matching fields if key not found
+    if ($itemKey === null) {
+        foreach ($items as $key => $item) {
+            if (($item['listing_id'] ?? null) == $listingId
+                && ($item['variant_id'] ?? null) == $variantId
+                && ($item['color'] ?? null) == $color
+                && ($item['size'] ?? null) == $size
+            ) {
+                $itemKey = $key;
+                break;
+            }
+        }
+    }
+
     if ($itemKey !== null && $quantity > 0) {
         $items[$itemKey]['quantity'] = $quantity;
         $items[$itemKey]['total'] = $items[$itemKey]['quantity'] * $items[$itemKey]['unit_price'];
-        
+
         $this->items = $items;
         $this->recalculateTotals();
         $this->save();
     } elseif ($itemKey !== null && $quantity <= 0) {
-        // Remove item if quantity is 0 or negative
         $this->removeVariantItem($listingId, $variantId, $color, $size);
     }
-    
+
     return $this;
 }
 

@@ -57,31 +57,64 @@ class OrderController extends Controller
     /**
      * Display checkout page
      */
-    public function checkout()
+    public function checkout(Request $request)
     {
         $cart = Cart::where('user_id', Auth::id())->first();
-        
+
         if (!$cart || empty($cart->items)) {
             return redirect()->route('buyer.cart.index')
                 ->with('error', 'Your cart is empty');
         }
 
+        // Determine selected item keys
+        $selectedKeys = [];
+        if ($request->has('selected')) {
+            $selectedKeys = json_decode($request->input('selected'), true) ?? [];
+        }
+
+        // Fallback: check cart meta for saved selection
+        if (empty($selectedKeys)) {
+            $meta = $cart->meta ?? [];
+            $selectedKeys = $meta['selected_items'] ?? [];
+        }
+
+        // If still empty, use all items
+        if (empty($selectedKeys)) {
+            $selectedKeys = array_keys($cart->items);
+        }
+
+        // Filter cart items to only selected ones
+        $selectedItems = $cart->getSelectedItems($selectedKeys);
+
+        if (empty($selectedItems)) {
+            return redirect()->route('buyer.cart.index')
+                ->with('error', 'No valid items selected for checkout');
+        }
+
+        // Calculate totals for selected items only
+        $subtotal = 0;
+        $taxTotal = 0;
+        foreach ($selectedItems as $item) {
+            $subtotal += ($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1);
+            $taxTotal += ($item['tax_amount'] ?? 0) * ($item['quantity'] ?? 1);
+        }
+
         // Get user's wallet
         $wallet = BuyerWallet::where('user_id', Auth::id())->first();
-        
+
         // Get shipping addresses
         $addresses = Auth::user()->shippingAddresses()
             ->orderBy('is_default', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         // Get or create default address if none exist
         if ($addresses->isEmpty()) {
             $defaultAddress = Auth::user()->getOrCreateDefaultAddress();
             $addresses = collect([$defaultAddress]);
         }
 
-        return view('buyer.orders.checkout', compact('cart', 'wallet', 'addresses'));
+        return view('buyer.orders.checkout', compact('cart', 'wallet', 'addresses', 'selectedItems', 'selectedKeys', 'subtotal', 'taxTotal'));
     }
 
     /**
@@ -93,6 +126,8 @@ class OrderController extends Controller
             'shipping_address_id' => 'required|exists:shipping_addresses,id',
             'payment_method' => 'required|in:cash_on_delivery,wallet,card,mobile_money,bank_transfer',
             'notes' => 'nullable|string|max:1000',
+            'selected_items' => 'nullable|array',
+            'selected_items.*' => 'string',
         ]);
 
         // Verify address belongs to user
@@ -102,15 +137,36 @@ class OrderController extends Controller
 
         // Get cart
         $cart = Cart::where('user_id', Auth::id())->first();
-        
+
         if (!$cart || empty($cart->items)) {
             return back()->with('error', 'Your cart is empty');
         }
 
+        // Determine which items to process
+        $selectedKeys = $validated['selected_items'] ?? [];
+        $isPartialCheckout = !empty($selectedKeys);
+
+        if ($isPartialCheckout) {
+            $itemsToProcess = $cart->getSelectedItems($selectedKeys);
+        } else {
+            $itemsToProcess = $cart->items;
+        }
+
+        if (empty($itemsToProcess)) {
+            return back()->with('error', 'No valid items to process');
+        }
+
+        // Calculate total for selected items for wallet validation
+        $selectedSubtotal = 0;
+        foreach ($itemsToProcess as $item) {
+            $selectedSubtotal += ($item['unit_price'] ?? 0) * ($item['quantity'] ?? 1);
+        }
+        $selectedTotal = $selectedSubtotal + ($selectedSubtotal * 0.18);
+
         // Validate wallet balance if wallet payment
         if ($validated['payment_method'] === 'wallet') {
             $wallet = BuyerWallet::where('user_id', Auth::id())->first();
-            if (!$wallet || $wallet->balance < $cart->total) {
+            if (!$wallet || $wallet->balance < $selectedTotal) {
                 return back()->with('error', 'Insufficient wallet balance');
             }
         }
@@ -119,7 +175,7 @@ class OrderController extends Controller
         try {
             // Group items by vendor
             $itemsByVendor = [];
-            foreach ($cart->items as $item) {
+            foreach ($itemsToProcess as $item) {
                 $listing = Listing::with('vendor')->find($item['listing_id']);
                 
                 if (!$listing || !$listing->is_active) {
@@ -220,26 +276,19 @@ class OrderController extends Controller
 
                 ActivityLogger::logOrderCreated($order);
 
-                 // TRACK PURCHASES - Add this after order creation
-    $cart = Cart::where('user_id', auth()->id())->first();
-    
-    if ($cart && $cart->items) {
-        $analyticsService = app(\App\Services\ProductAnalyticsService::class);
-        
-        foreach ($cart->items as $item) {
-            $listing = Listing::find($item['listing_id']);
-            if ($listing) {
-                $unitPrice = $item['unit_price'] ?? $listing->price;
-                $analyticsService->trackPurchase(
-                    $listing->id,
-                    $order->id,
-                    $item['quantity'],
-                    $unitPrice * $item['quantity']
-                );
-            }
-        }
-    }
-    
+                // TRACK PURCHASES for this vendor's items
+                $analyticsService = app(\App\Services\ProductAnalyticsService::class);
+                foreach ($vendorData['items'] as $itemData) {
+                    $listing = $itemData['listing'];
+                    $cartItem = $itemData['cart_item'];
+                    $unitPrice = $cartItem['unit_price'] ?? $listing->price;
+                    $analyticsService->trackPurchase(
+                        $listing->id,
+                        $order->id,
+                        $cartItem['quantity'],
+                        $unitPrice * $cartItem['quantity']
+                    );
+                }
 
                 // Create order items (with variant support)
                 foreach ($vendorData['items'] as $itemData) {
@@ -348,14 +397,24 @@ class OrderController extends Controller
                 $orders[] = $order;
             }
 
-            // Clear cart
-            $cart->update([
-                'items' => [],
-                'subtotal' => 0,
-                'shipping' => 0,
-                'tax' => 0,
-                'total' => 0
-            ]);
+            // Clear ordered items from cart
+            if ($isPartialCheckout) {
+                $cart->removeByKeys($selectedKeys);
+                // Also clear selection meta
+                $meta = $cart->meta ?? [];
+                unset($meta['selected_items']);
+                $cart->meta = $meta;
+                $cart->save();
+            } else {
+                $cart->update([
+                    'items' => [],
+                    'subtotal' => 0,
+                    'shipping' => 0,
+                    'tax' => 0,
+                    'total' => 0,
+                    'meta' => [],
+                ]);
+            }
 
             DB::commit();
 

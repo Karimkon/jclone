@@ -5,63 +5,88 @@
 @section('content')
 <div class="container mx-auto px-2 sm:px-4 py-4 sm:py-8 pb-20 sm:pb-8">
     <h1 class="text-2xl sm:text-3xl font-bold mb-4 sm:mb-8">Shopping Cart</h1>
-    
+
     @if(session('success'))
     <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
         <p class="text-green-700">{{ session('success') }}</p>
     </div>
     @endif
-    
+
     @if(session('error'))
     <div class="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
         <p class="text-red-700">{{ session('error') }}</p>
     </div>
     @endif
-    
+
     @if($cart && !empty($cart->items))
+    @php
+        $enrichedItems = $cart->getEnrichedItems();
+    @endphp
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-8">
         <!-- Cart Items -->
         <div class="lg:col-span-2">
             <div class="bg-white rounded-lg shadow overflow-hidden">
                 <div class="p-3 sm:p-6 border-b bg-gray-50">
                     <div class="flex justify-between items-center">
-                        <h2 class="text-base sm:text-xl font-bold">Cart Items ({{ $cart->item_count }})</h2>
-                        <form action="{{ route('buyer.cart.clear') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear your cart?')">
-                            @csrf
-                            @method('POST')
-                            <button type="submit" class="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium">
-                                <i class="fas fa-trash mr-1"></i> <span class="hidden sm:inline">Clear Cart</span><span class="sm:hidden">Clear</span>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center cursor-pointer">
+                                <input type="checkbox" id="select-all" checked
+                                       class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                       onchange="toggleSelectAll(this.checked)">
+                            </label>
+                            <h2 class="text-base sm:text-xl font-bold">
+                                Cart Items (<span id="selected-count">{{ count($enrichedItems) }}</span>/{{ count($enrichedItems) }})
+                            </h2>
+                        </div>
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <button type="button" onclick="deleteSelected()"
+                                    id="delete-selected-btn"
+                                    class="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium hidden">
+                                <i class="fas fa-trash mr-1"></i> <span class="hidden sm:inline">Delete Selected</span><span class="sm:hidden">Delete</span>
                             </button>
-                        </form>
+                            <form action="{{ route('buyer.cart.clear') }}" method="POST" onsubmit="return confirm('Are you sure you want to clear your cart?')">
+                                @csrf
+                                @method('POST')
+                                <button type="submit" class="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium">
+                                    <i class="fas fa-trash mr-1"></i> <span class="hidden sm:inline">Clear Cart</span><span class="sm:hidden">Clear</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
-                
+
                 <div class="divide-y">
-                  @foreach($cart->getEnrichedItems() as $item)
+                  @foreach($enrichedItems as $item)
 @php
     // Properly extract variation data from the cart item structure
     $variant = $item['variant'] ?? null;
     $color = $item['color'] ?? null;
     $size = $item['size'] ?? null;
     $variantId = $item['variant_id'] ?? null;
-    
+
     // Create unique item key
-    $itemKey = $item['listing_id'] . '_' . ($variantId ?? 'base') . '_' . ($color ?? '') . '_' . ($size ?? '');
-    
+    $itemKey = $item['listing_id'] . '_' . ($variantId ?? 'base') . '_' . ($color ?? 'nocolor') . '_' . ($size ?? 'nosize');
+
     // Get correct attributes from variant or direct item
     $variantAttributes = $variant['attributes'] ?? [];
     $displayColor = $color ?? $variantAttributes['color'] ?? $variantAttributes['Color'] ?? null;
     $displaySize = $size ?? $variantAttributes['size'] ?? $variantAttributes['Size'] ?? null;
-    
+
     // Add missing variables
     $stock = $item['stock'] ?? ($variant['stock'] ?? ($item['listing']['stock'] ?? 0));
     $unitPrice = $item['unit_price'] ?? ($variant['display_price'] ?? ($variant['price'] ?? 0));
 @endphp
 
-<div class="p-3 sm:p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}" data-item-key="{{ $itemKey }}">
+<div class="p-3 sm:p-6 cart-item" data-listing-id="{{ $item['listing_id'] }}" data-item-key="{{ $itemKey }}" data-unit-price="{{ $unitPrice }}" data-tax="{{ $item['tax_amount'] ?? 0 }}">
     <div class="flex flex-col sm:flex-row sm:space-x-4">
-        <!-- Product Image & Remove (Mobile: side by side, Desktop: image only) -->
-        <div class="flex items-start gap-3 sm:block mb-3 sm:mb-0">
+        <!-- Checkbox + Product Image & Remove (Mobile: side by side, Desktop: image only) -->
+        <div class="flex items-start gap-3 sm:gap-3 mb-3 sm:mb-0">
+            <label class="flex items-center cursor-pointer mt-1 sm:mt-7">
+                <input type="checkbox" class="item-checkbox h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                       data-item-key="{{ $itemKey }}"
+                       checked
+                       onchange="onItemSelectionChange()">
+            </label>
             <div class="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0">
                 @if($item['image'])
                 <img src="{{ $item['image'] }}" alt="{{ $item['title'] }}"
@@ -99,7 +124,7 @@
                     <p class="text-sm text-gray-600 mb-2">
                         <i class="fas fa-store mr-1"></i> {{ $item['vendor_name'] ?? ($item['listing']['vendor']['business_name'] ?? 'Vendor') }}
                     </p>
-                    
+
                     <!-- Display Variations if they exist -->
                     @if($variant || $displayColor || $displaySize)
                     <div class="mb-2">
@@ -110,14 +135,14 @@
                                 <span class="px-2 py-1 bg-gray-100 rounded text-sm">{{ $displayColor }}</span>
                             </div>
                             @endif
-                            
+
                             @if($displaySize)
                             <div class="flex items-center">
                                 <span class="font-medium w-16">Size:</span>
                                 <span class="px-2 py-1 bg-gray-100 rounded text-sm">{{ $displaySize }}</span>
                             </div>
                             @endif
-                            
+
                             @if($variant && isset($variant['sku']))
                             <div class="flex items-center">
                                 <span class="font-medium w-16">SKU:</span>
@@ -127,7 +152,7 @@
                         </div>
                     </div>
                     @endif
-                    
+
                     <div class="flex items-center space-x-4 text-sm text-gray-500">
                         @if(isset($item['origin']))
                         <span class="px-2 py-1 bg-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-100 text-{{ $item['origin'] == 'imported' ? 'blue' : 'green' }}-800 rounded text-xs">
@@ -140,14 +165,14 @@
                         @endif
                     </div>
                 </div>
-                
+
                 <!-- Remove Button -->
-                <button onclick="removeFromCart({{ $item['listing_id'] }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')" 
+                <button onclick="removeFromCart({{ $item['listing_id'] }}, '{{ $variantId }}', '{{ $color }}', '{{ $size }}')"
                         class="text-red-600 hover:text-red-800 h-8">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            
+
             <!-- Mobile: Variations display -->
             @if(($variant || $displayColor || $displaySize) && ($displayColor || $displaySize))
             <div class="sm:hidden flex flex-wrap gap-2 mb-3">
@@ -201,12 +226,12 @@
     </div>
 </div>
 @endforeach
-                    
-                    
+
+
                 </div>
             </div>
         </div>
-        
+
         <!-- Order Summary -->
 <div class="lg:col-span-1">
     <div class="bg-white rounded-lg shadow p-4 sm:p-6 sticky top-4">
@@ -214,7 +239,7 @@
 
         <div class="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
             <div class="flex justify-between text-gray-600">
-                <span>Subtotal</span>
+                <span>Subtotal (<span id="summary-item-count">{{ count($enrichedItems) }}</span> items)</span>
                 <span id="cart-subtotal">UGX {{ number_format($cart->subtotal, 0) }}</span>
             </div>
             <div class="flex justify-between text-gray-600">
@@ -233,11 +258,15 @@
             </div>
         </div>
 
-        <a href="{{ route('buyer.orders.checkout') }}"
-           class="block w-full text-white text-center py-2.5 sm:py-3 rounded-lg font-bold transition mb-2 sm:mb-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base"
+        <button type="button" onclick="proceedToCheckout()" id="checkout-btn"
+           class="block w-full text-white text-center py-2.5 sm:py-3 rounded-lg font-bold transition mb-2 sm:mb-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 text-sm sm:text-base cursor-pointer"
            style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;">
             <i class="fas fa-lock mr-2"></i> Proceed to Checkout
-        </a>
+        </button>
+
+        <p id="no-selection-msg" class="text-xs text-red-500 text-center mb-2 hidden">
+            Please select at least one item to checkout
+        </p>
 
         <a href="{{ route('marketplace.index') }}"
            class="block w-full text-center py-2.5 sm:py-3 border-2 border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition font-semibold text-sm sm:text-base">
@@ -255,7 +284,7 @@
         </div>
     </div>
 </div>
-    
+
     @else
     <!-- Empty Cart -->
     <div class="bg-white rounded-lg shadow p-6 sm:p-12 text-center">
@@ -273,17 +302,200 @@
 </div>
 
 <script>
+// ===== SELECTION STATE =====
+const allItemKeys = new Set();
+const selectedItems = new Set();
+
+// Initialize: all items selected by default
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        const key = cb.dataset.itemKey;
+        allItemKeys.add(key);
+        if (cb.checked) selectedItems.add(key);
+    });
+    updateSelectionSummary();
+});
+
+function toggleSelectAll(checked) {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = checked;
+        if (checked) {
+            selectedItems.add(cb.dataset.itemKey);
+        } else {
+            selectedItems.delete(cb.dataset.itemKey);
+        }
+    });
+    updateSelectionSummary();
+}
+
+function onItemSelectionChange() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        if (cb.checked) {
+            selectedItems.add(cb.dataset.itemKey);
+        } else {
+            selectedItems.delete(cb.dataset.itemKey);
+        }
+    });
+
+    // Update select-all checkbox state
+    const selectAll = document.getElementById('select-all');
+    const total = document.querySelectorAll('.item-checkbox').length;
+    if (selectAll) {
+        selectAll.checked = selectedItems.size === total;
+        selectAll.indeterminate = selectedItems.size > 0 && selectedItems.size < total;
+    }
+
+    updateSelectionSummary();
+}
+
+function updateSelectionSummary() {
+    let subtotal = 0;
+    let taxTotal = 0;
+    let selectedCount = 0;
+
+    document.querySelectorAll('.cart-item').forEach(itemEl => {
+        const key = itemEl.dataset.itemKey;
+        if (selectedItems.has(key)) {
+            selectedCount++;
+            const unitPrice = parseFloat(itemEl.dataset.unitPrice) || 0;
+            const tax = parseFloat(itemEl.dataset.tax) || 0;
+            const qtyInput = itemEl.querySelector('input[type="number"]');
+            const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
+            subtotal += unitPrice * qty;
+            taxTotal += tax * qty;
+        }
+    });
+
+    const total = subtotal + taxTotal;
+
+    // Update summary display
+    const subtotalEl = document.getElementById('cart-subtotal');
+    const taxEl = document.getElementById('cart-tax');
+    const totalEl = document.getElementById('cart-total');
+    const countEl = document.getElementById('selected-count');
+    const summaryCountEl = document.getElementById('summary-item-count');
+
+    if (subtotalEl) subtotalEl.textContent = 'UGX ' + Math.round(subtotal).toLocaleString('en-US');
+    if (taxEl) taxEl.textContent = 'UGX ' + Math.round(taxTotal).toLocaleString('en-US');
+    if (totalEl) totalEl.textContent = 'UGX ' + Math.round(total).toLocaleString('en-US');
+    if (countEl) countEl.textContent = selectedCount;
+    if (summaryCountEl) summaryCountEl.textContent = selectedCount;
+
+    // Toggle checkout button state
+    const checkoutBtn = document.getElementById('checkout-btn');
+    const noSelectionMsg = document.getElementById('no-selection-msg');
+    const deleteBtn = document.getElementById('delete-selected-btn');
+
+    if (selectedCount === 0) {
+        if (checkoutBtn) {
+            checkoutBtn.style.opacity = '0.5';
+            checkoutBtn.style.pointerEvents = 'none';
+        }
+        if (noSelectionMsg) noSelectionMsg.classList.remove('hidden');
+    } else {
+        if (checkoutBtn) {
+            checkoutBtn.style.opacity = '1';
+            checkoutBtn.style.pointerEvents = 'auto';
+        }
+        if (noSelectionMsg) noSelectionMsg.classList.add('hidden');
+    }
+
+    // Show/hide delete selected button
+    if (deleteBtn) {
+        const allChecked = document.querySelectorAll('.item-checkbox').length;
+        if (selectedCount > 0 && selectedCount < allChecked) {
+            deleteBtn.classList.remove('hidden');
+        } else {
+            deleteBtn.classList.add('hidden');
+        }
+    }
+}
+
+function proceedToCheckout() {
+    if (selectedItems.size === 0) {
+        showToast('Please select at least one item to checkout', 'warning');
+        return;
+    }
+
+    // Save selection to server, then redirect
+    fetch('{{ route("buyer.cart.selection") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ selected_keys: Array.from(selectedItems) })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '{{ route("buyer.orders.checkout") }}?selected=' + encodeURIComponent(JSON.stringify(Array.from(selectedItems)));
+        } else {
+            showToast('Failed to save selection', 'error');
+        }
+    })
+    .catch(() => {
+        // Fallback: just redirect with query params
+        window.location.href = '{{ route("buyer.orders.checkout") }}?selected=' + encodeURIComponent(JSON.stringify(Array.from(selectedItems)));
+    });
+}
+
+function deleteSelected() {
+    const keys = Array.from(selectedItems);
+    if (keys.length === 0) return;
+    if (!confirm(`Remove ${keys.length} selected item(s) from cart?`)) return;
+
+    fetch('{{ route("buyer.cart.remove.selected") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({ selected_keys: keys })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove items from DOM
+            keys.forEach(key => {
+                const el = document.querySelector(`.cart-item[data-item-key="${key}"]`);
+                if (el) el.remove();
+                selectedItems.delete(key);
+                allItemKeys.delete(key);
+            });
+
+            if (data.cart_count === 0) {
+                setTimeout(() => location.reload(), 500);
+            } else {
+                onItemSelectionChange();
+                updateCartCount(data.cart_count);
+            }
+            showToast(data.message, 'success');
+        } else {
+            showToast(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to delete items', 'error');
+    });
+}
+
+// ===== EXISTING FUNCTIONS (updated) =====
+
 // Update quantity with variation support
 function updateQuantity(listingId, quantity, variantId = null, color = null, size = null) {
     quantity = parseInt(quantity);
     if (quantity < 1) return;
-    
-    const itemKey = `${listingId}_${variantId || 'base'}_${color || ''}_${size || ''}`;
+
+    const itemKey = `${listingId}_${variantId || 'base'}_${color || 'nocolor'}_${size || 'nosize'}`;
     const qtyInput = document.getElementById(`qty-${itemKey}`);
     if (qtyInput) {
         qtyInput.value = quantity;
     }
-    
+
     fetch(`/buyer/cart/update/${listingId}`, {
         method: 'POST',
         headers: {
@@ -291,7 +503,7 @@ function updateQuantity(listingId, quantity, variantId = null, color = null, siz
             'X-CSRF-TOKEN': '{{ csrf_token() }}',
             'Accept': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             quantity: quantity,
             variant_id: variantId,
             color: color,
@@ -306,10 +518,10 @@ function updateQuantity(listingId, quantity, variantId = null, color = null, siz
             if (itemTotalElement) {
                 itemTotalElement.textContent = 'UGX ' + Math.round(data.item_total).toLocaleString('en-US');
             }
-            
-            // Update cart summary
-            updateCartSummary(data);
-            
+
+            // Update selection-aware summary
+            updateSelectionSummary();
+
             // Update stock availability
             if (data.stock !== undefined && qtyInput) {
                 const plusButton = qtyInput.nextElementSibling;
@@ -321,7 +533,7 @@ function updateQuantity(listingId, quantity, variantId = null, color = null, siz
                     minusButton.disabled = quantity <= 1;
                 }
             }
-            
+
             showToast(data.message, 'success');
         } else {
             showToast(data.message, 'error');
@@ -336,13 +548,13 @@ function updateQuantity(listingId, quantity, variantId = null, color = null, siz
 // Remove from cart with variation support
 function removeFromCart(listingId, variantId = null, color = null, size = null) {
     if (!confirm('Remove this item from cart?')) return;
-    
+
     const data = {
         variant_id: variantId,
         color: color,
         size: size
     };
-    
+
     fetch(`/buyer/cart/remove/${listingId}`, {
         method: 'DELETE',
         headers: {
@@ -356,27 +568,31 @@ function removeFromCart(listingId, variantId = null, color = null, size = null) 
     .then(data => {
         if (data.success) {
             // Remove item from DOM
-            const itemKey = `${listingId}_${variantId || 'base'}_${color || ''}_${size || ''}`;
+            const itemKey = `${listingId}_${variantId || 'base'}_${color || 'nocolor'}_${size || 'nosize'}`;
             const item = document.querySelector(`.cart-item[data-item-key="${itemKey}"]`);
             if (item) {
                 item.remove();
             }
-            
-            // Update cart summary
-            updateCartSummary(data);
-            
+
+            // Remove from selection tracking
+            selectedItems.delete(itemKey);
+            allItemKeys.delete(itemKey);
+
+            // Update selection summary
+            onItemSelectionChange();
+
             // Update cart count in navbar
             if (data.cart_count !== undefined) {
                 updateCartCount(data.cart_count);
             }
-            
+
             // If cart is now empty, reload page
             if (data.cart_count === 0) {
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
             }
-            
+
             showToast(data.message, 'success');
         } else {
             showToast(data.message, 'error');
@@ -386,37 +602,6 @@ function removeFromCart(listingId, variantId = null, color = null, size = null) 
         console.error('Error:', error);
         showToast('Failed to remove item', 'error');
     });
-}
-
-// Update cart summary
-function updateCartSummary(data) {
-    if (data.subtotal !== undefined) {
-        const subtotalElement = document.getElementById('cart-subtotal');
-        if (subtotalElement) {
-            subtotalElement.textContent = 'UGX ' + Math.round(data.subtotal).toLocaleString('en-US');
-        }
-    }
-
-    if (data.shipping !== undefined) {
-        const shippingElement = document.getElementById('cart-shipping');
-        if (shippingElement) {
-            shippingElement.textContent = 'UGX ' + Math.round(data.shipping).toLocaleString('en-US');
-        }
-    }
-
-    if (data.tax !== undefined) {
-        const taxElement = document.getElementById('cart-tax');
-        if (taxElement) {
-            taxElement.textContent = 'UGX ' + Math.round(data.tax).toLocaleString('en-US');
-        }
-    }
-
-    if (data.cart_total !== undefined) {
-        const totalElement = document.getElementById('cart-total');
-        if (totalElement) {
-            totalElement.textContent = 'UGX ' + Math.round(data.cart_total).toLocaleString('en-US');
-        }
-    }
 }
 
 // Update cart count in navbar
@@ -436,26 +621,26 @@ function showToast(message, type = 'info') {
     // Remove existing toasts
     const existingToasts = document.querySelectorAll('.custom-toast');
     existingToasts.forEach(toast => toast.remove());
-    
+
     const toast = document.createElement('div');
     toast.className = 'custom-toast fixed top-4 right-4 z-50 transform transition-all duration-300';
-    
+
     const typeStyles = {
         success: 'bg-green-500 text-white',
         error: 'bg-red-500 text-white',
         warning: 'bg-yellow-500 text-white',
         info: 'bg-blue-500 text-white'
     };
-    
+
     const icons = {
         success: 'fa-check-circle',
         error: 'fa-times-circle',
         warning: 'fa-exclamation-triangle',
         info: 'fa-info-circle'
     };
-    
+
     toast.className += ` ${typeStyles[type] || typeStyles.info} px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-slideIn`;
-    
+
     toast.innerHTML = `
         <i class="fas ${icons[type] || icons.info}"></i>
         <span class="font-medium">${message}</span>
@@ -463,9 +648,9 @@ function showToast(message, type = 'info') {
             <i class="fas fa-times"></i>
         </button>
     `;
-    
+
     document.body.appendChild(toast);
-    
+
     setTimeout(() => {
         if (toast.parentElement) {
             toast.style.opacity = '0';
@@ -489,13 +674,13 @@ document.addEventListener('keydown', function(e) {
             activeElement.select();
         }
     }
-    
+
     // Arrow keys for quantity adjustment
     if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
         const activeElement = document.activeElement;
         if (activeElement && activeElement.type === 'number' && activeElement.id.startsWith('qty-')) {
             e.preventDefault();
-            
+
             // Find the parent cart item to get variation details
             const cartItem = activeElement.closest('.cart-item');
             if (cartItem) {
@@ -505,10 +690,10 @@ document.addEventListener('keydown', function(e) {
                 const variantId = parts[1] !== 'base' ? parts[1] : null;
                 const color = parts[2] || null;
                 const size = parts[3] || null;
-                
+
                 let currentQty = parseInt(activeElement.value);
                 let newQty = e.key === 'ArrowUp' ? currentQty + 1 : currentQty - 1;
-                
+
                 if (newQty >= 1) {
                     updateQuantity(listingId, newQty, variantId, color, size);
                 }
@@ -530,19 +715,19 @@ style.textContent = `
             transform: translateX(0);
         }
     }
-    
+
     .animate-slideIn {
         animation: slideIn 0.3s ease-out;
     }
-    
+
     .cart-item {
         transition: all 0.3s ease;
     }
-    
+
     .cart-item:hover {
         background-color: #f9fafb;
     }
-    
+
     .custom-toast {
         min-width: 300px;
     }

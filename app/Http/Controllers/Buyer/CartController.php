@@ -18,63 +18,42 @@ class CartController extends Controller
     public function index()
 {
     $cart = $this->getOrCreateCart();
-    $cartItems = [];
-    
+
     if ($cart && !empty($cart->items)) {
-        foreach ($cart->items as $itemKey => $item) {
-            $listing = Listing::with('images', 'vendor')->find($item['listing_id']);
-            
-            if ($listing && $listing->is_active) {
-                $variant = null;
-                $stock = $listing->stock;
-                $unitPrice = $listing->price;
-                
-                // Load variant if exists
-                if (!empty($item['variant_id'])) {
-                    $variant = ListingVariant::find($item['variant_id']);
-                    if ($variant) {
-                        $stock = $variant->stock;
-                        $unitPrice = $variant->display_price ?? $variant->price;
-                    }
+        // Remove out-of-stock or inactive items, but preserve associative keys
+        $items = $cart->items;
+        $changed = false;
+
+        foreach ($items as $itemKey => $item) {
+            $listing = Listing::find($item['listing_id']);
+
+            if (!$listing || !$listing->is_active) {
+                unset($items[$itemKey]);
+                $changed = true;
+                continue;
+            }
+
+            $stock = $listing->stock;
+            if (!empty($item['variant_id'])) {
+                $variant = ListingVariant::find($item['variant_id']);
+                if ($variant) {
+                    $stock = $variant->stock;
                 }
-                
-                // Check stock (variant or main listing)
-                if ($stock <= 0) {
-                    continue; // Skip out of stock items
-                }
-                
-                $cartItems[] = [
-                    'listing_id' => $listing->id,
-                    'title' => $listing->title,
-                    'image' => $listing->images->first() ? asset('storage/' . $listing->images->first()->path) : null,
-                    'vendor_name' => $listing->vendor->business_name ?? 'Vendor',
-                    'unit_price' => $unitPrice,
-                    'quantity' => $item['quantity'] ?? 1,
-                    'total' => $unitPrice * ($item['quantity'] ?? 1),
-                    'weight_kg' => $listing->weight_kg,
-                    'origin' => $listing->origin,
-                    'stock' => $stock,
-                    'variant_id' => $item['variant_id'] ?? null,
-                    'color' => $item['color'] ?? null,
-                    'size' => $item['size'] ?? null,
-                    'variant' => $variant ? [
-                        'id' => $variant->id,
-                        'sku' => $variant->sku,
-                        'price' => $variant->price,
-                        'display_price' => $variant->display_price ?? $variant->price,
-                        'stock' => $variant->stock,
-                        'attributes' => $variant->attributes ?? []
-                    ] : null
-                ];
+            }
+
+            if ($stock <= 0) {
+                unset($items[$itemKey]);
+                $changed = true;
             }
         }
-        
-        // Update cart with current data
-        $cart->items = $cartItems;
-        $cart->recalculateTotals();
-        $cart->save();
+
+        if ($changed) {
+            $cart->items = $items;
+            $cart->recalculateTotals();
+            $cart->save();
+        }
     }
-    
+
     return view('buyer.cart.index', compact('cart'));
 }
 
@@ -205,7 +184,10 @@ class CartController extends Controller
         }
 
         $quantity = $request->input('quantity', 1);
-        
+        $variantId = $request->input('variant_id');
+        $color = $request->input('color');
+        $size = $request->input('size');
+
         if (!is_numeric($quantity) || $quantity < 1) {
             return response()->json([
                 'success' => false,
@@ -222,23 +204,34 @@ class CartController extends Controller
             ], 404);
         }
 
-        if ($listing->stock < $quantity) {
+        $unitPrice = $listing->price;
+        $stock = $listing->stock;
+
+        if ($variantId) {
+            $variant = ListingVariant::find($variantId);
+            if ($variant) {
+                $stock = $variant->stock;
+                $unitPrice = $variant->display_price ?? $variant->price;
+            }
+        }
+
+        if ($stock < $quantity) {
             return response()->json([
                 'success' => false,
-                'message' => 'Insufficient stock. Only ' . $listing->stock . ' available.'
+                'message' => 'Insufficient stock. Only ' . $stock . ' available.'
             ], 400);
         }
 
         try {
             $cart = $this->getOrCreateCart();
-            $cart->updateQuantity($listingId, $quantity);
+            $cart->updateQuantity($listingId, $quantity, $variantId, $color, $size);
 
             return response()->json([
                 'success' => true,
                 'message' => 'Cart updated successfully',
                 'cart_count' => count($cart->items ?? []),
                 'cart_total' => number_format($cart->total, 2),
-                'item_total' => number_format($quantity * $listing->price, 2),
+                'item_total' => number_format($quantity * $unitPrice, 2),
                 'subtotal' => number_format($cart->subtotal, 2),
                 'shipping' => number_format($cart->shipping, 2),
                 'tax' => number_format($cart->tax, 2)
@@ -246,7 +239,7 @@ class CartController extends Controller
 
         } catch (\Exception $e) {
             \Log::error('Update cart error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update cart'
@@ -345,6 +338,54 @@ class CartController extends Controller
             'subtotal' => $cart ? number_format($cart->subtotal, 2) : '0.00',
             'shipping' => $cart ? number_format($cart->shipping, 2) : '0.00',
             'tax' => $cart ? number_format($cart->tax, 2) : '0.00'
+        ]);
+    }
+
+    /**
+     * Update selected items in cart meta
+     */
+    public function updateSelection(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $cart = $this->getOrCreateCart();
+        $selectedKeys = $request->input('selected_keys', []);
+
+        $meta = $cart->meta ?? [];
+        $meta['selected_items'] = $selectedKeys;
+        $cart->meta = $meta;
+        $cart->save();
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Remove selected items from cart
+     */
+    public function removeSelected(Request $request)
+    {
+        if (!Auth::check()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
+
+        $selectedKeys = $request->input('selected_keys', []);
+        if (empty($selectedKeys)) {
+            return response()->json(['success' => false, 'message' => 'No items selected'], 400);
+        }
+
+        $cart = $this->getOrCreateCart();
+        $cart->removeByKeys($selectedKeys);
+
+        return response()->json([
+            'success' => true,
+            'message' => count($selectedKeys) . ' item(s) removed',
+            'cart_count' => $cart->item_count,
+            'cart_total' => number_format($cart->total, 2),
+            'subtotal' => number_format($cart->subtotal, 2),
+            'shipping' => number_format($cart->shipping, 2),
+            'tax' => number_format($cart->tax, 2),
         ]);
     }
 

@@ -709,6 +709,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/cart/update/{listingId}', [\App\Http\Controllers\Buyer\CartController::class, 'update'])->name('cart.update');
         Route::delete('/cart/remove/{listingId}', [\App\Http\Controllers\Buyer\CartController::class, 'remove'])->name('cart.remove');
         Route::post('/cart/clear', [\App\Http\Controllers\Buyer\CartController::class, 'clear'])->name('cart.clear');
+        Route::post('/cart/selection', [\App\Http\Controllers\Buyer\CartController::class, 'updateSelection'])->name('cart.selection');
+        Route::post('/cart/remove-selected', [\App\Http\Controllers\Buyer\CartController::class, 'removeSelected'])->name('cart.remove.selected');
         Route::get('/cart/summary', [\App\Http\Controllers\Buyer\CartController::class, 'getCartSummary'])->name('cart.summary');
         
         // Wishlist (PROTECTED - requires authentication)

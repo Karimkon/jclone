@@ -42,7 +42,6 @@
             </div>
         </div>
     </div>
-
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <!-- Wallet Balance -->
@@ -53,7 +52,7 @@
                 </div>
                 <div>
                     <p class="text-gray-600">Wallet Balance</p>
-                    <p class="text-2xl font-bold text-gray-800">${{ number_format($stats['wallet_balance'], 2) }}</p>
+                    <p class="text-2xl font-bold text-gray-800">UGX {{ number_format($stats['wallet_balance'], 2) }}</p>
                 </div>
             </div>
             <a href="{{ route('buyer.wallet.index') }}" 
@@ -138,7 +137,7 @@
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-bold text-gray-800">${{ number_format($order->total, 2) }}</div>
+                                <div class="font-bold text-gray-800">UGX {{ number_format($order->total, 2) }}</div>
                                 <span class="text-xs px-2 py-1 rounded-full 
                                     @if($order->status == 'pending') bg-yellow-100 text-yellow-800
                                     @elseif($order->status == 'paid') bg-blue-100 text-blue-800
@@ -201,13 +200,13 @@
                             <div class="text-right">
                                 <div class="font-bold @if($transaction->amount > 0) text-green-600 @else text-red-600 @endif">
                                     @if($transaction->amount > 0)
-                                    +${{ number_format($transaction->amount, 2) }}
+                                    + UGX {{ number_format($transaction->amount, 2) }}
                                     @else
-                                    -${{ number_format(abs($transaction->amount), 2) }}
+                                    -UGX {{ number_format(abs($transaction->amount), 2) }}
                                     @endif
                                 </div>
                                 <div class="text-xs text-gray-500 mt-1">
-                                    Balance: ${{ number_format($transaction->balance_after, 2) }}
+                                    Balance: UGX {{ number_format($transaction->balance_after, 2) }}
                                 </div>
                             </div>
                         </div>
@@ -294,7 +293,7 @@
                                 balanceElement.classList.remove('text-green-500');
                             }, 1000);
                         }
-                        balanceElement.textContent = '$' + newBalance.toFixed(2);
+                        balanceElement.textContent = 'UGX ' + newNumber.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                     }
                 });
         }, 30000);
