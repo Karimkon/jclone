@@ -467,15 +467,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
         Route::post('/users/{user}/toggle-verified', [AdminUserController::class, 'toggleVerified'])->name('users.toggle-verified');
 
-        // Vendor management - approve, reject, toggle, score
-        Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
-        Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
+        // Vendor management - admin-only actions (toggle status, update score)
         Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
         Route::post('/vendors/{id}/update-score', [AdminVendorController::class, 'updateScore'])->name('vendors.updateScore');
-
-        // Document verification
-        Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
-        Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
 
         // Category management
         Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
@@ -591,10 +585,16 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
         Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
 
-        // Vendors - view only
+        // Vendors - view, approve, reject (core support function)
         Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
         Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
         Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
+        Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
+        Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
+
+        // Document verification
+        Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
+        Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
 
         // Products - view only
         Route::get('/listings', [\App\Http\Controllers\Admin\AdminListingController::class, 'index'])->name('listings.index');
