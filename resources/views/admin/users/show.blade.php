@@ -253,7 +253,13 @@
                         </form>
 
                         @if($user->id != auth()->id())
-                        <button type="button" 
+                        <button type="button"
+                                onclick="showResetPasswordModal()"
+                                class="w-full flex items-center justify-center px-4 py-2 border border-orange-300 text-orange-700 rounded-lg hover:bg-orange-50">
+                            <i class="fas fa-key mr-2"></i> Reset Password
+                        </button>
+
+                        <button type="button"
                                 onclick="showDeleteModal('{{ $user->id }}', '{{ $user->name }}')"
                                 class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-white bg-red-600 rounded-lg hover:bg-red-700">
                             <i class="fas fa-trash mr-2"></i> Delete User
@@ -309,6 +315,68 @@
     </div>
 </div>
 
+<!-- New Password Alert -->
+@if(session('new_password'))
+<div class="fixed top-4 right-4 z-50 max-w-md" id="passwordAlert">
+    <div class="bg-white border-l-4 border-green-500 rounded-lg shadow-lg p-4">
+        <div class="flex items-start">
+            <div class="flex-shrink-0">
+                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+            </div>
+            <div class="ml-3 flex-1">
+                <h3 class="text-sm font-semibold text-gray-900">Password Reset Successful</h3>
+                <p class="text-sm text-gray-600 mt-1">New password for {{ $user->name }}:</p>
+                <div class="mt-2 flex items-center bg-gray-100 rounded px-3 py-2">
+                    <code class="text-sm font-mono text-gray-900 flex-1" id="newPasswordText">{{ session('new_password') }}</code>
+                    <button onclick="copyPassword()" class="ml-2 text-primary hover:text-primary-700" title="Copy password">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <p class="text-xs text-red-600 mt-2"><i class="fas fa-exclamation-triangle mr-1"></i> Copy this now. It won't be shown again.</p>
+            </div>
+            <button onclick="document.getElementById('passwordAlert').remove()" class="ml-2 text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</div>
+@endif
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50" style="display:none;align-items:center;justify-content:center" onclick="if(event.target===this)closeResetPasswordModal()">
+    <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+        <div class="text-center mb-4">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-orange-100 mb-3">
+                <i class="fas fa-key text-orange-600 text-xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-gray-900 mb-2">Reset Password</h3>
+            <p class="text-gray-600 mb-2">Reset password for <span class="font-semibold">{{ $user->name }}</span></p>
+        </div>
+
+        <form action="{{ route('admin.users.reset-password', $user->id) }}" method="POST">
+            @csrf
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
+                <input type="text" name="new_password" id="resetPasswordInput"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                       placeholder="Leave blank to auto-generate" minlength="6">
+                <p class="text-xs text-gray-500 mt-1">Leave blank to generate a random password, or type a specific one (min 6 chars).</p>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button type="button" onclick="closeResetPasswordModal()"
+                        class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+                    <i class="fas fa-key mr-1"></i> Reset Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Delete Modal -->
 <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
     <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
@@ -354,5 +422,24 @@
             closeDeleteModal();
         }
     });
+
+    function copyPassword() {
+        const text = document.getElementById('newPasswordText').textContent;
+        navigator.clipboard.writeText(text).then(function() {
+            alert('Password copied to clipboard!');
+        });
+    }
+
+    function showResetPasswordModal() {
+        const modal = document.getElementById('resetPasswordModal');
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
+
+    function closeResetPasswordModal() {
+        const modal = document.getElementById('resetPasswordModal');
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
 </script>
 @endsection

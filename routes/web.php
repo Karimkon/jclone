@@ -466,6 +466,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
         Route::post('/users/{user}/toggle-verified', [AdminUserController::class, 'toggleVerified'])->name('users.toggle-verified');
+        Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
 
         // Vendor vetting
         Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');

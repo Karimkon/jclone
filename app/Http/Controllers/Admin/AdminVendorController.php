@@ -35,19 +35,42 @@ class AdminVendorController extends Controller
     /**
      * Show all vendors
      */
-    public function index()
+    public function index(Request $request)
     {
-        $vendors = VendorProfile::with(['user', 'scores'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
-            
+        $query = VendorProfile::with(['user', 'scores']);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('business_name', 'like', "%{$search}%")
+                  ->orWhereHas('user', function($uq) use ($search) {
+                      $uq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // Status filter
+        if ($request->filled('status')) {
+            $query->where('vetting_status', $request->status);
+        }
+
+        // Type filter
+        if ($request->filled('type')) {
+            $query->where('vendor_type', $request->type);
+        }
+
+        $vendors = $query->orderBy('created_at', 'desc')->paginate(15);
+
         $stats = [
             'total' => VendorProfile::count(),
             'pending' => VendorProfile::where('vetting_status', 'pending')->count(),
             'approved' => VendorProfile::where('vetting_status', 'approved')->count(),
             'rejected' => VendorProfile::where('vetting_status', 'rejected')->count(),
         ];
-        
+
         return view('admin.vendors.index', compact('vendors', 'stats'));
     }
     

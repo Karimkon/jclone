@@ -196,6 +196,26 @@ class AdminUserController extends Controller
     }
 
     /**
+     * Reset user password
+     */
+    public function resetPassword(Request $request, User $user)
+    {
+        $request->validate([
+            'new_password' => 'nullable|string|min:6',
+        ]);
+
+        // Generate a random password if not provided
+        $plainPassword = $request->new_password ?: \Illuminate\Support\Str::random(10);
+
+        $user->update([
+            'password' => Hash::make($plainPassword),
+        ]);
+
+        return back()->with('success', "Password reset successfully. New password: {$plainPassword}")
+                     ->with('new_password', $plainPassword);
+    }
+
+    /**
      * Delete user
      */
     public function destroy(User $user)
