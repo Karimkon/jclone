@@ -15,13 +15,12 @@ class VendorProfile extends Model
         'address',
         'annual_turnover',
         'preferred_currency',
-        'vetting_status',
-        'vetting_notes',
-        'vetting_notes',
         'meta',
         'latitude',
         'longitude',
     ];
+
+    // vetting_status and vetting_notes are set explicitly via approve()/reject() methods only
 
     protected $casts = [
         'annual_turnover' => 'float',

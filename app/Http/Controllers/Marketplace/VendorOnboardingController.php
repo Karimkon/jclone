@@ -127,9 +127,13 @@ class VendorOnboardingController extends Controller
                     'email' => $validated['email'],
                     'phone' => $validated['phone'],
                     'password' => Hash::make($validated['password']),
-                    'role' => $validated['vendor_type'] == 'china_supplier' ? 'vendor_international' : 'vendor_local',
-                    'is_active' => true,
+                    // role set explicitly below
+                    // is_active set explicitly below
                 ]);
+            // Set protected fields explicitly
+            $user->role = $validated['vendor_type'] == 'china_supplier' ? 'vendor_international' : 'vendor_local';
+            $user->is_active = true;
+            $user->save();
                 
                 Log::info('New vendor user created', ['user_id' => $user->id, 'email' => $user->email]);
             } else {
@@ -150,9 +154,8 @@ class VendorOnboardingController extends Controller
                 }
                 
                 // Update user role to vendor
-                $user->update([
-                    'role' => $validated['vendor_type'] == 'china_supplier' ? 'vendor_international' : 'vendor_local'
-                ]);
+                $user->role = $validated['vendor_type'] == 'china_supplier' ? 'vendor_international' : 'vendor_local';
+                $user->save();
                 
                 Log::info('Existing user applying for vendor', ['user_id' => $user->id]);
             }
@@ -167,8 +170,6 @@ class VendorOnboardingController extends Controller
                 'address' => $validated['address'] ?? null,
                 'annual_turnover' => $validated['annual_turnover'] ?? null,
                 'preferred_currency' => $validated['preferred_currency'],
-                'vetting_status' => 'pending',
-                'vetting_notes' => null,
                 'meta' => !empty($validated['guarantor_name']) ? [
                     'guarantor' => [
                         'name' => $validated['guarantor_name'],
@@ -177,6 +178,9 @@ class VendorOnboardingController extends Controller
                     ]
                 ] : null
             ]);
+            // Set vetting fields explicitly (not mass-assignable for security)
+            $vendorProfile->vetting_status = 'pending';
+            $vendorProfile->save();
             
             Log::info('Vendor profile created', ['vendor_profile_id' => $vendorProfile->id]);
 
@@ -344,7 +348,7 @@ class VendorOnboardingController extends Controller
             if ($isApiRequest) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to submit application: ' . $e->getMessage()
+                    'message' => 'Failed to submit application. Please try again.'
                 ], 500);
             }
 
@@ -513,7 +517,7 @@ class VendorOnboardingController extends Controller
             if ($request->expectsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to upload document: ' . $e->getMessage()
+                    'message' => 'Failed to upload document. Please try again.'
                 ], 500);
             }
 

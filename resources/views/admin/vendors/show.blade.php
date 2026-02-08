@@ -240,29 +240,31 @@
                         </div>
                         
                         <div class="mt-4 flex space-x-2">
-                            <a href="{{ route('admin.documents.view', $document->id) }}" 
+                            <a href="{{ route('admin.documents.view', $document->id) }}"
                                target="_blank"
                                class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
                                 <i class="fas fa-eye mr-1"></i> View
                             </a>
-                            
+
+                            @if(auth()->user()->role !== 'support')
                             @if($document->status != 'verified')
                             <form action="{{ route('admin.documents.verify', $document->id) }}" method="POST" class="inline">
                                 @csrf
-                                <button type="submit" 
+                                <button type="submit"
                                         class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700"
                                         onclick="return confirm('Verify this document?')">
                                     <i class="fas fa-check mr-1"></i> Verify
                                 </button>
                             </form>
                             @endif
-                            
+
                             @if($document->status != 'rejected')
-                            <button type="button" 
+                            <button type="button"
                                     onclick="showRejectDocumentModal('{{ $document->id }}', '{{ $document->type }}')"
                                     class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700">
                                 <i class="fas fa-times mr-1"></i> Reject
                             </button>
+                            @endif
                             @endif
                         </div>
                     </div>

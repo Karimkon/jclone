@@ -237,7 +237,7 @@ class ProcessExpiredSubscriptions extends Command
             'vendor_profile_id' => $subscription->vendor_profile_id,
             'pesapal_merchant_reference' => $merchantReference,
             'amount' => $plan->price,
-            'currency' => 'KES',
+            'currency' => 'UGX',
             'status' => 'pending',
             'payment_response' => ['type' => 'auto_renewal'],
         ]);

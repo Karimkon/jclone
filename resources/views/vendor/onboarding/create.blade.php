@@ -153,7 +153,7 @@
             <!-- Documents Section -->
             <div class="bg-white rounded-lg shadow-sm p-4">
                 <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
-                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Documents
+                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Required Documents
                 </h2>
 
                 <!-- National ID - Required - Side by Side -->
@@ -317,12 +317,12 @@ document.getElementById('vendorForm').addEventListener('submit', function(e) {
         return false;
     }
 
-    const requiredFiles = ['national_id_front', 'national_id_back', 'bank_statement', 'proof_of_address', 'guarantor_id'];
+    const requiredFiles = ['national_id_front', 'national_id_back'];
     let missing = requiredFiles.filter(id => !document.getElementById(id).files.length);
 
     if (missing.length > 0) {
         e.preventDefault();
-        alert('Please upload all required documents');
+        alert('Please upload National ID (front and back)');
         return false;
     }
 });

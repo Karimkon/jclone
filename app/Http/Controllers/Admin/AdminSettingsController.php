@@ -197,7 +197,7 @@ class AdminSettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to create backup: ' . $e->getMessage()
+                'message' => 'Failed to create backup. Please check server logs.'
             ], 500);
         }
     }

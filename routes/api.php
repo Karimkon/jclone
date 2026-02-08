@@ -41,8 +41,8 @@ Route::get('/health', function () {
     ]);
 });
 
-// Authentication
-Route::post('/login', function (Request $request) {
+// Authentication (rate limited: 5 attempts per minute)
+Route::middleware('throttle:5,1')->post('/login', function (Request $request) {
     $request->validate([
         'email' => 'required|email',
         'password' => 'required',
@@ -291,7 +291,7 @@ Route::post('/auth/google', function (Request $request) {
         \Log::error('Google sign-in error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
         return response()->json([
             'success' => false,
-            'message' => 'Google sign-in failed: ' . $e->getMessage(),
+            'message' => 'Google sign-in failed. Please try again.',
         ], 500);
     }
 });
@@ -402,7 +402,7 @@ Route::post('/auth/apple', function (Request $request) {
         \Log::error('Apple sign-in error: ' . $e->getMessage() . ' | ' . $e->getTraceAsString());
         return response()->json([
             'success' => false,
-            'message' => 'Apple sign-in failed: ' . $e->getMessage(),
+            'message' => 'Apple sign-in failed. Please try again.',
         ], 500);
     }
 });
@@ -713,7 +713,7 @@ Route::get('/categories', function () {
         \Log::error('Categories API error: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => 'Failed to load categories: ' . $e->getMessage(),
+            'message' => 'Failed to load categories. Please try again.',
             'data' => []
         ], 500);
     }
@@ -974,7 +974,7 @@ Route::get('/marketplace/services', function (Request $request) {
             ]
         ]);
     } catch (\Exception $e) {
-        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        return response()->json(['success' => false, 'message' => 'An unexpected error occurred. Please try again.'], 500);
     }
 });
 
@@ -1072,7 +1072,7 @@ Route::get('/marketplace/jobs', function (Request $request) {
             ]
         ]);
     } catch (\Exception $e) {
-        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        return response()->json(['success' => false, 'message' => 'An unexpected error occurred. Please try again.'], 500);
     }
 });
 
@@ -2157,7 +2157,7 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         } catch (\Exception $e) {
             \DB::rollBack();
-            return response()->json(['success' => false, 'message' => 'Failed to confirm delivery: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Failed to confirm delivery. Please try again.'], 500);
         }
     });
 
@@ -2360,7 +2360,7 @@ Route::middleware('auth:sanctum')->group(function () {
             \Log::error('Place order error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to place order: ' . $e->getMessage(),
+                'message' => 'Failed to place order. Please try again.',
             ], 500);
         }
     });
@@ -2472,7 +2472,7 @@ Route::middleware('auth:sanctum')->group(function () {
             \Log::error('Pesapal payment error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Payment initialization failed: ' . $e->getMessage(),
+                'message' => 'Payment initialization failed. Please try again.',
             ], 500);
         }
     });
@@ -2504,25 +2504,36 @@ Route::middleware('auth:sanctum')->group(function () {
             }
 
             if ($status && $pesapalService->isPaymentSuccessful($status)) {
-                // Update payment
-                $payment->update([
-                    'status' => 'completed',
-                    'meta' => array_merge($payment->meta ?? [], [
-                        'provider_response' => $status,
-                        'completed_at' => now()->toDateTimeString(),
-                    ])
-                ]);
+                // Prevent duplicate processing with DB transaction
+                \DB::transaction(function () use ($payment, $status) {
+                    // Re-fetch with lock to prevent race conditions
+                    $payment = $payment->fresh();
+                    if ($payment->status === 'completed') {
+                        return; // Already processed
+                    }
 
-                // Update order
-                $payment->order->update(['status' => 'paid']);
+                    // Update payment
+                    $payment->update([
+                        'status' => 'completed',
+                        'meta' => array_merge($payment->meta ?? [], [
+                            'provider_response' => $status,
+                            'completed_at' => now()->toDateTimeString(),
+                        ])
+                    ]);
 
-                // Create escrow
-                \App\Models\Escrow::create([
-                    'order_id' => $payment->order_id,
-                    'amount' => $payment->order->total,
-                    'status' => 'held',
-                    'release_at' => now()->addDays(7),
-                ]);
+                    // Update order
+                    $payment->order->update(['status' => 'paid']);
+
+                    // Create escrow (idempotent - skip if already exists)
+                    \App\Models\Escrow::firstOrCreate(
+                        ['order_id' => $payment->order_id],
+                        [
+                            'amount' => $payment->order->total,
+                            'status' => 'held',
+                            'release_at' => now()->addDays(7),
+                        ]
+                    );
+                });
 
                 return response()->json([
                     'success' => true,
@@ -3293,7 +3304,7 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to confirm payment: ' . $e->getMessage(),
+                    'message' => 'Failed to confirm payment. Please try again.',
                 ], 500);
             }
         });

@@ -332,7 +332,7 @@
             <p class="text-gray-600">
                 <i class="fas fa-question-circle mr-2"></i>
                 Need help? Contact support at 
-                <a href="mailto:support@bebamart.com" class="text-indigo-600 hover:text-indigo-800">support@jclone.com</a>
+                <a href="mailto:support@bebamart.com" class="text-indigo-600 hover:text-indigo-800">support@bebamart.com</a>
             </p>
             <p class="text-sm text-gray-500 mt-2">
                 Application ID: VENDOR-{{ str_pad($vendorProfile->id, 6, '0', STR_PAD_LEFT) }}

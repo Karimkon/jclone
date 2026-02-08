@@ -101,15 +101,13 @@ class AdminVendorController extends Controller
         DB::beginTransaction();
         try {
             // Update vendor status
-            $vendor->update([
-                'vetting_status' => 'approved',
-                'vetting_notes' => $request->notes,
-            ]);
+            $vendor->vetting_status = 'approved';
+            $vendor->vetting_notes = $request->notes;
+            $vendor->save();
             
             // Update user status and ensure they remain vendor
-            $vendor->user->update([
-                'is_active' => true,
-            ]);
+            $vendor->user->is_active = true;
+            $vendor->user->save();
             
             // Create vendor score
             $scoreValue = $request->score ?? 50; // Default score of 50 if not provided
@@ -188,15 +186,13 @@ class AdminVendorController extends Controller
             $oldStatus = $vendor->vetting_status;
             
             // Update vendor status
-            $vendor->update([
-                'vetting_status' => 'rejected',
-                'vetting_notes' => $request->reason,
-            ]);
+            $vendor->vetting_status = 'rejected';
+            $vendor->vetting_notes = $request->reason;
+            $vendor->save();
             
             // Update user role back to buyer
-            $vendor->user->update([
-                'role' => 'buyer',
-            ]);
+            $vendor->user->role = 'buyer';
+            $vendor->user->save();
             
             // Log the action
             AuditLog::create([
@@ -457,7 +453,8 @@ public function viewDocument($id)
         
         try {
             $newStatus = !$vendor->user->is_active;
-            $vendor->user->update(['is_active' => $newStatus]);
+            $vendor->user->is_active = $newStatus;
+            $vendor->user->save();
             
             $action = $newStatus ? 'vendor_activated' : 'vendor_deactivated';
             

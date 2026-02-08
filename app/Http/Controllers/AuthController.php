@@ -87,19 +87,24 @@ class AuthController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
-            'role' => $role,
         ]);
+        // Set role explicitly (not mass-assignable for security)
+        $allowedRoles = ['buyer', 'vendor_local', 'vendor_international'];
+        $user->role = in_array($role, $allowedRoles) ? $role : 'buyer';
+        $user->is_active = true;
+        $user->save();
 
         // If vendor registration, create vendor profile
         if (in_array($role, ['vendor_local', 'vendor_international'])) {
-            VendorProfile::create([
+            $vendorProfile = VendorProfile::create([
                 'user_id' => $user->id,
                 'vendor_type' => $role === 'vendor_international' ? 'china_supplier' : 'local_retail',
                 'business_name' => $request->business_name ?? $request->name . "'s Store",
                 'country' => $request->country ?? 'Uganda',
                 'city' => $request->city ?? 'Kampala',
-                'vetting_status' => 'pending',
             ]);
+            $vendorProfile->vetting_status = 'pending';
+            $vendorProfile->save();
         }
         // If buyer registration, create wallet here (single source of truth)
         elseif ($role === 'buyer') {

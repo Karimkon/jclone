@@ -34,7 +34,7 @@ class AdvertisementController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'media_type' => 'required|in:image,video',
-            'media_file' => 'required|file|max:10240', // Max 10MB
+            'media_file' => 'required|file|max:10240|mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4', // Max 10MB
             'link' => 'nullable|url',
             'is_active' => 'boolean',
         ]);
@@ -66,7 +66,7 @@ class AdvertisementController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'media_type' => 'required|in:image,video',
-            'media_file' => 'nullable|file|max:10240',
+            'media_file' => 'nullable|file|max:10240|mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4',
             'link' => 'nullable|url',
             'is_active' => 'boolean',
         ]);

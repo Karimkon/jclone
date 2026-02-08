@@ -225,13 +225,15 @@ Route::get('/logistics/login', [AuthController::class, 'showLogisticsLogin'])->n
 Route::get('/finance/login', [AuthController::class, 'showFinanceLogin'])->name('finance.login');
 Route::get('/ceo/login', [AuthController::class, 'showCEOLogin'])->name('ceo.login');
 
-// Handle login submissions
-Route::post('/login', [AuthController::class, 'buyerLogin'])->name('login.submit');
-Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.submit');
-Route::post('/vendor/login', [AuthController::class, 'vendorLogin'])->name('vendor.login.submit');
-Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->name('logistics.login.submit');
-Route::post('/finance/login', [AuthController::class, 'financeLogin'])->name('finance.login.submit');
-Route::post('/ceo/login', [AuthController::class, 'ceoLogin'])->name('ceo.login.submit');
+// Handle login submissions (rate limited: 5 attempts per minute)
+Route::middleware('throttle:5,1')->group(function () {
+    Route::post('/login', [AuthController::class, 'buyerLogin'])->name('login.submit');
+    Route::post('/admin/login', [AuthController::class, 'adminLogin'])->name('admin.login.submit');
+    Route::post('/vendor/login', [AuthController::class, 'vendorLogin'])->name('vendor.login.submit');
+    Route::post('/logistics/login', [AuthController::class, 'logisticsLogin'])->name('logistics.login.submit');
+    Route::post('/finance/login', [AuthController::class, 'financeLogin'])->name('finance.login.submit');
+    Route::post('/ceo/login', [AuthController::class, 'ceoLogin'])->name('ceo.login.submit');
+});
 
 // ====================
 // REGISTRATION ROUTES

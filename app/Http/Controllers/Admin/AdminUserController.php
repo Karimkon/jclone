@@ -72,21 +72,30 @@ class AdminUserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
-        $validated['is_active'] = $validated['is_active'] ?? true;
+
+        // Extract sensitive fields before mass assignment
+        $role = $validated['role'];
+        $isActive = $validated['is_active'] ?? true;
+        unset($validated['role'], $validated['is_active']);
 
         $user = User::create($validated);
+        // Set protected fields explicitly
+        $user->role = $role;
+        $user->is_active = $isActive;
+        $user->save();
 
         // If vendor, create vendor profile
-        if (in_array($validated['role'], ['vendor_local', 'vendor_international'])) {
-            VendorProfile::create([
+        if (in_array($role, ['vendor_local', 'vendor_international'])) {
+            $vendorProfile = VendorProfile::create([
                 'user_id' => $user->id,
-                'vendor_type' => $validated['role'] == 'vendor_international' ? 'china_supplier' : 'local_retail',
+                'vendor_type' => $role == 'vendor_international' ? 'china_supplier' : 'local_retail',
                 'business_name' => $user->name . "'s Store",
                 'country' => 'Uganda',
                 'city' => 'Kampala',
                 'address' => 'To be updated',
-                'vetting_status' => 'approved',
             ]);
+            $vendorProfile->vetting_status = 'approved';
+            $vendorProfile->save();
         }
 
         return redirect()->route('admin.users.index')
@@ -131,22 +140,32 @@ class AdminUserController extends Controller
             unset($validated['password']);
         }
 
+        // Extract sensitive fields before mass assignment
+        $role = $validated['role'] ?? $user->role;
+        $isActive = $validated['is_active'] ?? $user->is_active;
+        unset($validated['role'], $validated['is_active']);
+
         $user->update($validated);
+        // Set protected fields explicitly
+        $user->role = $role;
+        $user->is_active = $isActive;
+        $user->save();
 
         // Handle vendor profile if role changed
-        $isVendor = in_array($validated['role'], ['vendor_local', 'vendor_international']);
+        $isVendor = in_array($role, ['vendor_local', 'vendor_international']);
         $hasProfile = $user->vendorProfile()->exists();
-        
+
         if ($isVendor && !$hasProfile) {
-            VendorProfile::create([
+            $vendorProfile = VendorProfile::create([
                 'user_id' => $user->id,
-                'vendor_type' => $validated['role'] == 'vendor_international' ? 'china_supplier' : 'local_retail',
+                'vendor_type' => $role == 'vendor_international' ? 'china_supplier' : 'local_retail',
                 'business_name' => $user->name . "'s Store",
                 'country' => 'Uganda',
                 'city' => 'Kampala',
                 'address' => 'To be updated',
-                'vetting_status' => 'approved',
             ]);
+            $vendorProfile->vetting_status = 'approved';
+            $vendorProfile->save();
         } elseif (!$isVendor && $hasProfile) {
             $user->vendorProfile()->delete();
         }
@@ -160,7 +179,8 @@ class AdminUserController extends Controller
      */
     public function toggleStatus(User $user)
     {
-        $user->update(['is_active' => !$user->is_active]);
+        $user->is_active = !$user->is_active;
+        $user->save();
         
         $status = $user->is_active ? 'activated' : 'deactivated';
         return back()->with('success', "User {$status} successfully.");

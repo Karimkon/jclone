@@ -28,10 +28,10 @@ class CheckVendorStatus
         // ============================================================
         // Admins should NEVER be redirected to vendor onboarding pages
         // ============================================================
-        if (in_array($user->role, ['admin', 'ceo'])) {
+        if (in_array($user->role, ['admin', 'support', 'ceo'])) {
             return $next($request);
         }
-        
+
         // Also allow logistics and finance to bypass (they have their own dashboards)
         if (in_array($user->role, ['logistics', 'finance'])) {
             return $next($request);

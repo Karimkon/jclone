@@ -15,11 +15,16 @@ class User extends Authenticatable
     use HasApiTokens, Notifiable; 
 
     protected $fillable = [
-        'name', 'phone', 'email', 'password', 'role', 'is_active', 'meta',
-        'otp_code', 'otp_expires_at', 'is_verified', 'google_id', 'apple_user_id', 'avatar',
-        'phone_otp_code', 'phone_otp_expires_at', 'phone_verified', 'phone_verified_at',
-        'is_admin_verified', 'admin_verified_at'
+        'name', 'phone', 'email', 'password', 'meta',
+        'is_verified', 'google_id', 'apple_user_id', 'avatar',
+        'phone_verified', 'phone_verified_at',
     ];
+
+    /**
+     * Fields that should NEVER be mass-assigned.
+     * Use explicit methods like setRole(), setOtp(), etc.
+     */
+    protected $guarded_note = 'role, is_active, is_admin_verified, admin_verified_at, otp_code, otp_expires_at, phone_otp_code, phone_otp_expires_at are set explicitly';
 
     protected $casts = [
         'meta' => 'array',

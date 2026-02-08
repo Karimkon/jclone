@@ -274,7 +274,7 @@
 @if(session('success'))
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        alert('{{ session('success') }}');
+        alert(@json(session('success')));
     });
 </script>
 @endif
@@ -282,7 +282,7 @@
 @if(session('error'))
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        alert('{{ session('error') }}');
+        alert(@json(session('error')));
     });
 </script>
 @endif

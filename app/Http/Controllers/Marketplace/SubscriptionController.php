@@ -196,7 +196,7 @@ class SubscriptionController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to initiate subscription payment: ' . $e->getMessage(),
+                'message' => 'Failed to initiate subscription payment. Please try again.',
             ], 500);
         }
     }
