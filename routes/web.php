@@ -452,26 +452,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/api/listings/{listing}/reviews', [ReviewController::class, 'getListingReviews'])->name('api.listings.reviews');
 
     // ====================
-    // ADMIN ROUTES
+    // ADMIN ROUTES (admin-only: sensitive operations)
     // ====================
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-        
-        // Admin User Management Routes
-    Route::resource('users', AdminUserController::class);
-    
-    // Advertisement Routes
-    Route::resource('advertisements', App\Http\Controllers\Admin\AdvertisementController::class);
-    Route::post('advertisements/{advertisement}/toggle', [App\Http\Controllers\Admin\AdvertisementController::class, 'toggleStatus'])->name('advertisements.toggle');
+        // User management - create, edit, delete, toggle, verify
+        Route::get('/users/create', [AdminUserController::class, 'create'])->name('users.create');
+        Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
+        Route::get('/users/{user}/edit', [AdminUserController::class, 'edit'])->name('users.edit');
+        Route::put('/users/{user}', [AdminUserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [AdminUserController::class, 'destroy'])->name('users.destroy');
         Route::post('/users/{user}/toggle-status', [AdminUserController::class, 'toggleStatus'])->name('users.toggle-status');
         Route::post('/users/{user}/verify-email', [AdminUserController::class, 'verifyEmail'])->name('users.verify-email');
         Route::post('/users/{user}/toggle-verified', [AdminUserController::class, 'toggleVerified'])->name('users.toggle-verified');
-        Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
 
-        // Vendor vetting
-        Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
-        Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
-        Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
+        // Vendor management - approve, reject, toggle, score
         Route::post('/vendors/{vendor}/approve', [AdminVendorController::class, 'approve'])->name('vendors.approve');
         Route::post('/vendors/{vendor}/reject', [AdminVendorController::class, 'reject'])->name('vendors.reject');
         Route::post('/vendors/{id}/toggle-status', [AdminVendorController::class, 'toggleStatus'])->name('vendors.toggleStatus');
@@ -480,7 +474,7 @@ Route::middleware(['auth'])->group(function () {
         // Document verification
         Route::post('/documents/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('documents.verify');
         Route::post('/documents/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('documents.reject');
-        
+
         // Category management
         Route::get('/categories', [CategoryController::class, 'adminIndex'])->name('categories.index');
         Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
@@ -492,35 +486,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/categories/{category}/icon', [CategoryController::class, 'updateIcon'])->name('categories.update-icon');
         Route::get('/categories/missing-icons', [CategoryController::class, 'missingIcons'])->name('categories.missing-icons');
 
-        // Orders
-        Route::prefix('orders')->name('orders.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('index');
-            Route::get('/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('show');
-            Route::post('/{order}/status', [\App\Http\Controllers\Admin\AdminOrderController::class, 'updateStatus'])->name('update-status');
-            Route::post('/{order}/refund', [\App\Http\Controllers\Admin\AdminOrderController::class, 'refund'])->name('refund');
-            Route::get('/{order}/invoice', [\App\Http\Controllers\Admin\AdminOrderController::class, 'invoice'])->name('invoice');
-            Route::get('/export', [\App\Http\Controllers\Admin\AdminOrderController::class, 'export'])->name('export');
-        });
-        
-        // Disputes
-        Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
-        Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
-        Route::patch('/disputes/{dispute}/status', [\App\Http\Controllers\Admin\DisputeController::class, 'updateStatus'])->name('disputes.updateStatus');
-        Route::post('/disputes/{dispute}/comment', [\App\Http\Controllers\Admin\DisputeController::class, 'addComment'])->name('disputes.comment');
-        Route::post('/disputes/{dispute}/request-evidence', [\App\Http\Controllers\Admin\DisputeController::class, 'requestEvidence'])->name('disputes.requestEvidence');
+        // Orders - admin actions
+        Route::post('/orders/{order}/status', [\App\Http\Controllers\Admin\AdminOrderController::class, 'updateStatus'])->name('orders.update-status');
+        Route::post('/orders/{order}/refund', [\App\Http\Controllers\Admin\AdminOrderController::class, 'refund'])->name('orders.refund');
+        Route::get('/orders/export', [\App\Http\Controllers\Admin\AdminOrderController::class, 'export'])->name('orders.export');
 
         // Escrow management
         Route::prefix('escrows')->name('escrows.')->group(function () {
             Route::get('/pending', [EscrowController::class, 'pending'])->name('pending');
             Route::post('/{escrow}/release', [EscrowController::class, 'release'])->name('release');
             Route::post('/{escrow}/refund', [EscrowController::class, 'refund'])->name('refund');
-        });
-
-        // Document Routes
-        Route::prefix('documents')->name('documents.')->group(function () {
-            Route::get('/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('view');
-            Route::post('/{id}/verify', [AdminVendorController::class, 'verifyDocument'])->name('verify');
-            Route::post('/{id}/reject', [AdminVendorController::class, 'rejectDocument'])->name('reject');
         });
 
         // Withdrawal Management
@@ -534,86 +509,125 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{withdrawal}/complete', [\App\Http\Controllers\Admin\WithdrawalController::class, 'complete'])->name('complete');
         });
 
-      // Admin Product Management Routes :
-    Route::prefix('listings')->name('listings.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AdminListingController::class, 'index'])->name('index');
-        Route::get('/create', [\App\Http\Controllers\Admin\AdminListingController::class, 'create'])->name('create');
-        Route::post('/', [\App\Http\Controllers\Admin\AdminListingController::class, 'store'])->name('store');
-        Route::get('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'show'])->name('show');
-        Route::get('/{listing}/edit', [\App\Http\Controllers\Admin\AdminListingController::class, 'edit'])->name('edit');
-        Route::put('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'update'])->name('update');
-        Route::delete('/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'destroy'])->name('destroy');
-        Route::post('/{listing}/toggle-status', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleStatus'])->name('toggle-status');
-        Route::post('/{listing}/feature', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleFeatured'])->name('toggle-featured');
-        Route::post('/bulk-actions', [\App\Http\Controllers\Admin\AdminListingController::class, 'bulkActions'])->name('bulk-actions');
-        Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'exportCSV'])->name('export.csv');
-        Route::post('/import/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'importCSV'])->name('import.csv');
-    });
-    
-     Route::prefix('contact-messages')->name('contact-messages.')->group(function () {
-        Route::get('/', [ContactMessageController::class, 'index'])->name('index');
-        Route::get('/{id}', [ContactMessageController::class, 'show'])->name('show');
-        Route::post('/{id}/status', [ContactMessageController::class, 'updateStatus'])->name('update-status');
-        Route::post('/{id}/response', [ContactMessageController::class, 'sendResponse'])->name('send-response');
-        Route::delete('/{id}', [ContactMessageController::class, 'destroy'])->name('destroy');
-        Route::post('/bulk-actions', [ContactMessageController::class, 'bulkActions'])->name('bulk-actions');
+        // Listings - admin write operations
+        Route::get('/listings/create', [\App\Http\Controllers\Admin\AdminListingController::class, 'create'])->name('listings.create');
+        Route::post('/listings', [\App\Http\Controllers\Admin\AdminListingController::class, 'store'])->name('listings.store');
+        Route::get('/listings/{listing}/edit', [\App\Http\Controllers\Admin\AdminListingController::class, 'edit'])->name('listings.edit');
+        Route::put('/listings/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'update'])->name('listings.update');
+        Route::delete('/listings/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'destroy'])->name('listings.destroy');
+        Route::post('/listings/{listing}/toggle-status', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleStatus'])->name('listings.toggle-status');
+        Route::post('/listings/{listing}/feature', [\App\Http\Controllers\Admin\AdminListingController::class, 'toggleFeatured'])->name('listings.toggle-featured');
+        Route::post('/listings/bulk-actions', [\App\Http\Controllers\Admin\AdminListingController::class, 'bulkActions'])->name('listings.bulk-actions');
+        Route::get('/listings/export/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'exportCSV'])->name('listings.export.csv');
+        Route::post('/listings/import/csv', [\App\Http\Controllers\Admin\AdminListingController::class, 'importCSV'])->name('listings.import.csv');
+
+        // Contact Messages - admin actions (delete, bulk)
+        Route::delete('/contact-messages/{id}', [ContactMessageController::class, 'destroy'])->name('contact-messages.destroy');
+        Route::post('/contact-messages/bulk-actions', [ContactMessageController::class, 'bulkActions'])->name('contact-messages.bulk-actions');
+
+        // Advertisement Routes
+        Route::resource('advertisements', App\Http\Controllers\Admin\AdvertisementController::class);
+        Route::post('advertisements/{advertisement}/toggle', [App\Http\Controllers\Admin\AdvertisementController::class, 'toggleStatus'])->name('advertisements.toggle');
+
+        // Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/', [ReportController::class, 'index'])->name('index');
+            Route::get('/sales-detailed', [ReportController::class, 'salesDetailed'])->name('sales.detailed');
+            Route::get('/financial', [ReportController::class, 'financialReport'])->name('financial');
+            Route::get('/user-acquisition', [ReportController::class, 'userAcquisition'])->name('user.acquisition');
+            Route::get('/vendor-performance', [ReportController::class, 'vendorPerformance'])->name('vendor.performance');
+            Route::get('/category-performance', [ReportController::class, 'categoryPerformance'])->name('category.performance');
+            Route::get('/platform-analytics', [ReportController::class, 'platformAnalytics'])->name('platform.analytics');
+            Route::get('/export', [ReportController::class, 'export'])->name('export');
+        });
+
+        // Settings
+        Route::prefix('settings')->name('settings.')->group(function () {
+            Route::get('/', [AdminSettingsController::class, 'index'])->name('index');
+            Route::put('/general', [AdminSettingsController::class, 'updateGeneral'])->name('general.update');
+            Route::put('/email', [AdminSettingsController::class, 'updateEmail'])->name('email.update');
+            Route::put('/notifications', [AdminSettingsController::class, 'updateNotifications'])->name('notifications.update');
+            Route::put('/security', [AdminSettingsController::class, 'updateSecurity'])->name('security.update');
+            Route::post('/backup', [AdminSettingsController::class, 'createBackup'])->name('backup.create');
+            Route::get('/logs', [AdminSettingsController::class, 'viewLogs'])->name('logs');
+            Route::delete('/logs/clear', [AdminSettingsController::class, 'clearLogs'])->name('logs.clear');
+        });
+
+        Route::get('/activity-logs', function () {
+            $logs = \App\Models\ActivityLog::orderBy('created_at', 'desc')->paginate(20);
+            return view('admin.activity-logs.index', compact('logs'));
+        })->name('activity-logs');
+
+        // Subscription Management
+        Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'index'])->name('index');
+            Route::get('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'showSubscription'])->name('show');
+            Route::post('/{id}/extend', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'extendSubscription'])->name('extend');
+            Route::post('/{id}/cancel', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'cancelSubscription'])->name('cancel');
+            Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'export'])->name('export');
+            Route::get('/revenue/analytics', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'revenue'])->name('revenue');
+        });
+
+        // Subscription Plans Management
+        Route::prefix('subscription-plans')->name('subscriptions.plans.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'plans'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'storePlan'])->name('store');
+            Route::put('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'updatePlan'])->name('update');
+            Route::delete('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'destroyPlan'])->name('destroy');
+            Route::post('/{id}/toggle', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'togglePlanStatus'])->name('toggle');
+        });
     });
 
-    Route::prefix('reports')->name('reports.')->group(function () {
-    Route::get('/', [ReportController::class, 'index'])->name('index');
-    Route::get('/sales-detailed', [ReportController::class, 'salesDetailed'])->name('sales.detailed');
-    Route::get('/financial', [ReportController::class, 'financialReport'])->name('financial');
-    Route::get('/user-acquisition', [ReportController::class, 'userAcquisition'])->name('user.acquisition');
-    Route::get('/vendor-performance', [ReportController::class, 'vendorPerformance'])->name('vendor.performance');
-    Route::get('/category-performance', [ReportController::class, 'categoryPerformance'])->name('category.performance');
-    Route::get('/platform-analytics', [ReportController::class, 'platformAnalytics'])->name('platform.analytics');
-    Route::get('/export', [ReportController::class, 'export'])->name('export');
-});
+    // ====================
+    // ADMIN ROUTES (shared: admin + support)
+    // ====================
+    Route::middleware(['role:admin,support'])->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
 
-// Profile & Settings Routes
-    Route::prefix('profile')->name('profile.')->group(function () {
-        Route::get('/', [AdminProfileController::class, 'index'])->name('index');
-        Route::put('/update', [AdminProfileController::class, 'update'])->name('update');
-        Route::put('/change-password', [AdminProfileController::class, 'changePassword'])->name('change-password');
-        Route::post('/upload-photo', [AdminProfileController::class, 'uploadPhoto'])->name('upload-photo');
-        Route::delete('/remove-photo', [AdminProfileController::class, 'removePhoto'])->name('remove-photo');
-    });
-    
-    Route::prefix('settings')->name('settings.')->group(function () {
-        Route::get('/', [AdminSettingsController::class, 'index'])->name('index');
-        Route::put('/general', [AdminSettingsController::class, 'updateGeneral'])->name('general.update');
-        Route::put('/email', [AdminSettingsController::class, 'updateEmail'])->name('email.update');
-        Route::put('/notifications', [AdminSettingsController::class, 'updateNotifications'])->name('notifications.update');
-        Route::put('/security', [AdminSettingsController::class, 'updateSecurity'])->name('security.update');
-        Route::post('/backup', [AdminSettingsController::class, 'createBackup'])->name('backup.create');
-        Route::get('/logs', [AdminSettingsController::class, 'viewLogs'])->name('logs');
-        Route::delete('/logs/clear', [AdminSettingsController::class, 'clearLogs'])->name('logs.clear');
-    });
+        // Users - view, show, search, reset password (support can do these)
+        Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}', [AdminUserController::class, 'show'])->name('users.show');
+        Route::post('/users/{user}/reset-password', [AdminUserController::class, 'resetPassword'])->name('users.reset-password');
 
-    Route::get('/activity-logs', function () {
-        $logs = \App\Models\ActivityLog::orderBy('created_at', 'desc')->paginate(20);
-        return view('admin.activity-logs.index', compact('logs'));
-    })->name('activity-logs');
+        // Vendors - view only
+        Route::get('/vendors/pending', [AdminVendorController::class, 'pending'])->name('vendors.pending');
+        Route::get('/vendors', [AdminVendorController::class, 'index'])->name('vendors.index');
+        Route::get('/vendors/{vendor}', [AdminVendorController::class, 'show'])->name('vendors.show');
 
-    // Subscription Management
-    Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'index'])->name('index');
-        Route::get('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'showSubscription'])->name('show');
-        Route::post('/{id}/extend', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'extendSubscription'])->name('extend');
-        Route::post('/{id}/cancel', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'cancelSubscription'])->name('cancel');
-        Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'export'])->name('export');
-        Route::get('/revenue/analytics', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'revenue'])->name('revenue');
-    });
+        // Products - view only
+        Route::get('/listings', [\App\Http\Controllers\Admin\AdminListingController::class, 'index'])->name('listings.index');
+        Route::get('/listings/{listing}', [\App\Http\Controllers\Admin\AdminListingController::class, 'show'])->name('listings.show');
 
-    // Subscription Plans Management
-    Route::prefix('subscription-plans')->name('subscriptions.plans.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'plans'])->name('index');
-        Route::post('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'storePlan'])->name('store');
-        Route::put('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'updatePlan'])->name('update');
-        Route::delete('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'destroyPlan'])->name('destroy');
-        Route::post('/{id}/toggle', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'togglePlanStatus'])->name('toggle');
+        // Orders - view and invoices
+        Route::get('/orders', [\App\Http\Controllers\Admin\AdminOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [\App\Http\Controllers\Admin\AdminOrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{order}/invoice', [\App\Http\Controllers\Admin\AdminOrderController::class, 'invoice'])->name('orders.invoice');
+
+        // Disputes - view, comment, update status, request evidence (core support)
+        Route::get('/disputes', [\App\Http\Controllers\Admin\DisputeController::class, 'index'])->name('disputes.index');
+        Route::get('/disputes/{dispute}', [\App\Http\Controllers\Admin\DisputeController::class, 'show'])->name('disputes.show');
+        Route::patch('/disputes/{dispute}/status', [\App\Http\Controllers\Admin\DisputeController::class, 'updateStatus'])->name('disputes.updateStatus');
+        Route::post('/disputes/{dispute}/comment', [\App\Http\Controllers\Admin\DisputeController::class, 'addComment'])->name('disputes.comment');
+        Route::post('/disputes/{dispute}/request-evidence', [\App\Http\Controllers\Admin\DisputeController::class, 'requestEvidence'])->name('disputes.requestEvidence');
+
+        // Contact Messages - view, respond, update status
+        Route::get('/contact-messages', [ContactMessageController::class, 'index'])->name('contact-messages.index');
+        Route::get('/contact-messages/{id}', [ContactMessageController::class, 'show'])->name('contact-messages.show');
+        Route::post('/contact-messages/{id}/status', [ContactMessageController::class, 'updateStatus'])->name('contact-messages.update-status');
+        Route::post('/contact-messages/{id}/response', [ContactMessageController::class, 'sendResponse'])->name('contact-messages.send-response');
+
+        // Profile (own profile management)
+        Route::prefix('profile')->name('profile.')->group(function () {
+            Route::get('/', [AdminProfileController::class, 'index'])->name('index');
+            Route::put('/update', [AdminProfileController::class, 'update'])->name('update');
+            Route::put('/change-password', [AdminProfileController::class, 'changePassword'])->name('change-password');
+            Route::post('/upload-photo', [AdminProfileController::class, 'uploadPhoto'])->name('upload-photo');
+            Route::delete('/remove-photo', [AdminProfileController::class, 'removePhoto'])->name('remove-photo');
+        });
+
+        // Document view only
+        Route::get('/documents/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('documents.view');
     });
-});
 
     // ====================
     // LOGISTICS ROUTES

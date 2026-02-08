@@ -98,19 +98,21 @@
                                    class="text-indigo-600 hover:text-indigo-900">
                                     <i class="fas fa-eye mr-1"></i> Review
                                 </a>
+                                @if(auth()->user()->role !== 'support')
                                 <form action="{{ route('admin.vendors.approve', $vendor) }}" method="POST" class="inline">
                                     @csrf
-                                    <button type="submit" 
+                                    <button type="submit"
                                             class="text-green-600 hover:text-green-900"
                                             onclick="return confirm('Approve this vendor?')">
                                         <i class="fas fa-check mr-1"></i> Approve
                                     </button>
                                 </form>
-                                <button type="button" 
+                                <button type="button"
                                         onclick="showRejectModal({{ $vendor->id }}, '{{ $vendor->business_name }}')"
                                         class="text-red-600 hover:text-red-900">
                                     <i class="fas fa-times mr-1"></i> Reject
                                 </button>
+                                @endif
                             </div>
                         </td>
                     </tr>

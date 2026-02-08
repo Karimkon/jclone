@@ -43,7 +43,7 @@ class AdminUserController extends Controller
             'total' => User::count(),
             'vendors' => User::whereIn('role', ['vendor_local', 'vendor_international'])->count(),
             'buyers' => User::where('role', 'buyer')->count(),
-            'staff' => User::whereIn('role', ['admin', 'logistics', 'finance', 'ceo'])->count(),
+            'staff' => User::whereIn('role', ['admin', 'support', 'logistics', 'finance', 'ceo'])->count(),
         ];
         
         return view('admin.users.index', compact('users', 'stats'));
@@ -66,7 +66,7 @@ class AdminUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
             'phone' => 'required|string|max:20',
-            'role' => 'required|in:admin,buyer,vendor_local,vendor_international,logistics,finance,ceo',
+            'role' => 'required|in:admin,support,buyer,vendor_local,vendor_international,logistics,finance,ceo',
             'password' => 'required|string|min:8|confirmed',
             'is_active' => 'boolean',
         ]);
@@ -120,7 +120,7 @@ class AdminUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'phone' => 'required|string|max:20',
-            'role' => 'required|in:admin,buyer,vendor_local,vendor_international,logistics,finance,ceo',
+            'role' => 'required|in:admin,support,buyer,vendor_local,vendor_international,logistics,finance,ceo',
             'password' => 'nullable|string|min:8|confirmed',
             'is_active' => 'boolean',
         ]);

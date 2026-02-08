@@ -147,6 +147,7 @@
                                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="">Select Role</option>
                                         <option value="admin" {{ old('role', $user->role) == 'admin' ? 'selected' : '' }}>Admin</option>
+                                        <option value="support" {{ old('role', $user->role) == 'support' ? 'selected' : '' }}>Support Agent</option>
                                         <option value="buyer" {{ old('role', $user->role) == 'buyer' ? 'selected' : '' }}>Buyer</option>
                                         <option value="vendor_local" {{ old('role', $user->role) == 'vendor_local' ? 'selected' : '' }}>Local Vendor</option>
                                         <option value="vendor_international" {{ old('role', $user->role) == 'vendor_international' ? 'selected' : '' }}>International Vendor</option>

@@ -57,23 +57,25 @@
         </div>
     </div>
 
+    @if(auth()->user()->role !== 'support')
     <!-- Action Buttons -->
     <div class="flex flex-wrap gap-3">
-        <a href="{{ route('admin.listings.create') }}" 
+        <a href="{{ route('admin.listings.create') }}"
            class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition flex items-center">
             <i class="fas fa-plus mr-2"></i> Add New Product
         </a>
-        
-        <a href="{{ route('admin.listings.export.csv') }}" 
+
+        <a href="{{ route('admin.listings.export.csv') }}"
            class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition flex items-center">
             <i class="fas fa-file-export mr-2"></i> Export CSV
         </a>
-        
-        <button onclick="toggleImportModal()" 
+
+        <button onclick="toggleImportModal()"
                 class="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center">
             <i class="fas fa-file-import mr-2"></i> Import CSV
         </button>
     </div>
+    @endif
 
     <!-- Filters -->
     <div class="bg-white rounded-xl shadow-sm p-6">
@@ -160,7 +162,7 @@
     </div>
 
     <!-- Bulk Actions Bar -->
-    <div class="bg-white rounded-xl shadow-sm p-4 hidden" id="bulkActionsBar">
+    <div class="bg-white rounded-xl shadow-sm p-4 hidden {{ auth()->user()->role === 'support' ? '!hidden' : '' }}" id="bulkActionsBar">
         <div class="flex flex-wrap items-center justify-between">
             <div class="flex items-center space-x-3">
                 <span class="text-sm font-medium text-gray-700" id="selectedCount">0 products selected</span>

@@ -83,10 +83,11 @@
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
 
-            <div class="flex space-x-2">
+            <div class="flex flex-wrap gap-2">
                 <select name="role" id="roleFilter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="this.form.submit()">
                     <option value="">All Roles</option>
                     <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="support" {{ request('role') == 'support' ? 'selected' : '' }}>Support</option>
                     <option value="buyer" {{ request('role') == 'buyer' ? 'selected' : '' }}>Buyer</option>
                     <option value="vendor_local" {{ request('role') == 'vendor_local' ? 'selected' : '' }}>Local Vendor</option>
                     <option value="vendor_international" {{ request('role') == 'vendor_international' ? 'selected' : '' }}>International Vendor</option>
@@ -101,16 +102,22 @@
                     <option value="inactive" {{ request('status') == 'inactive' ? 'selected' : '' }}>Inactive</option>
                 </select>
 
+                <button type="submit" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-search mr-2"></i> Search
+                </button>
+
                 @if(request('search') || request('role') || request('status'))
                 <a href="{{ route('admin.users.index') }}" class="inline-flex items-center px-3 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200" title="Clear filters">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times mr-1"></i> Clear
                 </a>
                 @endif
 
+                @if(auth()->user()->role !== 'support')
                 <a href="{{ route('admin.users.create') }}"
                    class="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-700">
                     <i class="fas fa-plus mr-2"></i> Add User
                 </a>
+                @endif
             </div>
         </div>
     </div>
@@ -173,6 +180,7 @@
                             @php
                                 $roleColors = [
                                     'admin' => 'bg-red-100 text-red-800',
+                                    'support' => 'bg-teal-100 text-teal-800',
                                     'buyer' => 'bg-purple-100 text-purple-800',
                                     'vendor_local' => 'bg-blue-100 text-blue-800',
                                     'vendor_international' => 'bg-green-100 text-green-800',
@@ -182,6 +190,7 @@
                                 ];
                                 $roleLabels = [
                                     'admin' => 'Admin',
+                                    'support' => 'Support Agent',
                                     'buyer' => 'Buyer',
                                     'vendor_local' => 'Local Vendor',
                                     'vendor_international' => 'International Vendor',
@@ -225,6 +234,7 @@
                                    title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                @if(auth()->user()->role !== 'support')
                                 <a href="{{ route('admin.users.edit', $user) }}"
                                    class="text-blue-600 hover:text-blue-900"
                                    title="Edit User">
@@ -240,6 +250,7 @@
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 </form>
+                                @endif
                                 @endif
                             </div>
                         </td>

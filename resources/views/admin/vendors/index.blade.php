@@ -83,7 +83,7 @@
                 <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
             </div>
 
-            <div class="flex space-x-2">
+            <div class="flex flex-wrap gap-2">
                 <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" onchange="this.form.submit()">
                     <option value="">All Status</option>
                     <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
@@ -98,9 +98,13 @@
                     <option value="dropship" {{ request('type') == 'dropship' ? 'selected' : '' }}>Dropshipper</option>
                 </select>
 
+                <button type="submit" class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
+                    <i class="fas fa-search mr-2"></i> Search
+                </button>
+
                 @if(request('search') || request('status') || request('type'))
                 <a href="{{ route('admin.vendors.index') }}" class="inline-flex items-center px-3 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200" title="Clear filters">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times mr-1"></i> Clear
                 </a>
                 @endif
             </div>
@@ -205,6 +209,7 @@
                                    title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
+                                @if(auth()->user()->role !== 'support')
                                 <form action="{{ route('admin.vendors.toggleStatus', $vendor->id) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit"
@@ -213,6 +218,7 @@
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

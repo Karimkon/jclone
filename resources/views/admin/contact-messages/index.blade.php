@@ -109,6 +109,7 @@
     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
         <div class="px-5 py-4 border-b flex justify-between items-center">
             <h2 class="text-lg font-semibold text-gray-900">Contact Messages</h2>
+            @if(auth()->user()->role !== 'support')
             <div class="flex items-center space-x-2">
                 <!-- Bulk Actions -->
                 <form id="bulkActionForm" action="{{ route('admin.contact-messages.bulk-actions') }}" method="POST" class="flex items-center space-x-2">
@@ -121,12 +122,13 @@
                         <option value="delete">Delete</option>
                     </select>
                     <input type="hidden" name="messages" id="bulkMessages">
-                    <button type="submit" onclick="return confirm('Are you sure?')" 
+                    <button type="submit" onclick="return confirm('Are you sure?')"
                             class="px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm">
                         Apply
                     </button>
                 </form>
             </div>
+            @endif
         </div>
         
         <div class="overflow-x-auto">
@@ -190,7 +192,8 @@
                                    class="px-3 py-1 bg-primary-100 text-primary-700 rounded hover:bg-primary-200">
                                     <i class="fas fa-eye mr-1"></i> View
                                 </a>
-                                <form action="{{ route('admin.contact-messages.destroy', $message->id) }}" 
+                                @if(auth()->user()->role !== 'support')
+                                <form action="{{ route('admin.contact-messages.destroy', $message->id) }}"
                                       method="POST" class="inline"
                                       onsubmit="return confirm('Delete this message?')">
                                     @csrf
@@ -199,6 +202,7 @@
                                         <i class="fas fa-trash mr-1"></i> Delete
                                     </button>
                                 </form>
+                                @endif
                             </div>
                         </td>
                     </tr>

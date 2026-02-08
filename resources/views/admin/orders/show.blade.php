@@ -32,16 +32,17 @@
         </div>
     </div>
 
+    @if(auth()->user()->role !== 'support')
     <!-- Order Actions -->
     <div class="bg-white rounded-xl shadow-sm p-6">
         <h2 class="text-lg font-bold text-gray-800 mb-4">Update Status</h2>
-        
+
         <form action="{{ route('admin.orders.update-status', $order) }}" method="POST">
             @csrf
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select name="status" required 
+                    <select name="status" required
                             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                         <option value="pending" {{ $order->status == 'pending' ? 'selected' : '' }}>Pending</option>
                         <option value="confirmed" {{ $order->status == 'confirmed' ? 'selected' : '' }}>Confirmed</option>
@@ -51,16 +52,16 @@
                         <option value="cancelled" {{ $order->status == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                     </select>
                 </div>
-                
+
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
-                    <input type="text" name="notes" 
+                    <input type="text" name="notes"
                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                            placeholder="Add notes about status change">
                 </div>
-                
+
                 <div class="flex items-end">
-                    <button type="submit" 
+                    <button type="submit"
                             class="w-full px-6 py-2 bg-primary text-white rounded-lg hover:bg-indigo-700 font-medium">
                         <i class="fas fa-save mr-2"></i> Update Status
                     </button>
@@ -68,6 +69,7 @@
             </div>
         </form>
     </div>
+    @endif
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Order Items -->

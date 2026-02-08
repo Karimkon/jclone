@@ -156,14 +156,12 @@ public function adminLogin(Request $request)
         'password' => 'required|string',
     ]);
 
-    // Add role to credentials to ensure only admins can login
-    $credentials['role'] = 'admin';
-    
-    if (Auth::attempt($credentials)) {
+    // Try login without role constraint first, then check role after
+    if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password']])) {
         $user = Auth::user();
-        
-        // Check if user is admin
-        if ($user->role !== 'admin' && $user->role !== 'ceo') {
+
+        // Check if user is admin or support
+        if (!in_array($user->role, ['admin', 'support', 'ceo'])) {
             Auth::logout();
             return back()->withErrors([
                 'email' => 'Access denied. Admin privileges required.',
@@ -171,9 +169,9 @@ public function adminLogin(Request $request)
         }
 
         $request->session()->regenerate();
-        
-        // Force redirect to admin dashboard
-        return redirect()->route('admin.dashboard')->with('success', 'Welcome back, Admin!');
+
+        $welcomeMessage = $user->role === 'support' ? 'Welcome back, Support Agent!' : 'Welcome back, Admin!';
+        return redirect()->route('admin.dashboard')->with('success', $welcomeMessage);
     }
 
     return back()->withErrors([
@@ -335,7 +333,10 @@ private function redirectBasedOnRole($user)
         case 'admin':
             // Force admin to dashboard, not vendor status
             return redirect()->route('admin.dashboard')->with('success', 'Welcome back, Admin!');
-            
+
+        case 'support':
+            return redirect()->route('admin.dashboard')->with('success', 'Welcome back, Support Agent!');
+
         case 'ceo':
             return redirect()->route('ceo.dashboard');
             

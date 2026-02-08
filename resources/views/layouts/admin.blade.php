@@ -889,7 +889,7 @@
                 </div>
                 <div>
                     <div class="logo-text">{{ config('app.name') }}</div>
-                    <div class="logo-subtitle">ADMIN PANEL</div>
+                    <div class="logo-subtitle">{{ Auth::user()->role === 'support' ? 'SUPPORT PANEL' : 'ADMIN PANEL' }}</div>
                 </div>
             </div>
             <button id="toggleSidebar" class="toggle-btn">
@@ -909,7 +909,7 @@
             </div>
             <div class="user-info">
                 <div class="user-name">{{ Auth::user()->name }}</div>
-                <div class="user-role">{{ ucfirst(Auth::user()->role) }}</div>
+                <div class="user-role">{{ Auth::user()->role === 'support' ? 'Support Agent' : ucfirst(Auth::user()->role) }}</div>
             </div>
         </div>
         
@@ -976,8 +976,9 @@
             <div class="nav-section">
                 <div class="nav-section-title">CONTENT MANAGEMENT</div>
                 
+                @if(Auth::user()->role !== 'support')
                 <div class="nav-item">
-                    <a href="{{ route('admin.categories.index') }}" 
+                    <a href="{{ route('admin.categories.index') }}"
                        class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
                         <div class="nav-icon">
                             <i class="fas fa-tags"></i>
@@ -986,7 +987,8 @@
                         <div class="nav-tooltip">Categories</div>
                     </a>
                 </div>
-                
+                @endif
+
                 <div class="nav-item">
                     <a href="{{ route('admin.listings.index') }}" 
                        class="nav-link {{ request()->routeIs('admin.listings.*') ? 'active' : '' }}">
@@ -1039,6 +1041,7 @@
                     </a>
                 </div>
 
+                @if(Auth::user()->role !== 'support')
                 <div class="nav-item">
                     <a href="{{ route('admin.advertisements.index') }}"
                        class="nav-link {{ request()->routeIs('admin.advertisements.*') ? 'active' : '' }}">
@@ -1049,7 +1052,9 @@
                         <div class="nav-tooltip">Advertisements</div>
                     </a>
                 </div>
+                @endif
 
+                @if(Auth::user()->role !== 'support')
                 <div class="nav-item">
                     <a href="{{ route('admin.subscriptions.index') }}"
                        class="nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
@@ -1064,14 +1069,16 @@
                         <div class="nav-tooltip">Subscriptions</div>
                     </a>
                 </div>
+                @endif
             </div>
 
+            @if(Auth::user()->role !== 'support')
             <!-- Finance -->
             <div class="nav-section">
                 <div class="nav-section-title">FINANCE</div>
-                
+
                 <div class="nav-item">
-                    <a href="{{ route('admin.withdrawals.pending') }}" 
+                    <a href="{{ route('admin.withdrawals.pending') }}"
                        class="nav-link {{ request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
                         <div class="nav-icon">
                             <i class="fas fa-money-bill-wave"></i>
@@ -1085,13 +1092,15 @@
                     </a>
                 </div>
             </div>
+            @endif
             
+            @if(Auth::user()->role !== 'support')
             <!-- Analytics -->
             <div class="nav-section">
                 <div class="nav-section-title">ANALYTICS</div>
-                
+
                 <div class="nav-item">
-                    <a href="{{ route('admin.reports.index') }}" 
+                    <a href="{{ route('admin.reports.index') }}"
                        class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
                         <div class="nav-icon">
                             <i class="fas fa-chart-bar"></i>
@@ -1101,13 +1110,15 @@
                     </a>
                 </div>
             </div>
+            @endif
             
-            <!-- Settings -->
+            <!-- Settings / Account -->
             <div class="nav-section">
-                <div class="nav-section-title">SETTINGS</div>
-                
+                <div class="nav-section-title">{{ Auth::user()->role === 'support' ? 'ACCOUNT' : 'SETTINGS' }}</div>
+
+                @if(Auth::user()->role !== 'support')
                 <div class="nav-item">
-                    <a href="{{ route('admin.settings.index') }}" 
+                    <a href="{{ route('admin.settings.index') }}"
                        class="nav-link {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
                         <div class="nav-icon">
                             <i class="fas fa-cog"></i>
@@ -1116,7 +1127,8 @@
                         <div class="nav-tooltip">Settings</div>
                     </a>
                 </div>
-                
+                @endif
+
                 <div class="nav-item">
                     <a href="{{ route('admin.profile.index') }}" 
                        class="nav-link {{ request()->routeIs('admin.profile.*') ? 'active' : '' }}">
@@ -1267,7 +1279,7 @@
                         </div>
                         <div class="user-menu-info">
                             <div class="user-menu-name">{{ Auth::user()->name }}</div>
-                            <div class="user-menu-role">{{ ucfirst(Auth::user()->role) }}</div>
+                            <div class="user-menu-role">{{ Auth::user()->role === 'support' ? 'Support Agent' : ucfirst(Auth::user()->role) }}</div>
                         </div>
                         <i class="fas fa-chevron-down text-sm"></i>
                     </button>
@@ -1283,10 +1295,12 @@
                                 <i class="fas fa-user text-dark-400 dark:text-dark-500"></i>
                                 <span>My Profile</span>
                             </a>
+                            @if(Auth::user()->role !== 'support')
                             <a href="{{ route('admin.settings.index') }}" class="dropdown-item">
                                 <i class="fas fa-cog text-dark-400 dark:text-dark-500"></i>
                                 <span>Settings</span>
                             </a>
+                            @endif
                             <form action="{{ route('logout') }}" method="POST">
                                 @csrf
                                 <button type="submit" class="dropdown-item w-full text-left text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">

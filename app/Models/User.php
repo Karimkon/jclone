@@ -387,13 +387,23 @@ public function isCEO()
 }
 
 /**
- * Check if user has administrative privileges (admin or CEO)
- * 
+ * Check if user is a support agent
+ *
+ * @return bool
+ */
+public function isSupport()
+{
+    return $this->role === 'support';
+}
+
+/**
+ * Check if user has administrative privileges (admin, support, or CEO)
+ *
  * @return bool
  */
 public function hasAdminAccess()
 {
-    return in_array($this->role, ['admin', 'ceo']);
+    return in_array($this->role, ['admin', 'support', 'ceo']);
 }
 
 /**
@@ -425,6 +435,7 @@ public function getDashboardRoute()
 {
     $routes = [
         'admin' => 'admin.dashboard',
+        'support' => 'admin.dashboard',
         'ceo' => 'ceo.dashboard',
         'vendor_local' => 'vendor.dashboard',
         'vendor_international' => 'vendor.dashboard',

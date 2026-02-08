@@ -66,6 +66,7 @@
                             @php
                                 $roleColors = [
                                     'admin' => 'bg-red-100 text-red-800',
+                                    'support' => 'bg-teal-100 text-teal-800',
                                     'buyer' => 'bg-purple-100 text-purple-800',
                                     'vendor_local' => 'bg-blue-100 text-blue-800',
                                     'vendor_international' => 'bg-green-100 text-green-800',
@@ -214,15 +215,16 @@
                 </div>
                 <div class="p-6">
                     <div class="space-y-3">
-                        <a href="{{ route('admin.users.edit', $user) }}" 
+                        @if(auth()->user()->role !== 'support')
+                        <a href="{{ route('admin.users.edit', $user) }}"
                            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">
                             <i class="fas fa-edit mr-2"></i> Edit User
                         </a>
-                        
+
                         @if($user->id != auth()->id())
                         <form action="{{ route('admin.users.toggle-status', $user->id) }}" method="POST">
                             @csrf
-                            <button type="submit" 
+                            <button type="submit"
                                     class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                                     onclick="return confirm('{{ $user->is_active ? 'Deactivate this user?' : 'Activate this user?' }}')">
                                 <i class="fas fa-power-off mr-2"></i>
@@ -230,7 +232,7 @@
                             </button>
                         </form>
                         @endif
-                        
+
                         @if(!$user->email_verified_at)
                         <form action="{{ route('admin.users.verify-email', $user->id) }}" method="POST">
                             @csrf
@@ -251,6 +253,7 @@
                                 {{ $user->is_admin_verified ? 'Remove Verified Badge' : 'Grant Verified Badge' }}
                             </button>
                         </form>
+                        @endif
 
                         @if($user->id != auth()->id())
                         <button type="button"
@@ -259,11 +262,13 @@
                             <i class="fas fa-key mr-2"></i> Reset Password
                         </button>
 
+                        @if(auth()->user()->role !== 'support')
                         <button type="button"
                                 onclick="showDeleteModal('{{ $user->id }}', '{{ $user->name }}')"
                                 class="w-full flex items-center justify-center px-4 py-2 border border-transparent text-white bg-red-600 rounded-lg hover:bg-red-700">
                             <i class="fas fa-trash mr-2"></i> Delete User
                         </button>
+                        @endif
                         @endif
                         
                         <a href="{{ route('admin.users.index') }}" 

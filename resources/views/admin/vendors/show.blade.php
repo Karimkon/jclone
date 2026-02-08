@@ -285,41 +285,42 @@
         
         <div class="p-6">
             <div class="flex flex-wrap gap-3">
+                @if(auth()->user()->role !== 'support')
                 @if($vendor->vetting_status == 'pending' || $vendor->vetting_status == 'under_review')
                 <!-- Approve Form -->
                 <form action="{{ route('admin.vendors.approve', $vendor->id) }}" method="POST" class="inline">
                     @csrf
                     <div class="flex items-center">
-                        <input type="number" 
-                               name="score" 
-                               min="0" 
-                               max="100" 
+                        <input type="number"
+                               name="score"
+                               min="0"
+                               max="100"
                                value="50"
                                class="w-20 px-3 py-2 border border-gray-300 rounded-lg mr-2 text-center"
                                placeholder="Score">
-                        <button type="submit" 
+                        <button type="submit"
                                 class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700"
                                 onclick="return confirm('Approve this vendor with the selected score?')">
                             <i class="fas fa-check mr-2"></i> Approve Vendor
                         </button>
                     </div>
                 </form>
-                
+
                 <!-- Reject Button -->
-                <button type="button" 
+                <button type="button"
                         onclick="showRejectModal('{{ $vendor->id }}', '{{ $vendor->business_name }}')"
                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700">
                     <i class="fas fa-times mr-2"></i> Reject Application
                 </button>
                 @endif
-                
+
                 <!-- Update Score -->
-                <button type="button" 
+                <button type="button"
                         onclick="showScoreUpdateModal('{{ $vendor->id }}', '{{ $vendor->scores()->latest()->first()->score ?? 0 }}')"
                         class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50">
                     <i class="fas fa-chart-line mr-2"></i> Update Score
                 </button>
-                
+
                 <!-- Toggle Status -->
                 <form action="{{ route('admin.vendors.toggleStatus', $vendor->id) }}" method="POST" class="inline">
                     @csrf
@@ -341,6 +342,7 @@
                         {{ $vendor->user->is_admin_verified ? 'Remove Verified' : 'Mark as Verified' }}
                     </button>
                 </form>
+                @endif
                 
                 <!-- Back Button -->
                 <a href="{{ route('admin.vendors.pending') }}" 
