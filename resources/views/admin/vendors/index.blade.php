@@ -209,7 +209,7 @@
                                    title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                @if(auth()->user()->role !== 'support')
+                                @if(auth()->user()->role === 'admin')
                                 <form action="{{ route('admin.vendors.toggleStatus', $vendor->id) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit"

@@ -98,7 +98,6 @@
                                    class="text-indigo-600 hover:text-indigo-900">
                                     <i class="fas fa-eye mr-1"></i> Review
                                 </a>
-                                @if(auth()->user()->role !== 'support')
                                 <form action="{{ route('admin.vendors.approve', $vendor) }}" method="POST" class="inline">
                                     @csrf
                                     <button type="submit"
@@ -112,7 +111,6 @@
                                         class="text-red-600 hover:text-red-900">
                                     <i class="fas fa-times mr-1"></i> Reject
                                 </button>
-                                @endif
                             </div>
                         </td>
                     </tr>

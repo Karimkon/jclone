@@ -246,7 +246,6 @@
                                 <i class="fas fa-eye mr-1"></i> View
                             </a>
 
-                            @if(auth()->user()->role !== 'support')
                             @if($document->status != 'verified')
                             <form action="{{ route('admin.documents.verify', $document->id) }}" method="POST" class="inline">
                                 @csrf
@@ -264,7 +263,6 @@
                                     class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700">
                                 <i class="fas fa-times mr-1"></i> Reject
                             </button>
-                            @endif
                             @endif
                         </div>
                     </div>
@@ -287,7 +285,6 @@
         
         <div class="p-6">
             <div class="flex flex-wrap gap-3">
-                @if(auth()->user()->role !== 'support')
                 @if($vendor->vetting_status == 'pending' || $vendor->vetting_status == 'under_review')
                 <!-- Approve Form -->
                 <form action="{{ route('admin.vendors.approve', $vendor->id) }}" method="POST" class="inline">
@@ -316,6 +313,7 @@
                 </button>
                 @endif
 
+                @if(auth()->user()->role === 'admin')
                 <!-- Update Score -->
                 <button type="button"
                         onclick="showScoreUpdateModal('{{ $vendor->id }}', '{{ $vendor->scores()->latest()->first()->score ?? 0 }}')"
