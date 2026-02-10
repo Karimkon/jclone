@@ -1072,6 +1072,41 @@
                 @endif
             </div>
 
+            <!-- Communications -->
+            <div class="nav-section">
+                <div class="nav-section-title">COMMUNICATIONS</div>
+
+                <div class="nav-item">
+                    <a href="{{ route('admin.campaigns.index') }}"
+                       class="nav-link {{ request()->routeIs('admin.campaigns.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-bullhorn"></i>
+                        </div>
+                        <span class="nav-text">Campaigns</span>
+                        @php $draftCampaigns = \App\Models\Campaign::where('status', 'draft')->count(); @endphp
+                        @if($draftCampaigns > 0)
+                            <span class="badge">{{ $draftCampaigns }}</span>
+                        @endif
+                        <div class="nav-tooltip">Campaigns</div>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{{ route('admin.newsletters.index') }}"
+                       class="nav-link {{ request()->routeIs('admin.newsletters.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-newspaper"></i>
+                        </div>
+                        <span class="nav-text">Newsletter Subs</span>
+                        @php $activeSubscribers = \App\Models\NewsletterSubscriber::where('status', 'subscribed')->count(); @endphp
+                        @if($activeSubscribers > 0)
+                            <span class="badge">{{ $activeSubscribers }}</span>
+                        @endif
+                        <div class="nav-tooltip">Newsletter</div>
+                    </a>
+                </div>
+            </div>
+
             @if(Auth::user()->role !== 'support')
             <!-- Finance -->
             <div class="nav-section">

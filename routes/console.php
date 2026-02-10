@@ -14,3 +14,9 @@ Schedule::command('subscriptions:process-expired --send-reminders')
     ->at('00:00')
     ->withoutOverlapping()
     ->runInBackground();
+
+// Process scheduled campaigns every minute
+Schedule::command('campaigns:process-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground();

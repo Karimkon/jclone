@@ -37,6 +37,9 @@ use App\Http\Controllers\Admin\ContactMessageController;
 use \App\Http\Controllers\Admin\ReportController;
 use \App\Http\Controllers\Admin\AdminProfileController;
 use \App\Http\Controllers\Admin\AdminSettingsController;
+use App\Http\Controllers\NewsletterController;
+use App\Http\Controllers\Admin\CampaignController;
+use App\Http\Controllers\Admin\AdminNewsletterController;
 
 // ====================
 // PUBLIC ROUTES
@@ -62,6 +65,10 @@ Route::get('/sitemap-categories.xml', [\App\Http\Controllers\SitemapController::
 Route::get('/sitemap-vendors.xml', [\App\Http\Controllers\SitemapController::class, 'vendors'])->name('sitemap.vendors');
 Route::get('/sitemap-jobs.xml', [\App\Http\Controllers\SitemapController::class, 'jobs'])->name('sitemap.jobs');
 Route::get('/sitemap-services.xml', [\App\Http\Controllers\SitemapController::class, 'services'])->name('sitemap.services');
+
+// Newsletter (public)
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe'])->name('newsletter.subscribe')->middleware('throttle:3,1');
+Route::get('/newsletter/unsubscribe/{token}', [NewsletterController::class, 'unsubscribe'])->name('newsletter.unsubscribe');
 
 // Account Deletion Request (Google Play Store requirement)
 Route::get('/delete-account', function () {
@@ -629,6 +636,28 @@ Route::middleware(['auth'])->group(function () {
 
         // Document view only
         Route::get('/documents/{document}/view', [AdminVendorController::class, 'viewDocument'])->name('documents.view');
+
+        // Campaigns
+        Route::prefix('campaigns')->name('campaigns.')->group(function () {
+            Route::get('/', [CampaignController::class, 'index'])->name('index');
+            Route::get('/create', [CampaignController::class, 'create'])->name('create');
+            Route::post('/', [CampaignController::class, 'store'])->name('store');
+            Route::get('/{campaign}', [CampaignController::class, 'show'])->name('show');
+            Route::get('/{campaign}/edit', [CampaignController::class, 'edit'])->name('edit');
+            Route::put('/{campaign}', [CampaignController::class, 'update'])->name('update');
+            Route::post('/{campaign}/cancel', [CampaignController::class, 'cancel'])->name('cancel');
+            Route::post('/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('duplicate');
+            Route::post('/preview', [CampaignController::class, 'preview'])->name('preview');
+            Route::post('/audience-count', [CampaignController::class, 'getAudienceCount'])->name('audience-count');
+        });
+
+        // Newsletter Subscribers
+        Route::prefix('newsletters')->name('newsletters.')->group(function () {
+            Route::get('/', [AdminNewsletterController::class, 'index'])->name('index');
+            Route::get('/export', [AdminNewsletterController::class, 'export'])->name('export');
+            Route::delete('/{subscriber}', [AdminNewsletterController::class, 'destroy'])->name('destroy');
+            Route::post('/bulk-action', [AdminNewsletterController::class, 'bulkAction'])->name('bulk-action');
+        });
     });
 
     // ====================

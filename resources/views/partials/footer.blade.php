@@ -129,15 +129,59 @@
             <div class="col-span-2 md:col-span-2 lg:col-span-1">
                 <h5 class="font-semibold mb-4 text-sm uppercase tracking-wide text-gray-300">Newsletter</h5>
                 <p class="text-gray-400 text-sm mb-4">Subscribe for exclusive deals and updates.</p>
-                <form class="space-y-3">
+                <form id="newsletterForm" class="space-y-3" onsubmit="return subscribeNewsletter(event)">
                     <div class="relative">
-                        <input type="email" placeholder="Enter your email"
+                        <input type="email" id="newsletterEmail" placeholder="Enter your email" required
                                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-white placeholder-gray-500 transition">
-                        <button type="submit" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-lg transition">
-                            <i class="fas fa-paper-plane text-sm"></i>
+                        <button type="submit" id="newsletterBtn" class="absolute right-1.5 top-1/2 -translate-y-1/2 bg-indigo-600 hover:bg-indigo-700 px-4 py-1.5 rounded-lg transition">
+                            <i class="fas fa-paper-plane text-sm" id="newsletterIcon"></i>
                         </button>
                     </div>
+                    <div id="newsletterFeedback" class="hidden text-sm rounded-lg px-3 py-2"></div>
                 </form>
+                <script>
+                function subscribeNewsletter(e) {
+                    e.preventDefault();
+                    var email = document.getElementById('newsletterEmail').value;
+                    var btn = document.getElementById('newsletterBtn');
+                    var icon = document.getElementById('newsletterIcon');
+                    var feedback = document.getElementById('newsletterFeedback');
+                    btn.disabled = true;
+                    icon.className = 'fas fa-spinner fa-spin text-sm';
+                    feedback.className = 'hidden';
+                    fetch('/newsletter/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || ''
+                        },
+                        body: JSON.stringify({ email: email })
+                    })
+                    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                    .then(function(res) {
+                        feedback.classList.remove('hidden');
+                        if (res.ok) {
+                            feedback.className = 'text-sm rounded-lg px-3 py-2 bg-green-900/50 text-green-300';
+                            feedback.textContent = res.data.message;
+                            document.getElementById('newsletterEmail').value = '';
+                        } else {
+                            var msg = res.data.message || (res.data.errors && res.data.errors.email ? res.data.errors.email[0] : 'Something went wrong.');
+                            feedback.className = 'text-sm rounded-lg px-3 py-2 bg-red-900/50 text-red-300';
+                            feedback.textContent = msg;
+                        }
+                    })
+                    .catch(function() {
+                        feedback.classList.remove('hidden');
+                        feedback.className = 'text-sm rounded-lg px-3 py-2 bg-red-900/50 text-red-300';
+                        feedback.textContent = 'Network error. Please try again.';
+                    })
+                    .finally(function() {
+                        btn.disabled = false;
+                        icon.className = 'fas fa-paper-plane text-sm';
+                    });
+                    return false;
+                }
+                </script>
 
                 <!-- Contact Info -->
                 <div class="mt-6 space-y-2">
