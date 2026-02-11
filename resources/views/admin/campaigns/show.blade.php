@@ -147,8 +147,8 @@
             @endif
         </h3>
         @if($campaign->type === 'email')
-            <div class="border rounded-lg p-4 prose prose-sm max-w-none">
-                {!! $campaign->message !!}
+            <div class="border rounded-lg p-4">
+                <p class="text-gray-800 whitespace-pre-wrap">{{ $campaign->message }}</p>
             </div>
         @else
             <div class="bg-gray-50 rounded-lg p-4">

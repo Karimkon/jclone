@@ -95,7 +95,10 @@
                 <h3 class="text-lg font-semibold text-gray-900 mb-4">Message Content</h3>
 
                 <div id="emailEditor">
-                    <textarea name="message" id="emailMessage" class="w-full">{{ old('message', $campaign->message) }}</textarea>
+                    <p class="text-xs text-gray-500 mb-2">Write your email message below. Line breaks will be preserved in the sent email.</p>
+                    <textarea name="message" id="emailMessage" rows="12"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm"
+                              placeholder="Hello,&#10;&#10;We're excited to share some great news with you...">{{ old('message', $campaign->message) }}</textarea>
                     @error('message')
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
@@ -163,30 +166,12 @@
 @endsection
 
 @section('scripts')
-<script src="https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 <script>
-    let editor;
-
     document.addEventListener('DOMContentLoaded', function() {
-        initTinyMCE();
         toggleTypeFields();
         toggleCustomFilters();
         updateAudienceCount();
     });
-
-    function initTinyMCE() {
-        tinymce.init({
-            selector: '#emailMessage',
-            height: 400,
-            menubar: false,
-            plugins: 'lists link image code table hr',
-            toolbar: 'undo redo | blocks | bold italic underline | forecolor backcolor | alignleft aligncenter alignright | bullist numlist | link image | hr | code',
-            content_style: 'body { font-family: Arial, sans-serif; font-size: 14px; }',
-            setup: function(ed) {
-                editor = ed;
-            }
-        });
-    }
 
     function toggleTypeFields() {
         const type = document.querySelector('input[name="type"]:checked')?.value || 'email';
@@ -241,7 +226,7 @@
         })
         .then(r => r.json())
         .then(data => {
-            document.getElementById('audienceCount').textContent = `(~${data.count} recipients)`;
+            document.getElementById('audienceCount').textContent = '(~' + data.count + ' recipients)';
         })
         .catch(() => {});
     }
@@ -250,11 +235,7 @@
         document.getElementById('formAction').value = action;
         const type = document.querySelector('input[name="type"]:checked')?.value || 'email';
         if (type === 'sms') {
-            const smsMsg = document.getElementById('smsMessage').value;
-            if (editor) editor.setContent(smsMsg);
-            document.getElementById('emailMessage').value = smsMsg;
-        } else if (editor) {
-            editor.save();
+            document.getElementById('emailMessage').value = document.getElementById('smsMessage').value;
         }
         document.getElementById('campaignForm').submit();
     }
@@ -262,13 +243,12 @@
     function confirmSend() {
         const audience = document.getElementById('audience');
         const audienceText = audience.options[audience.selectedIndex].text;
-        if (confirm(`Are you sure you want to send this campaign to "${audienceText}" now?`)) {
+        if (confirm('Are you sure you want to send this campaign to "' + audienceText + '" now?')) {
             submitForm('send');
         }
     }
 
     function previewEmail() {
-        if (editor) editor.save();
         const message = document.getElementById('emailMessage').value;
         const subject = document.getElementById('subject').value;
 
@@ -278,7 +258,7 @@
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
             },
-            body: JSON.stringify({ message, subject })
+            body: JSON.stringify({ message: message, subject: subject })
         })
         .then(r => r.json())
         .then(data => {
