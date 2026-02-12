@@ -108,7 +108,7 @@
                     </div>
                     <div class="flex items-center">
                         <label class="w-24 text-sm text-gray-600 flex-shrink-0">Country *</label>
-                        <select name="country" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                        <select name="country" id="countrySelect" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select</option>
                             <option value="Uganda" {{ old('country') == 'Uganda' ? 'selected' : '' }}>Uganda</option>
                             <option value="Kenya" {{ old('country') == 'Kenya' ? 'selected' : '' }}>Kenya</option>
@@ -125,11 +125,12 @@
                     </div>
                     <div class="flex items-center">
                         <label class="w-24 text-sm text-gray-600 flex-shrink-0">Currency *</label>
-                        <select name="preferred_currency" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
+                        <select name="preferred_currency" id="currencySelect" required class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select</option>
                             <option value="UGX" {{ old('preferred_currency') == 'UGX' ? 'selected' : '' }}>UGX</option>
                             <option value="USD" {{ old('preferred_currency') == 'USD' ? 'selected' : '' }}>USD</option>
                             <option value="KES" {{ old('preferred_currency') == 'KES' ? 'selected' : '' }}>KES</option>
+                            <option value="CNY" {{ old('preferred_currency') == 'CNY' ? 'selected' : '' }}>CNY</option>
                         </select>
                     </div>
                     <div class="flex items-center col-span-2">
@@ -141,10 +142,124 @@
                     <div class="flex items-center col-span-2">
                         <label class="w-24 text-sm text-gray-600 flex-shrink-0">Turnover</label>
                         <div class="flex-1 relative">
-                            <span class="absolute left-3 top-2 text-gray-400 text-sm">UGX</span>
-                            <input type="number" name="annual_turnover" value="{{ old('annual_turnover') }}"
+                            <span id="turnoverPrefix" class="absolute left-3 top-2 text-gray-400 text-sm">UGX</span>
+                            <input type="text" name="annual_turnover" id="annualTurnover" value="{{ old('annual_turnover') }}"
                                    class="w-full pl-12 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                                   placeholder="Optional">
+                                   placeholder="Optional" inputmode="numeric">
+                            <p id="turnoverFeedback" class="text-xs mt-1 hidden"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- China Verification Section (hidden by default) -->
+            <div id="chinaVerificationSection" style="display: none;" class="transition-all duration-300">
+                <div class="bg-white rounded-lg shadow-sm p-4 border-l-4 border-red-500">
+                    <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
+                        <i class="fas fa-flag text-red-500 mr-2"></i>Chinese Company Verification
+                        <span class="ml-auto text-xs text-red-400 font-normal">Required for China suppliers</span>
+                    </h2>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Company Chinese Name -->
+                        <div class="flex items-center col-span-2">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0">Company <span class="text-red-500">*</span></label>
+                            <input type="text" name="china_company_name" id="chinaCompanyName" value="{{ old('china_company_name') }}"
+                                   class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                   placeholder="Chinese company name (e.g. &#28145;&#22323;&#24066;&#21326;&#20026;&#25216;&#26415;&#26377;&#38480;&#20844;&#21496;)">
+                        </div>
+
+                        <!-- USCC -->
+                        <div class="flex items-center col-span-2">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0">USCC <span class="text-red-500">*</span></label>
+                            <div class="flex-1">
+                                <input type="text" name="uscc" id="usccInput" value="{{ old('uscc') }}" maxlength="18"
+                                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500 font-mono tracking-wider"
+                                       placeholder="18-character Unified Social Credit Code">
+                                <p id="usccFeedback" class="text-xs mt-1 hidden"></p>
+                            </div>
+                        </div>
+
+                        <!-- Legal Representative -->
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0">Legal Rep <span class="text-red-500">*</span></label>
+                            <input type="text" name="legal_representative" value="{{ old('legal_representative') }}"
+                                   class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                   placeholder="Legal representative name">
+                        </div>
+
+                        <!-- Registered Capital -->
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0">Capital</label>
+                            <input type="text" name="registered_capital" value="{{ old('registered_capital') }}"
+                                   class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                   placeholder="e.g. 1,000,000 CNY (optional)">
+                        </div>
+
+                        <!-- Business Scope -->
+                        <div class="flex items-start col-span-2">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-2">Scope <span class="text-red-500">*</span></label>
+                            <textarea name="business_scope" id="businessScope" rows="2"
+                                      class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                      placeholder="Business scope (&#32463;&#33829;&#33539;&#22260;)">{{ old('business_scope') }}</textarea>
+                        </div>
+
+                        <!-- Registered Address -->
+                        <div class="flex items-center col-span-2">
+                            <label class="w-24 text-sm text-gray-600 flex-shrink-0">Reg. Addr <span class="text-red-500">*</span></label>
+                            <input type="text" name="china_registered_address" value="{{ old('china_registered_address') }}"
+                                   class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                                   placeholder="Registered company address in China">
+                        </div>
+                    </div>
+
+                    <!-- Business License Upload -->
+                    <div class="mt-3 flex items-start">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">License <span class="text-red-500">*</span></label>
+                        <div class="flex-1">
+                            <div class="file-upload-box border-2 border-dashed border-red-300 rounded p-3 text-center cursor-pointer hover:border-red-400 transition bg-red-50"
+                                 onclick="document.getElementById('business_license').click()">
+                                <div id="licensePreview" class="text-center py-1">
+                                    <i class="fas fa-file-certificate text-red-400 text-lg"></i>
+                                </div>
+                                <p class="text-xs text-red-500 font-medium">Business License (&#33829;&#19994;&#25191;&#29031;) *</p>
+                                <input type="file" name="business_license" id="business_license" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Industry Permits -->
+                    <div class="mt-3 flex items-start">
+                        <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Permits</label>
+                        <div class="flex-1">
+                            <div class="file-upload-box border-2 border-dashed border-gray-200 rounded p-3 text-center cursor-pointer hover:border-gray-400 transition"
+                                 onclick="document.getElementById('industry_permits').click()">
+                                <div id="permitsPreview" class="text-center py-1">
+                                    <i class="fas fa-folder-open text-gray-300"></i>
+                                </div>
+                                <p class="text-xs text-gray-400">Industry Permits (optional, max 5)</p>
+                                <input type="file" name="industry_permits[]" id="industry_permits" class="hidden" accept=".jpg,.jpeg,.png,.pdf" multiple>
+                            </div>
+                            <div id="permitsFileList" class="mt-1"></div>
+                        </div>
+                    </div>
+
+                    <!-- Verification Resources -->
+                    <div class="mt-4 p-3 bg-red-50 rounded border border-red-100">
+                        <h3 class="text-xs font-semibold text-red-800 mb-2"><i class="fas fa-link mr-1"></i>Verification Resources</h3>
+                        <div class="grid grid-cols-2 gap-2">
+                            <a href="https://www.gsxt.gov.cn" target="_blank" rel="noopener" class="text-xs text-red-600 hover:underline flex items-center">
+                                <i class="fas fa-external-link-alt mr-1"></i>GSXT (National Enterprise Credit)
+                            </a>
+                            <a href="http://www.customs.gov.cn" target="_blank" rel="noopener" class="text-xs text-red-600 hover:underline flex items-center">
+                                <i class="fas fa-external-link-alt mr-1"></i>China Customs
+                            </a>
+                            <a href="https://www.chinverify.com" target="_blank" rel="noopener" class="text-xs text-red-600 hover:underline flex items-center">
+                                <i class="fas fa-external-link-alt mr-1"></i>ChinVerify
+                            </a>
+                            <a href="https://www.qincheck.com" target="_blank" rel="noopener" class="text-xs text-red-600 hover:underline flex items-center">
+                                <i class="fas fa-external-link-alt mr-1"></i>QINCheck
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -153,33 +268,36 @@
             <!-- Documents Section -->
             <div class="bg-white rounded-lg shadow-sm p-4">
                 <h2 class="font-semibold text-gray-800 mb-3 flex items-center text-sm border-b pb-2">
-                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>Required Documents
+                    <i class="fas fa-file-alt text-indigo-500 mr-2"></i>
+                    <span id="docsTitle">Required Documents</span>
                 </h2>
 
-                <!-- National ID - Required - Side by Side -->
-                <div class="flex items-start mb-3">
-                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">National ID <span class="text-red-500">*</span></label>
+                <!-- National ID -->
+                <div id="nationalIdSection" class="flex items-start mb-3">
+                    <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">
+                        National ID <span id="nationalIdRequired" class="text-red-500">*</span>
+                    </label>
                     <div class="flex-1 grid grid-cols-2 gap-2">
                         <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
                              onclick="document.getElementById('national_id_front').click()">
                             <div id="frontPreview" class="text-center py-1">
                                 <i class="fas fa-id-card text-gray-400"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Front Side *</p>
-                            <input type="file" name="national_id_front" id="national_id_front" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <p class="text-xs text-gray-500" id="frontLabel">Front Side *</p>
+                            <input type="file" name="national_id_front" id="national_id_front" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                         <div class="file-upload-box border-2 border-dashed border-gray-300 rounded p-2 text-center cursor-pointer hover:border-indigo-400 transition"
                              onclick="document.getElementById('national_id_back').click()">
                             <div id="backPreview" class="text-center py-1">
                                 <i class="fas fa-id-card text-gray-400"></i>
                             </div>
-                            <p class="text-xs text-gray-500">Back Side *</p>
-                            <input type="file" name="national_id_back" id="national_id_back" class="hidden" accept=".jpg,.jpeg,.png,.pdf" required>
+                            <p class="text-xs text-gray-500" id="backLabel">Back Side *</p>
+                            <input type="file" name="national_id_back" id="national_id_back" class="hidden" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
                     </div>
                 </div>
 
-                <!-- Optional: Bank Statement & Proof of Address - Side by Side -->
+                <!-- Optional: Bank Statement & Proof of Address -->
                 <div class="flex items-start mb-3">
                     <label class="w-24 text-sm text-gray-600 flex-shrink-0 pt-1">Financial</label>
                     <div class="flex-1 grid grid-cols-2 gap-2">
@@ -254,7 +372,7 @@
                         <input type="checkbox" name="terms" required class="mr-2 h-4 w-4 text-indigo-600 rounded focus:ring-indigo-500">
                         <span class="text-gray-600">I agree to the <a href="{{ route('site.terms') }}" class="text-indigo-600 hover:underline">Terms</a></span>
                     </label>
-                    <button type="submit" class="bg-indigo-600 text-white font-medium py-2 px-6 rounded hover:bg-indigo-700 transition text-sm">
+                    <button type="submit" id="submitBtn" class="bg-indigo-600 text-white font-medium py-2 px-6 rounded hover:bg-indigo-700 transition text-sm">
                         <i class="fas fa-paper-plane mr-2"></i>Submit Application
                     </button>
                 </div>
@@ -268,7 +386,93 @@
 </div>
 
 <script>
-// Vendor type selection
+// Get current vendor type
+function getVendorType() {
+    const checked = document.querySelector('input[name="vendor_type"]:checked');
+    return checked ? checked.value : null;
+}
+
+function isChinaSupplier() {
+    return getVendorType() === 'china_supplier';
+}
+
+// Toggle China verification section
+function updateFormForVendorType() {
+    const chinaSection = document.getElementById('chinaVerificationSection');
+    const countrySelect = document.getElementById('countrySelect');
+    const currencySelect = document.getElementById('currencySelect');
+    const turnoverPrefix = document.getElementById('turnoverPrefix');
+    const nationalIdRequired = document.getElementById('nationalIdRequired');
+    const frontLabel = document.getElementById('frontLabel');
+    const backLabel = document.getElementById('backLabel');
+    const docsTitle = document.getElementById('docsTitle');
+    const idFront = document.getElementById('national_id_front');
+    const idBack = document.getElementById('national_id_back');
+
+    if (isChinaSupplier()) {
+        // Show China section
+        chinaSection.style.display = 'block';
+
+        // Auto-set country and currency
+        countrySelect.value = 'China';
+        currencySelect.value = 'CNY';
+        turnoverPrefix.textContent = 'CNY';
+
+        // National ID becomes optional
+        nationalIdRequired.textContent = '';
+        frontLabel.textContent = 'Front Side (opt)';
+        backLabel.textContent = 'Back Side (opt)';
+        docsTitle.textContent = 'Identity & Other Documents';
+        idFront.removeAttribute('required');
+        idBack.removeAttribute('required');
+
+        // Make china fields required
+        setChinaFieldsRequired(true);
+    } else {
+        // Hide China section
+        chinaSection.style.display = 'none';
+
+        // Reset currency prefix
+        turnoverPrefix.textContent = currencySelect.value || 'UGX';
+
+        // National ID required again
+        nationalIdRequired.textContent = '*';
+        frontLabel.textContent = 'Front Side *';
+        backLabel.textContent = 'Back Side *';
+        docsTitle.textContent = 'Required Documents';
+
+        // China fields not required
+        setChinaFieldsRequired(false);
+    }
+}
+
+function setChinaFieldsRequired(required) {
+    const chinaFields = ['chinaCompanyName', 'usccInput', 'businessScope'];
+    const chinaInputNames = ['china_company_name', 'uscc', 'legal_representative', 'business_scope', 'china_registered_address'];
+
+    chinaInputNames.forEach(name => {
+        const el = document.querySelector(`[name="${name}"]`);
+        if (el) {
+            if (required) {
+                el.setAttribute('required', 'required');
+            } else {
+                el.removeAttribute('required');
+            }
+        }
+    });
+
+    // Business license required for china
+    const bizLicense = document.getElementById('business_license');
+    if (bizLicense) {
+        if (required) {
+            bizLicense.setAttribute('required', 'required');
+        } else {
+            bizLicense.removeAttribute('required');
+        }
+    }
+}
+
+// Vendor type selection styling + toggle
 document.querySelectorAll('.vendor-type-option').forEach(option => {
     option.addEventListener('click', function() {
         document.querySelectorAll('.vendor-type-option').forEach(o => {
@@ -277,13 +481,102 @@ document.querySelectorAll('.vendor-type-option').forEach(option => {
         });
         this.classList.remove('border-gray-300');
         this.classList.add('border-indigo-500', 'bg-indigo-50');
+
+        // Update form based on vendor type
+        setTimeout(updateFormForVendorType, 50);
     });
 });
 
-// File upload preview
+// Currency change updates turnover prefix
+document.getElementById('currencySelect').addEventListener('change', function() {
+    document.getElementById('turnoverPrefix').textContent = this.value || 'UGX';
+});
+
+// Real-time turnover validation (numbers only)
+document.getElementById('annualTurnover').addEventListener('input', function(e) {
+    const feedback = document.getElementById('turnoverFeedback');
+    // Remove non-numeric characters
+    this.value = this.value.replace(/[^0-9]/g, '');
+
+    if (this.value && isNaN(parseInt(this.value))) {
+        feedback.textContent = 'Please enter numbers only';
+        feedback.classList.remove('hidden', 'text-green-600');
+        feedback.classList.add('text-red-500');
+        this.classList.add('border-red-400');
+        this.classList.remove('border-gray-300');
+    } else if (this.value) {
+        // Format with commas for display hint
+        feedback.textContent = 'Value: ' + parseInt(this.value).toLocaleString();
+        feedback.classList.remove('hidden', 'text-red-500');
+        feedback.classList.add('text-green-600');
+        this.classList.remove('border-red-400');
+        this.classList.add('border-gray-300');
+    } else {
+        feedback.classList.add('hidden');
+        this.classList.remove('border-red-400');
+        this.classList.add('border-gray-300');
+    }
+});
+
+// Real-time USCC validation
+document.getElementById('usccInput').addEventListener('input', function(e) {
+    const feedback = document.getElementById('usccFeedback');
+    // Remove non-alphanumeric
+    this.value = this.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+
+    if (this.value.length === 0) {
+        feedback.classList.add('hidden');
+        this.classList.remove('border-red-400', 'border-green-400');
+        this.classList.add('border-gray-300');
+    } else if (this.value.length < 18) {
+        feedback.textContent = this.value.length + '/18 characters';
+        feedback.classList.remove('hidden', 'text-green-600');
+        feedback.classList.add('text-yellow-600');
+        this.classList.remove('border-green-400');
+        this.classList.add('border-yellow-400');
+    } else if (this.value.length === 18) {
+        feedback.textContent = 'Valid USCC format';
+        feedback.classList.remove('hidden', 'text-yellow-600', 'text-red-500');
+        feedback.classList.add('text-green-600');
+        this.classList.remove('border-yellow-400', 'border-red-400');
+        this.classList.add('border-green-400');
+    }
+});
+
+// Industry permits file count validation
+document.getElementById('industry_permits').addEventListener('change', function() {
+    const fileList = document.getElementById('permitsFileList');
+    if (this.files.length > 5) {
+        alert('Maximum 5 industry permits allowed. Only the first 5 will be uploaded.');
+    }
+    // Show file count
+    if (this.files.length > 0) {
+        fileList.innerHTML = '<p class="text-xs text-green-600 font-medium">' + Math.min(this.files.length, 5) + ' file(s) selected</p>';
+    } else {
+        fileList.innerHTML = '';
+    }
+});
+
+// File upload preview (for all file inputs)
 document.querySelectorAll('input[type="file"]').forEach(input => {
     input.addEventListener('change', function() {
-        const previewId = this.id.replace(/_/g, '').replace('nationalidfront', 'front').replace('nationalidback', 'back').replace('bankstatement', 'bank').replace('proofofaddress', 'address').replace('guarantorid', 'guarantor').replace('companyregistration', 'company').replace('taxcertificate', 'tax') + 'Preview';
+        // Skip industry_permits as it has its own handler
+        if (this.id === 'industry_permits') return;
+
+        const previewMap = {
+            'national_id_front': 'frontPreview',
+            'national_id_back': 'backPreview',
+            'bank_statement': 'bankPreview',
+            'proof_of_address': 'addressPreview',
+            'guarantor_id': 'guarantorPreview',
+            'company_registration': 'companyPreview',
+            'tax_certificate': 'taxPreview',
+            'business_license': 'licensePreview'
+        };
+
+        const previewId = previewMap[this.id];
+        if (!previewId) return;
+
         const preview = document.getElementById(previewId);
         const box = this.closest('.file-upload-box');
 
@@ -293,44 +586,78 @@ document.querySelectorAll('input[type="file"]').forEach(input => {
             if (file.type.startsWith('image/')) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    preview.innerHTML = `<img src="${e.target.result}" class="h-6 w-auto mx-auto rounded">`;
+                    preview.innerHTML = '<img src="' + e.target.result + '" class="h-6 w-auto mx-auto rounded">';
                 }
                 reader.readAsDataURL(file);
             } else {
-                preview.innerHTML = `<i class="fas fa-file-pdf text-red-500"></i>`;
+                preview.innerHTML = '<i class="fas fa-file-pdf text-red-500"></i>';
             }
 
-            box.classList.remove('border-gray-300', 'border-gray-200');
+            box.classList.remove('border-gray-300', 'border-gray-200', 'border-red-300');
             box.classList.add('border-green-400', 'bg-green-50');
-            box.querySelector('p').textContent = '✓ Uploaded';
-            box.querySelector('p').classList.add('text-green-600', 'font-medium');
+            const label = box.querySelector('p');
+            if (label) {
+                label.textContent = 'Uploaded';
+                label.classList.add('text-green-600', 'font-medium');
+            }
         }
     });
 });
 
 // Form validation
 document.getElementById('vendorForm').addEventListener('submit', function(e) {
-    const vendorType = document.querySelector('input[name="vendor_type"]:checked');
+    const vendorType = getVendorType();
     if (!vendorType) {
         e.preventDefault();
         alert('Please select a vendor type');
         return false;
     }
 
-    const requiredFiles = ['national_id_front', 'national_id_back'];
-    let missing = requiredFiles.filter(id => !document.getElementById(id).files.length);
+    if (isChinaSupplier()) {
+        // Validate China-specific fields
+        const uscc = document.getElementById('usccInput').value;
+        if (uscc.length !== 18) {
+            e.preventDefault();
+            alert('USCC must be exactly 18 characters');
+            document.getElementById('usccInput').focus();
+            return false;
+        }
 
-    if (missing.length > 0) {
-        e.preventDefault();
-        alert('Please upload National ID (front and back)');
-        return false;
+        const bizLicense = document.getElementById('business_license');
+        if (!bizLicense.files.length) {
+            e.preventDefault();
+            alert('Please upload your Business License');
+            return false;
+        }
+    } else {
+        // Validate National ID for non-china vendors
+        const requiredFiles = ['national_id_front', 'national_id_back'];
+        let missing = requiredFiles.filter(id => !document.getElementById(id).files.length);
+
+        if (missing.length > 0) {
+            e.preventDefault();
+            alert('Please upload National ID (front and back)');
+            return false;
+        }
     }
+
+    // Show loading state
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+});
+
+// Initialize form state on page load (handles old() data)
+document.addEventListener('DOMContentLoaded', function() {
+    updateFormForVendorType();
 });
 </script>
 
 <style>
 .file-upload-box { min-height: 50px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 .file-upload-box:hover { transform: translateY(-1px); }
+#chinaVerificationSection { animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 640px) {
     .grid-cols-2 { grid-template-columns: 1fr; }
     .grid-cols-3 { grid-template-columns: 1fr; }

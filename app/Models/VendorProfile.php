@@ -18,6 +18,7 @@ class VendorProfile extends Model
         'meta',
         'latitude',
         'longitude',
+        'uscc',
     ];
 
     // vetting_status and vetting_notes are set explicitly via approve()/reject() methods only
@@ -77,6 +78,14 @@ class VendorProfile extends Model
     public function getGuarantorAttribute()
     {
         return $this->meta['guarantor'] ?? null;
+    }
+
+    /**
+     * Get China verification data from meta
+     */
+    public function getChinaVerificationAttribute()
+    {
+        return $this->meta['china_verification'] ?? null;
     }
 
     /**

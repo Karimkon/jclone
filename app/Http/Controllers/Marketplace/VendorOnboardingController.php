@@ -84,7 +84,26 @@ class VendorOnboardingController extends Controller
 
             'terms' => 'required|accepted',
         ];
-        
+
+        // Conditional China supplier validation
+        if ($request->input('vendor_type') === 'china_supplier') {
+            $validationRules = array_merge($validationRules, [
+                'china_company_name' => 'required|string|max:255',
+                'uscc' => ['required', 'string', 'size:18', 'regex:/^[A-Za-z0-9]{18}$/', 'unique:vendor_profiles,uscc'],
+                'legal_representative' => 'required|string|max:255',
+                'business_scope' => 'required|string|max:2000',
+                'china_registered_address' => 'required|string|max:500',
+                'registered_capital' => 'nullable|string|max:100',
+                'business_license' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+                'industry_permits' => 'nullable|array|max:5',
+                'industry_permits.*' => 'file|mimes:jpg,jpeg,png,pdf|max:5120',
+            ]);
+
+            // For china_supplier, National ID is optional (Business License is primary)
+            $validationRules['national_id_front'] = 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120';
+            $validationRules['national_id_back'] = 'nullable|file|mimes:jpg,jpeg,png,pdf|max:5120';
+        }
+
         // Add user registration fields if not logged in
         if ($isNewUser) {
             $validationRules = array_merge($validationRules, [
@@ -160,6 +179,26 @@ class VendorOnboardingController extends Controller
                 Log::info('Existing user applying for vendor', ['user_id' => $user->id]);
             }
 
+            // Build meta data
+            $metaData = [];
+            if (!empty($validated['guarantor_name'])) {
+                $metaData['guarantor'] = [
+                    'name' => $validated['guarantor_name'],
+                    'phone' => $validated['guarantor_phone'] ?? null,
+                    'added_at' => now()->toDateTimeString(),
+                ];
+            }
+            if ($validated['vendor_type'] === 'china_supplier') {
+                $metaData['china_verification'] = [
+                    'company_chinese_name' => $validated['china_company_name'],
+                    'legal_representative' => $validated['legal_representative'],
+                    'business_scope' => $validated['business_scope'],
+                    'registered_address' => $validated['china_registered_address'],
+                    'registered_capital' => $validated['registered_capital'] ?? null,
+                    'submitted_at' => now()->toDateTimeString(),
+                ];
+            }
+
             // Create vendor profile
             $vendorProfile = VendorProfile::create([
                 'user_id' => $user->id,
@@ -170,13 +209,8 @@ class VendorOnboardingController extends Controller
                 'address' => $validated['address'] ?? null,
                 'annual_turnover' => $validated['annual_turnover'] ?? null,
                 'preferred_currency' => $validated['preferred_currency'],
-                'meta' => !empty($validated['guarantor_name']) ? [
-                    'guarantor' => [
-                        'name' => $validated['guarantor_name'],
-                        'phone' => $validated['guarantor_phone'] ?? null,
-                        'added_at' => now()->toDateTimeString(),
-                    ]
-                ] : null
+                'uscc' => $validated['uscc'] ?? null,
+                'meta' => !empty($metaData) ? $metaData : null,
             ]);
             // Set vetting fields explicitly (not mass-assignable for security)
             $vendorProfile->vetting_status = 'pending';
@@ -184,11 +218,32 @@ class VendorOnboardingController extends Controller
             
             Log::info('Vendor profile created', ['vendor_profile_id' => $vendorProfile->id]);
 
-            // Upload and save documents - Required documents
-            $documents = [
-                ['type' => 'national_id', 'file' => $request->file('national_id_front'), 'side' => 'front'],
-                ['type' => 'national_id', 'file' => $request->file('national_id_back'), 'side' => 'back'],
-            ];
+            // Upload and save documents
+            $documents = [];
+
+            // National ID - required for non-China, optional for China suppliers
+            if ($request->hasFile('national_id_front')) {
+                $documents[] = ['type' => 'national_id', 'file' => $request->file('national_id_front'), 'side' => 'front'];
+            }
+            if ($request->hasFile('national_id_back')) {
+                $documents[] = ['type' => 'national_id', 'file' => $request->file('national_id_back'), 'side' => 'back'];
+            }
+
+            // China supplier documents
+            if ($validated['vendor_type'] === 'china_supplier') {
+                if ($request->hasFile('business_license')) {
+                    $documents[] = ['type' => 'business_license', 'file' => $request->file('business_license')];
+                }
+                if ($request->hasFile('industry_permits')) {
+                    foreach ($request->file('industry_permits') as $index => $permitFile) {
+                        $documents[] = [
+                            'type' => 'industry_permit',
+                            'file' => $permitFile,
+                            'subtype' => 'permit_' . ($index + 1),
+                        ];
+                    }
+                }
+            }
 
             // Add optional documents if provided
             if ($request->hasFile('bank_statement')) {
@@ -266,6 +321,21 @@ class VendorOnboardingController extends Controller
             if ($scoreFactors['address_proof_uploaded']) $score += 5;
             if ($scoreFactors['guarantor_provided']) $score += 5;
 
+            // China-specific scoring
+            if ($validated['vendor_type'] === 'china_supplier') {
+                $scoreFactors['business_license_uploaded'] = $request->hasFile('business_license');
+                $scoreFactors['industry_permits_count'] = $request->hasFile('industry_permits')
+                    ? count($request->file('industry_permits'))
+                    : 0;
+                $scoreFactors['uscc_provided'] = !empty($validated['uscc']);
+
+                if ($scoreFactors['business_license_uploaded']) $score += 10;
+                if ($scoreFactors['industry_permits_count'] > 0) {
+                    $score += min($scoreFactors['industry_permits_count'] * 5, 15);
+                }
+                if ($scoreFactors['uscc_provided']) $score += 5;
+            }
+
             $scoreFactors['initial_score'] = $score;
 
             $vendorProfile->scores()->create([
@@ -284,6 +354,8 @@ class VendorOnboardingController extends Controller
                     'vendor_name' => $vendorProfile->business_name,
                     'vendor_type' => $vendorProfile->vendor_type,
                     'vendor_email' => $user->email,
+                    'is_china_supplier' => $vendorProfile->vendor_type === 'china_supplier',
+                    'uscc' => $vendorProfile->uscc,
                     'action_url' => route('admin.vendors.pending')
                 ],
                 'status' => 'pending'

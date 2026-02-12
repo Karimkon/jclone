@@ -177,6 +177,92 @@
         </div>
     </div>
 
+
+    <!-- Chinese Company Verification (China Suppliers Only) -->
+    @if($vendor->vendor_type === 'china_supplier')
+    <div class="bg-white rounded-lg shadow-sm mb-6 border-l-4 border-red-500">
+        <div class="p-6 border-b">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                <span class="text-red-600 mr-2">&#x1F1E8;&#x1F1F3;</span>
+                Chinese Company Verification
+            </h3>
+            <p class="text-sm text-gray-600 mt-1">China supplier credentials submitted during onboarding</p>
+        </div>
+        
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <dl class="space-y-3">
+                    @if($vendor->uscc)
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">USCC (Unified Social Credit Code)</dt>
+                        <dd class="mt-1 text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">{{ $vendor->uscc }}</dd>
+                    </div>
+                    @endif
+
+                    @if($vendor->china_verification)
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Company Name (Chinese)</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $vendor->china_verification['company_chinese_name'] ?? 'N/A' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Legal Representative</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $vendor->china_verification['legal_representative'] ?? 'N/A' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Registered Capital</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $vendor->china_verification['registered_capital'] ?? 'N/A' }}</dd>
+                    </div>
+                    @endif
+                </dl>
+            </div>
+            
+            <div>
+                <dl class="space-y-3">
+                    @if($vendor->china_verification)
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Business Scope</dt>
+                        <dd class="mt-1 text-sm text-gray-900 bg-gray-50 p-3 rounded border">{{ $vendor->china_verification['business_scope'] ?? 'N/A' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Registered Address</dt>
+                        <dd class="mt-1 text-sm text-gray-900">{{ $vendor->china_verification['registered_address'] ?? 'N/A' }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-sm font-medium text-gray-500">Submitted At</dt>
+                        <dd class="mt-1 text-sm text-gray-500">{{ $vendor->china_verification['submitted_at'] ?? 'N/A' }}</dd>
+                    </div>
+                    @endif
+                </dl>
+            </div>
+        </div>
+
+        @if($vendor->uscc)
+        <div class="px-6 pb-6">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="text-sm font-semibold text-blue-800 mb-2"><i class="fas fa-external-link-alt mr-1"></i> Verification Resources</h4>
+                <div class="flex flex-wrap gap-3">
+                    <a href="https://www.gsxt.gov.cn" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline">
+                        GSXT (Enterprise Credit)
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="http://www.customs.gov.cn" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline">
+                        China Customs
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://www.chinverify.com" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline">
+                        ChinVerify
+                    </a>
+                    <span class="text-gray-300">|</span>
+                    <a href="https://www.qincheck.com" target="_blank" class="text-sm text-blue-600 hover:text-blue-800 underline">
+                        QINCheck
+                    </a>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+    @endif
+
     <!-- Documents Section -->
     <div class="bg-white rounded-lg shadow-sm mb-6">
         <div class="p-6 border-b">
@@ -208,6 +294,8 @@
                                             'proof_of_address' => 'Proof of Address',
                                             'guarantor_id' => 'Guarantor ID',
                                             'company_docs' => 'Company Document',
+                                            'business_license' => 'Business License (营业执照)',
+                                            'industry_permit' => 'Industry Permit',
                                         ];
                                     @endphp
                                     {{ $docTypes[$document->type] ?? ucfirst($document->type) }}
