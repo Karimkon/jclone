@@ -102,7 +102,7 @@ Route::post('/register', function (Request $request) {
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => 'required|string|min:8|confirmed',
-            'phone' => 'required|string|max:20|unique:users,phone',
+            'phone' => 'nullable|string|max:20|unique:users,phone',
             'role' => 'nullable|in:buyer,vendor_local,vendor_international',
         ], [
             'email.unique' => 'This email is already registered. Please sign in instead.',
@@ -114,7 +114,7 @@ Route::post('/register', function (Request $request) {
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'phone' => $request->phone,
+            'phone' => $request->phone ?: null,
             'role' => $request->role ?? 'buyer',
             'is_verified' => false,
         ]);
@@ -122,18 +122,20 @@ Route::post('/register', function (Request $request) {
         // Generate phone OTP
         $otp = $user->generatePhoneOtp();
 
-        // Send OTP via SMS
+        // Send OTP via SMS (only if phone provided)
         $smsSent = false;
-        try {
-            $smsService = new \App\Services\EgoSmsService();
-            $result = $smsService->sendOtp($user->phone, $otp);
-            $smsSent = $smsService->isSuccess($result);
+        if (!empty($user->phone)) {
+            try {
+                $smsService = new \App\Services\EgoSmsService();
+                $result = $smsService->sendOtp($user->phone, $otp);
+                $smsSent = $smsService->isSuccess($result);
 
-            if (!$smsSent) {
-                \Log::warning('SMS OTP send failed', ['phone' => $user->phone, 'result' => $result]);
+                if (!$smsSent) {
+                    \Log::warning('SMS OTP send failed', ['phone' => $user->phone, 'result' => $result]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
             }
-        } catch (\Exception $e) {
-            \Log::error('Failed to send SMS OTP: ' . $e->getMessage());
         }
 
         // Also send OTP email as backup
