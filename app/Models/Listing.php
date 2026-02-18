@@ -12,7 +12,7 @@ class Listing extends Model
 
     protected $fillable = [
         'vendor_profile_id', 'title', 'slug', 'description', 'sku', 'price',
-        'tax_amount', 'tax_description',
+        'compare_at_price', 'tax_amount', 'tax_description',
         'weight_kg', 'origin', 'condition', 'category_id', 'stock',
         'attributes', 'is_active',  'view_count', 'click_count', 'wishlist_count',
         'cart_add_count', 'purchase_count', 'share_count', 'last_viewed_at'
@@ -21,6 +21,7 @@ class Listing extends Model
     protected $casts = [
         'attributes' => 'array',
         'price' => 'decimal:2',
+        'compare_at_price' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'weight_kg' => 'decimal:2',
         'is_active' => 'boolean',

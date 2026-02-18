@@ -20,3 +20,15 @@ Schedule::command('campaigns:process-scheduled')
     ->everyMinute()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Send personalized daily push notifications at 10 AM
+Schedule::command('notifications:send-daily')
+    ->dailyAt('10:00')
+    ->withoutOverlapping()
+    ->runInBackground();
+
+// Send cart abandonment reminders every 4 hours
+Schedule::command('notifications:cart-abandonment')
+    ->everyFourHours()
+    ->withoutOverlapping()
+    ->runInBackground();

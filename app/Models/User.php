@@ -9,6 +9,11 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\BuyerWallet;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\DeviceToken;
+use App\Models\PushNotification;
+use App\Models\UserNotificationPreference;
+use App\Models\SearchQuery;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -448,8 +453,37 @@ public function getDashboardRoute()
         'finance' => 'finance.dashboard',
         'buyer' => 'welcome',
     ];
-    
+
     return $routes[$this->role] ?? 'welcome';
+}
+
+// ==================
+// Push Notification Relationships
+// ==================
+
+public function deviceTokens(): HasMany
+{
+    return $this->hasMany(DeviceToken::class);
+}
+
+public function pushNotifications(): HasMany
+{
+    return $this->hasMany(PushNotification::class);
+}
+
+public function notificationPreferences(): HasOne
+{
+    return $this->hasOne(UserNotificationPreference::class);
+}
+
+public function searchQueries(): HasMany
+{
+    return $this->hasMany(SearchQuery::class);
+}
+
+public function getNotificationPrefs(): UserNotificationPreference
+{
+    return UserNotificationPreference::getOrCreate($this->id);
 }
 
 }

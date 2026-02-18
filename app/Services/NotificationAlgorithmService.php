@@ -1,0 +1,472 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Cart;
+use App\Models\DeviceToken;
+use App\Models\Listing;
+use App\Models\ProductInteraction;
+use App\Models\SearchQuery;
+use App\Models\User;
+use App\Models\Wishlist;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+
+class NotificationAlgorithmService
+{
+    private PushNotificationService $pushService;
+
+    // Enticing message templates with emojis
+    private array $cartTemplates = [
+        "Your cart misses you! 🛒 {product} is still waiting",
+        "Don't forget! 😍 {product} is still in your cart",
+        "Hey! 👋 {product} won't wait forever. Grab it now!",
+        "Still thinking about {product}? 🤔 Complete your order before it's gone!",
+        "🔥 {product} is selling fast! Your cart is ready to checkout",
+    ];
+
+    private array $priceDropTemplates = [
+        "🎉 Price drop! {product} is now {percent}% off!",
+        "💰 Great news! {product} just got cheaper",
+        "🏷️ Alert! {product} dropped to {price}. Don't miss it!",
+        "📉 The price you wanted! {product} is now on sale",
+    ];
+
+    private array $searchTemplates = [
+        "Still looking for \"{query}\"? 🔎 Check out {product}!",
+        "We found something you'll love! 😍 Based on your search for \"{query}\"",
+        "New match for \"{query}\"! ✨ {product} just arrived",
+    ];
+
+    private array $viewTemplates = [
+        "Loved {product}? 👀 It's still available!",
+        "Back for more? 😊 {product} is waiting for you",
+        "Don't miss out! 🔥 {product} you viewed is trending",
+    ];
+
+    private array $trendingTemplates = [
+        "🔥 Trending now: {product}. Everyone's buying it!",
+        "⭐ Hot deal alert! {product} is a bestseller today",
+        "📈 {product} is trending! See why everyone loves it",
+    ];
+
+    private array $newArrivalTemplates = [
+        "✨ New arrival: {product}! Be the first to grab it",
+        "🆕 Just in! {product} — fresh and ready for you",
+        "🎊 New drop! {product} just landed on BebaMart",
+    ];
+
+    private array $generalTemplates = [
+        "🛍️ Great deals await! Check out today's top picks on BebaMart",
+        "💫 Your daily dose of amazing deals is here!",
+        "🎯 Handpicked deals just for you! Shop now on BebaMart",
+        "🌟 Don't miss today's specials on BebaMart!",
+    ];
+
+    public function __construct(PushNotificationService $pushService)
+    {
+        $this->pushService = $pushService;
+    }
+
+    /**
+     * Generate and send daily personalized notifications
+     * Called by artisan command at 10 AM daily
+     */
+    public function sendDailyNotifications(): array
+    {
+        $stats = ['total_users' => 0, 'sent' => 0, 'skipped' => 0];
+
+        // Get users with active device tokens
+        $userIds = DeviceToken::where('is_active', true)
+            ->distinct()
+            ->pluck('user_id');
+
+        $stats['total_users'] = $userIds->count();
+
+        foreach ($userIds as $userId) {
+            try {
+                $sent = $this->generatePersonalizedNotification($userId);
+                if ($sent) {
+                    $stats['sent']++;
+                } else {
+                    $stats['skipped']++;
+                }
+            } catch (\Exception $e) {
+                $stats['skipped']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Send cart abandonment reminders
+     * Called every 4 hours
+     */
+    public function sendCartAbandonmentReminders(): array
+    {
+        $stats = ['sent' => 0, 'skipped' => 0];
+        $fourHoursAgo = Carbon::now()->subHours(4);
+
+        // Find users who added to cart 4+ hours ago but haven't purchased
+        $carts = Cart::whereNotNull('user_id')
+            ->where('updated_at', '<=', $fourHoursAgo)
+            ->whereNotNull('items')
+            ->get();
+
+        foreach ($carts as $cart) {
+            $items = is_string($cart->items) ? json_decode($cart->items, true) : $cart->items;
+            if (empty($items)) continue;
+
+            // Don't spam — max 1 cart reminder per 24 hours
+            $recentReminder = DB::table('push_notifications')
+                ->where('user_id', $cart->user_id)
+                ->where('type', 'cart_reminder')
+                ->where('created_at', '>=', Carbon::now()->subHours(24))
+                ->exists();
+
+            if ($recentReminder) {
+                $stats['skipped']++;
+                continue;
+            }
+
+            // Get first item's listing for the message
+            $firstItem = $items[0] ?? null;
+            if (!$firstItem) continue;
+
+            $listingId = $firstItem['listing_id'] ?? null;
+            if (!$listingId) continue;
+
+            $listing = Listing::with('images')->find($listingId);
+            if (!$listing || !$listing->is_active) continue;
+
+            $template = $this->cartTemplates[array_rand($this->cartTemplates)];
+            $title = count($items) > 1
+                ? "You left " . count($items) . " items in your cart! 🛒"
+                : "Complete your purchase! 🛒";
+            $body = str_replace('{product}', $this->truncate($listing->title, 40), $template);
+
+            $firstImage = $listing->images->first();
+            $imageUrl = $firstImage?->image_url
+                ? url('storage/' . $firstImage->image_url)
+                : null;
+
+            $this->pushService->sendToUser(
+                $cart->user_id,
+                'cart_reminder',
+                $title,
+                $body,
+                ['route' => '/cart'],
+                $imageUrl
+            );
+
+            $stats['sent']++;
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Generate personalized notification for a single user
+     * Uses a priority-based strategy selection
+     */
+    private function generatePersonalizedNotification(int $userId): bool
+    {
+        // Try strategies in priority order (most relevant first)
+        $strategies = [
+            [$this, 'tryPriceDropNotification'],
+            [$this, 'trySearchBasedNotification'],
+            [$this, 'tryViewBasedNotification'],
+            [$this, 'tryTrendingNotification'],
+            [$this, 'tryNewArrivalNotification'],
+            [$this, 'tryGeneralNotification'],
+        ];
+
+        // Shuffle after the first two to add variety on repeated days
+        $priorityStrategies = array_slice($strategies, 0, 2);
+        $otherStrategies = array_slice($strategies, 2);
+        shuffle($otherStrategies);
+        $strategies = array_merge($priorityStrategies, $otherStrategies);
+
+        foreach ($strategies as $strategy) {
+            if (call_user_func($strategy, $userId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Strategy 1: Price drop on wishlisted items
+     */
+    private function tryPriceDropNotification(int $userId): bool
+    {
+        // Get wishlisted items where price has decreased
+        $wishlisted = Wishlist::where('user_id', $userId)
+            ->pluck('listing_id');
+
+        if ($wishlisted->isEmpty()) return false;
+
+        // Find items where current price < compare_at_price (on sale)
+        $onSale = Listing::whereIn('id', $wishlisted)
+            ->where('is_active', true)
+            ->where('stock', '>', 0)
+            ->whereNotNull('compare_at_price')
+            ->whereColumn('price', '<', 'compare_at_price')
+            ->with('images')
+            ->first();
+
+        if (!$onSale) return false;
+
+        $percent = round((($onSale->compare_at_price - $onSale->price) / $onSale->compare_at_price) * 100);
+
+        $template = $this->priceDropTemplates[array_rand($this->priceDropTemplates)];
+        $body = str_replace(
+            ['{product}', '{percent}', '{price}'],
+            [$this->truncate($onSale->title, 40), $percent, 'UGX ' . number_format($onSale->price)],
+            $template
+        );
+
+        $firstImage = $onSale->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'price_drop',
+            "Price drop on your wishlist! 💰",
+            $body,
+            ['route' => '/product/' . $onSale->id],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 2: Based on recent search queries
+     */
+    private function trySearchBasedNotification(int $userId): bool
+    {
+        $recentSearch = SearchQuery::where('user_id', $userId)
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->orderByDesc('created_at')
+            ->first();
+
+        if (!$recentSearch) return false;
+
+        // Find matching active listings
+        $listing = Listing::where('is_active', true)
+            ->where('stock', '>', 0)
+            ->where('title', 'LIKE', '%' . $recentSearch->query . '%')
+            ->with('images')
+            ->orderByDesc('view_count')
+            ->first();
+
+        if (!$listing) return false;
+
+        $template = $this->searchTemplates[array_rand($this->searchTemplates)];
+        $body = str_replace(
+            ['{query}', '{product}'],
+            [$this->truncate($recentSearch->query, 25), $this->truncate($listing->title, 40)],
+            $template
+        );
+
+        $firstImage = $listing->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'recommendation',
+            "Found something for you! 🔍",
+            $body,
+            ['route' => '/product/' . $listing->id],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 3: Based on recently viewed products/categories
+     */
+    private function tryViewBasedNotification(int $userId): bool
+    {
+        // Get category IDs the user has interacted with recently
+        $viewedListingIds = ProductInteraction::where('user_id', $userId)
+            ->whereIn('type', ['view', 'click'])
+            ->where('created_at', '>=', Carbon::now()->subDays(14))
+            ->distinct()
+            ->pluck('listing_id');
+
+        if ($viewedListingIds->isEmpty()) return false;
+
+        // Get categories from viewed listings
+        $categoryIds = Listing::whereIn('id', $viewedListingIds)
+            ->distinct()
+            ->pluck('category_id')
+            ->filter();
+
+        if ($categoryIds->isEmpty()) return false;
+
+        // Find popular products in those categories that the user hasn't viewed
+        $listing = Listing::whereIn('category_id', $categoryIds)
+            ->whereNotIn('id', $viewedListingIds)
+            ->where('is_active', true)
+            ->where('stock', '>', 0)
+            ->with('images')
+            ->orderByDesc('view_count')
+            ->first();
+
+        if (!$listing) {
+            // Fallback: recommend one they viewed that's still in stock
+            $listing = Listing::whereIn('id', $viewedListingIds->take(10))
+                ->where('is_active', true)
+                ->where('stock', '>', 0)
+                ->with('images')
+                ->inRandomOrder()
+                ->first();
+        }
+
+        if (!$listing) return false;
+
+        $template = $this->viewTemplates[array_rand($this->viewTemplates)];
+        $body = str_replace('{product}', $this->truncate($listing->title, 40), $template);
+
+        $firstImage = $listing->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'recommendation',
+            "Picked for you! 🎯",
+            $body,
+            ['route' => '/product/' . $listing->id],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 4: Trending products
+     */
+    private function tryTrendingNotification(int $userId): bool
+    {
+        $trending = Listing::where('is_active', true)
+            ->where('stock', '>', 0)
+            ->where('view_count', '>', 10)
+            ->with('images')
+            ->orderByDesc('view_count')
+            ->limit(10)
+            ->get();
+
+        if ($trending->isEmpty()) return false;
+
+        $listing = $trending->random();
+
+        $template = $this->trendingTemplates[array_rand($this->trendingTemplates)];
+        $body = str_replace('{product}', $this->truncate($listing->title, 40), $template);
+
+        $firstImage = $listing->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'promo',
+            "Trending on BebaMart 🔥",
+            $body,
+            ['route' => '/product/' . $listing->id],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 5: New arrivals in browsed categories
+     */
+    private function tryNewArrivalNotification(int $userId): bool
+    {
+        // Get categories user has interacted with
+        $categoryIds = ProductInteraction::where('user_id', $userId)
+            ->where('created_at', '>=', Carbon::now()->subDays(30))
+            ->join('listings', 'product_interactions.listing_id', '=', 'listings.id')
+            ->distinct()
+            ->pluck('listings.category_id')
+            ->filter();
+
+        if ($categoryIds->isEmpty()) {
+            // Fall back to all recent arrivals
+            $categoryIds = null;
+        }
+
+        $query = Listing::where('is_active', true)
+            ->where('stock', '>', 0)
+            ->where('created_at', '>=', Carbon::now()->subDays(3))
+            ->with('images')
+            ->orderByDesc('created_at');
+
+        if ($categoryIds) {
+            $query->whereIn('category_id', $categoryIds);
+        }
+
+        $listing = $query->first();
+
+        if (!$listing) return false;
+
+        $template = $this->newArrivalTemplates[array_rand($this->newArrivalTemplates)];
+        $body = str_replace('{product}', $this->truncate($listing->title, 40), $template);
+
+        $firstImage = $listing->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'recommendation',
+            "New arrival! ✨",
+            $body,
+            ['route' => '/product/' . $listing->id],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 6: General promotional notification (fallback)
+     */
+    private function tryGeneralNotification(int $userId): bool
+    {
+        $body = $this->generalTemplates[array_rand($this->generalTemplates)];
+
+        $this->pushService->sendToUser(
+            $userId,
+            'promo',
+            "BebaMart 🛍️",
+            $body,
+            ['route' => '/home']
+        );
+
+        return true;
+    }
+
+    /**
+     * Truncate string to max length
+     */
+    private function truncate(string $text, int $maxLength): string
+    {
+        if (mb_strlen($text) <= $maxLength) return $text;
+        return mb_substr($text, 0, $maxLength - 3) . '...';
+    }
+}

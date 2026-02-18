@@ -1408,6 +1408,19 @@ Route::middleware('auth:sanctum')->group(function () {
         return response()->json(['success' => true, 'message' => 'Logged out successfully']);
     });
 
+    // ====================
+    // PUSH NOTIFICATIONS
+    // ====================
+    Route::post('/device-token', [\App\Http\Controllers\Api\NotificationController::class, 'registerToken']);
+    Route::delete('/device-token', [\App\Http\Controllers\Api\NotificationController::class, 'removeToken']);
+    Route::get('/notifications', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+    Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markRead']);
+    Route::post('/notifications/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+    Route::get('/notification-preferences', [\App\Http\Controllers\Api\NotificationController::class, 'getPreferences']);
+    Route::put('/notification-preferences', [\App\Http\Controllers\Api\NotificationController::class, 'updatePreferences']);
+    Route::post('/search-queries', [\App\Http\Controllers\Api\NotificationController::class, 'logSearch']);
+
     Route::get('/user', function (Request $request) {
         $user = $request->user()->load('vendorProfile');
 
@@ -2339,6 +2352,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
             \DB::commit();
 
+            // Notify vendor about new order
+            try {
+                $vendorUser = \App\Models\VendorProfile::find($order->vendor_profile_id)?->user;
+                if ($vendorUser) {
+                    $pushService = new \App\Services\PushNotificationService();
+                    $pushService->sendToUser(
+                        $vendorUser->id,
+                        'vendor_order',
+                        "New order received! 🎉",
+                        "Order #{$order->order_number} — UGX " . number_format($order->total) . ". Tap to view details.",
+                        ['route' => '/vendor/orders/' . $order->id]
+                    );
+                }
+            } catch (\Exception $e) {
+                // Non-critical
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Order placed successfully',
@@ -3185,7 +3215,26 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
             // Use the model method for proper timestamp tracking
             $order->updateStatusWithTimestamps($request->status);
 
-            // TODO: Send notification to buyer about status change
+            // Send notification to buyer about status change
+            try {
+                $pushService = new \App\Services\PushNotificationService();
+                $statusMessages = [
+                    'processing' => ['title' => 'Order Being Processed! 📦', 'body' => "Your order #{$order->order_number} is being prepared"],
+                    'shipped' => ['title' => 'Order Shipped! 🚚', 'body' => "Your order #{$order->order_number} is on its way!"],
+                    'delivered' => ['title' => 'Order Delivered! 🎉', 'body' => "Your order #{$order->order_number} has been delivered"],
+                    'cancelled' => ['title' => 'Order Cancelled 😔', 'body' => "Your order #{$order->order_number} has been cancelled"],
+                ];
+                $msg = $statusMessages[$request->status] ?? ['title' => 'Order Update 📋', 'body' => "Order #{$order->order_number} status: {$request->status}"];
+                $pushService->sendToUser(
+                    $order->user_id,
+                    'order_update',
+                    $msg['title'],
+                    $msg['body'],
+                    ['route' => '/orders/' . $order->id]
+                );
+            } catch (\Exception $e) {
+                // Non-critical — don't fail the status update
+            }
 
             return response()->json([
                 'success' => true,
