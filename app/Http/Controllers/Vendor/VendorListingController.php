@@ -70,11 +70,9 @@ class VendorListingController extends Controller
             'tax_amount' => 'nullable|numeric|min:0',
             'tax_description' => 'nullable|string|max:255',
 
-            // Attributes
-            'attributes.brand' => 'nullable|string|max:100',
-            'attributes.model' => 'nullable|string|max:100',
-            'attributes.color' => 'nullable|string|max:50',
-            'attributes.size' => 'nullable|string|max:50',
+            // Attributes (dynamic, category-specific)
+            'attributes' => 'nullable|array',
+            'attributes.*' => 'nullable|string|max:255',
 
             // Media files - accept both images and videos
             'media_files' => 'required|array|min:1|max:5',
@@ -268,11 +266,9 @@ class VendorListingController extends Controller
             'tax_amount' => 'nullable|numeric|min:0',
             'tax_description' => 'nullable|string|max:255',
 
-            // Attributes
-            'attributes.brand' => 'nullable|string|max:100',
-            'attributes.model' => 'nullable|string|max:100',
-            'attributes.color' => 'nullable|string|max:50',
-            'attributes.size' => 'nullable|string|max:50',
+            // Attributes (dynamic, category-specific)
+            'attributes' => 'nullable|array',
+            'attributes.*' => 'nullable|string|max:255',
 
             // New images/videos
             'new_media' => 'nullable|array|max:5',

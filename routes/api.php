@@ -676,6 +676,7 @@ Route::get('/categories', function () {
                     'parent_id' => null,  // Always null for parent categories
                     'is_parent' => true,  // Explicit flag
                     'listings_count' => $listingsCount,
+                    'meta' => $category->meta,
                     'children' => $category->children->map(function ($child) {
                         return [
                             'id' => $child->id,
@@ -686,6 +687,7 @@ Route::get('/categories', function () {
                             'parent_id' => $child->parent_id,
                             'is_parent' => $child->children->isNotEmpty(),
                             'listings_count' => $child->total_listings_count,
+                            'meta' => $child->meta,
                             'children' => $child->children->map(function ($grandchild) {
                                 return [
                                     'id' => $grandchild->id,
@@ -696,6 +698,7 @@ Route::get('/categories', function () {
                                     'parent_id' => $grandchild->parent_id,
                                     'is_parent' => false,
                                     'listings_count' => $grandchild->total_listings_count,
+                                    'meta' => $grandchild->meta,
                                 ];
                             })->values()->toArray(),
                         ];
@@ -719,6 +722,32 @@ Route::get('/categories', function () {
             'data' => []
         ], 500);
     }
+});
+
+// Category Attributes (with parent inheritance)
+Route::get('/categories/{id}/attributes', function ($id) {
+    $category = Category::find($id);
+    if (!$category) {
+        return response()->json(['success' => false, 'message' => 'Category not found'], 404);
+    }
+
+    // Walk up the hierarchy to find attribute_fields
+    $current = $category;
+    $fields = null;
+    while ($current) {
+        $meta = $current->meta;
+        if (!empty($meta['attribute_fields'])) {
+            $fields = $meta['attribute_fields'];
+            break;
+        }
+        $current = $current->parent_id ? Category::find($current->parent_id) : null;
+    }
+
+    return response()->json([
+        'success' => true,
+        'category_id' => (int) $id,
+        'attribute_fields' => $fields ?? [],
+    ]);
 });
 
 // Subscription Plans (Public)
@@ -1258,6 +1287,7 @@ Route::get('/marketplace/{id}', function ($id) {
             'variants' => $listing->variants ? $listing->variants->map(function ($v) {
                 return ['id' => $v->id, 'listing_id' => $v->listing_id, 'sku' => $v->sku, 'price' => $v->price, 'stock' => $v->stock, 'attributes' => $v->attributes ?? []];
             }) : [],
+            'attributes' => $listing->attributes ?? [],
             'category' => $listing->category ? ['id' => $listing->category->id, 'name' => $listing->category->name] : null,
             'vendor' => $listing->user && $listing->user->vendorProfile ? [
                 'id' => $listing->user->vendorProfile->id,
@@ -2909,6 +2939,9 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
                 'tax_amount' => 'nullable|numeric|min:0',
                 'tax_description' => 'nullable|string|max:255',
+                // Dynamic attributes (category-specific)
+                'attributes' => 'nullable|array',
+                'attributes.*' => 'nullable|string|max:255',
             ]);
 
             // Create slug
@@ -2927,6 +2960,7 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'stock' => $request->stock ?? $request->quantity ?? 1,
                 'weight_kg' => $request->weight ?? null,
                 'condition' => $request->condition ?? 'new',
+                'attributes' => $request->has('attributes') ? array_filter($request->input('attributes')) : null,
                 'is_active' => true,
             ]);
 
@@ -3019,12 +3053,20 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'condition' => 'nullable|in:new,used,refurbished',
                 'tax_amount' => 'nullable|numeric|min:0',
                 'tax_description' => 'nullable|string|max:255',
+                // Dynamic attributes (category-specific)
+                'attributes' => 'nullable|array',
+                'attributes.*' => 'nullable|string|max:255',
             ]);
 
             $updateData = $request->only([
                 'title', 'description', 'price', 'category_id', 'condition',
                 'tax_amount', 'tax_description'
             ]);
+
+            // Update attributes if provided
+            if ($request->has('attributes')) {
+                $updateData['attributes'] = array_filter($request->input('attributes'));
+            }
 
             // Map quantity to stock (DB column is 'stock')
             if ($request->has('quantity')) {

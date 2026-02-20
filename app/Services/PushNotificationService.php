@@ -143,7 +143,7 @@ class PushNotificationService
                     'title' => $title,
                     'body' => $body,
                 ],
-                'data' => $this->prepareData($data),
+                'data' => empty($data) ? new \stdClass() : $this->prepareData($data),
                 'android' => [
                     'priority' => 'high',
                     'notification' => [
@@ -269,7 +269,6 @@ class PushNotificationService
     {
         $message = $e->getMessage();
         return str_contains($message, 'UNREGISTERED')
-            || str_contains($message, 'INVALID_ARGUMENT')
             || str_contains($message, 'NOT_FOUND');
     }
 

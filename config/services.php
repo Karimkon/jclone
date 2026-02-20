@@ -83,4 +83,9 @@ return [
         'sender_id' => env('EGOSMS_SENDER_ID', 'BEBAMART'),
     ],
 
+    'firebase' => [
+        'project_id' => env('FIREBASE_PROJECT_ID', 'bebamart-95b69'),
+        'service_account_path' => env('FIREBASE_SERVICE_ACCOUNT_PATH', 'firebase-service-account.json'),
+    ],
+
 ];

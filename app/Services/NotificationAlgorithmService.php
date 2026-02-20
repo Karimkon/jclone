@@ -85,7 +85,15 @@ class NotificationAlgorithmService
 
         foreach ($userIds as $userId) {
             try {
-                $sent = $this->generatePersonalizedNotification($userId);
+                $isVendor = DB::table('vendor_profiles')
+                    ->where('user_id', $userId)
+                    ->where('vetting_status', 'approved')
+                    ->exists();
+
+                $sent = $isVendor
+                    ? $this->generateVendorNotification($userId)
+                    : $this->generatePersonalizedNotification($userId);
+
                 if ($sent) {
                     $stats['sent']++;
                 } else {
@@ -116,7 +124,18 @@ class NotificationAlgorithmService
 
         foreach ($carts as $cart) {
             $items = is_string($cart->items) ? json_decode($cart->items, true) : $cart->items;
-            if (empty($items)) continue;
+            if (empty($items) || !is_array($items) || count($items) === 0) continue;
+
+            // Skip if user completed an order in the past 24 hours (cart may already be fulfilled)
+            $recentOrder = DB::table('orders')
+                ->where('user_id', $cart->user_id)
+                ->where('created_at', '>=', Carbon::now()->subHours(24))
+                ->exists();
+
+            if ($recentOrder) {
+                $stats['skipped']++;
+                continue;
+            }
 
             // Don't spam — max 1 cart reminder per 24 hours
             $recentReminder = DB::table('push_notifications')
@@ -456,6 +475,78 @@ class NotificationAlgorithmService
             "BebaMart 🛍️",
             $body,
             ['route' => '/home']
+        );
+
+        return true;
+    }
+
+    /**
+     * Generate vendor-specific notification (store performance, tips)
+     */
+    private function generateVendorNotification(int $userId): bool
+    {
+        $hour = (int) now()->format('H');
+
+        // Morning: motivate with store stats
+        if ($hour >= 6 && $hour < 12) {
+            $views = DB::table('listings')
+                ->where('vendor_id', function($q) use ($userId) {
+                    $q->select('id')->from('vendor_profiles')->where('user_id', $userId);
+                })
+                ->sum('view_count');
+
+            $titles = ["Good morning! ☀️", "Rise & sell! 🚀", "Start strong today! 💪"];
+            $bodies = [
+                "Your listings have {views} total views. Keep them fresh to attract buyers!",
+                "Morning check-in: {views} views on your products. Add new listings to boost sales!",
+                "Your store has been viewed {views} times. Today is a great day to add new products!",
+            ];
+            $title = $titles[array_rand($titles)];
+            $body = str_replace('{views}', number_format($views), $bodies[array_rand($bodies)]);
+            $route = '/vendor/dashboard';
+        }
+        // Afternoon: check orders
+        elseif ($hour >= 12 && $hour < 18) {
+            $pendingOrders = DB::table('orders')
+                ->where('vendor_id', function($q) use ($userId) {
+                    $q->select('id')->from('vendor_profiles')->where('user_id', $userId);
+                })
+                ->where('status', 'pending')
+                ->count();
+
+            if ($pendingOrders > 0) {
+                $title = "Orders need attention! 📦";
+                $body = "You have {$pendingOrders} pending order" . ($pendingOrders > 1 ? 's' : '') . " waiting to be processed.";
+                $route = '/vendor/orders';
+            } else {
+                $title = "Boost your visibility! 🎯";
+                $body = "No pending orders? Add new products or update prices to attract more buyers.";
+                $route = '/vendor/products';
+            }
+        }
+        // Evening: recap
+        else {
+            $todaySales = DB::table('orders')
+                ->where('vendor_id', function($q) use ($userId) {
+                    $q->select('id')->from('vendor_profiles')->where('user_id', $userId);
+                })
+                ->whereDate('created_at', today())
+                ->count();
+
+            $titles = ["Evening recap 🌙", "Today's summary 📊", "End of day check-in ✅"];
+            $title = $titles[array_rand($titles)];
+            $body = $todaySales > 0
+                ? "Great day! You received {$todaySales} order" . ($todaySales > 1 ? 's' : '') . " today. Keep it up!"
+                : "No orders today yet. Try updating your product photos or prices to stand out!";
+            $route = '/vendor/dashboard';
+        }
+
+        $this->pushService->sendToUser(
+            $userId,
+            'recommendation',
+            $title,
+            $body,
+            ['route' => $route]
         );
 
         return true;
