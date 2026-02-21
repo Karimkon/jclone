@@ -25,12 +25,12 @@ class LandingController extends Controller
             return $this->getCategoriesWithEnhancedData();
         });
 
-        // Featured products (you can add a 'is_featured' column later)
+        // Featured products — 30 = 6 rows at 5 cols
         $featuredProducts = Listing::where('is_active', true)
             ->whereHas('user', fn($q) => $q->where('is_active', true))
             ->with(['images', 'category', 'vendor.user'])
             ->inRandomOrder()
-            ->take(10)
+            ->take(30)
             ->get();
 
         // Trending/New Arrivals

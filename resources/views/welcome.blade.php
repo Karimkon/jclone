@@ -383,6 +383,15 @@ button[onclick="closeOptionsModal()"]:hover {
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #6366f1; border-radius: 3px; }
+
+        /* Category Sidebar – scrollbar hidden by default, visible on hover */
+        .category-sidebar-container::-webkit-scrollbar { width: 5px; }
+        .category-sidebar-container::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        .category-sidebar-container::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; transition: background 0.3s; }
+        .category-sidebar-container:hover::-webkit-scrollbar-thumb { background: #6366f1; }
+        /* Firefox */
+        .category-sidebar-container { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+        .category-sidebar-container:hover { scrollbar-color: #6366f1 #f1f5f9; }
         
         .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -788,7 +797,7 @@ main {
             
 <!-- Left Sidebar - Categories with Subcategory Hover -->
 <aside class="hidden lg:block w-72 flex-shrink-0" style="z-index: 50;">
-    <div class="bg-white rounded-xl shadow-sm sticky top-32 border border-ink-100" style="overflow: visible;">
+    <div class="bg-white rounded-xl shadow-sm sticky top-32 border border-ink-100" style="overflow: visible; max-height: calc(100vh - 140px); display: flex; flex-direction: column;">
         <div class="bg-gradient-to-r from-brand-600 to-purple-600 text-white px-4 py-3 font-semibold flex items-center gap-2 text-sm">
             <i class="fas fa-th-large"></i>Browse Categories
             <span class="text-xs bg-white/20 px-2 py-0.5 rounded ml-auto">
@@ -796,7 +805,7 @@ main {
             </span>
         </div>
         
-        <div class="category-sidebar-container">
+        <div class="category-sidebar-container" style="max-height: calc(100vh - 200px); overflow-y: auto;">
            
             @foreach($categories as $i => $cat)
             <div class="cat-sidebar-item">
@@ -810,7 +819,8 @@ main {
             <span class="text-sm font-medium">
                 {{ $cat->name }} 
                 <span class="text-brand-600 font-bold ml-1">
-                    ({{ isset($cat->listings_count) ? ($cat->listings_count > 99 ? '99+' : $cat->listings_count) : rand(5,50) }})
+                    @php $sideCnt = $cat->listings_count ?? rand(5,50); @endphp
+                    ({{ $sideCnt >= 1000 ? floor($sideCnt/1000).'k+' : $sideCnt }})
                 </span>
             </span>
         </span>
@@ -1052,14 +1062,15 @@ main {
                         <a href="{{ route('marketplace.index') }}" class="text-brand-600 font-medium text-sm hover:underline">View All →</a>
                     </div>
                     <div id="featuredProductsGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                        @foreach($featuredProducts->take(10) as $product)
+                        @foreach($featuredProducts->take(30) as $product)
                         <div class="product-card shadow-sm border border-ink-100">
                             <div class="relative aspect-square overflow-hidden bg-ink-50">
                                 <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     @if($product->images->first())
-                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
+                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                                    <div class="w-full h-full items-center justify-center hidden" style="background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%)"><i class="fas fa-box text-brand-300 text-3xl"></i></div>
                                     @else
-                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-ink-300 text-3xl"></i></div>
+                                    <div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%)"><i class="fas fa-box text-brand-300 text-3xl"></i></div>
                                     @endif
                                 </a>
                                 <div class="absolute top-2 left-2">
@@ -1155,8 +1166,9 @@ main {
                     <i class="fas fa-{{ $cat->icon ?? 'tag' }} text-lg"></i>
                 </div>
                 <!-- Category Product Count Badge -->
-                <span class="absolute -top-1 -right-1 bg-brand-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {{ isset($cat->listings_count) ? ($cat->listings_count > 9 ? '9+' : $cat->listings_count) : rand(5,50) }}
+                @php $gridCnt = $cat->listings_count ?? rand(5,50); @endphp
+                <span class="absolute -top-2 -right-2 bg-brand-600 text-white text-xs font-bold rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1 leading-none">
+                    {{ $gridCnt >= 1000 ? floor($gridCnt/1000).'k+' : $gridCnt }}
                                 </span>
                             </div>
                             <h3 class="text-xs font-medium text-ink-700 group-hover:text-brand-600 transition line-clamp-1">{{ $cat->name }}</h3>
@@ -1179,9 +1191,10 @@ main {
                             <div class="relative aspect-square overflow-hidden bg-ink-50">
                                 <a href="{{ $product->category ? route('marketplace.show.category', ['category_slug' => $product->category->slug, 'listing' => $product->slug]) : route('marketplace.show', $product) }}">
                                     @if($product->images->first())
-                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover">
+                                    <img src="{{ asset('storage/' . $product->images->first()->path) }}" alt="{{ $product->title }}" class="product-image w-full h-full object-cover" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                                    <div class="w-full h-full items-center justify-center hidden" style="background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%)"><i class="fas fa-box text-brand-300 text-3xl"></i></div>
                                     @else
-                                    <div class="w-full h-full flex items-center justify-center"><i class="fas fa-image text-ink-300 text-3xl"></i></div>
+                                    <div class="w-full h-full flex items-center justify-center" style="background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 100%)"><i class="fas fa-box text-brand-300 text-3xl"></i></div>
                                     @endif
                                 </a>
                                 <div class="absolute top-2 left-2 flex flex-col gap-1">
@@ -1834,79 +1847,66 @@ function setupQuickActionButtons() {
 
 function initCategoryNavigation() {
     const sidebarItems = document.querySelectorAll('.cat-sidebar-item');
-    
+    const sidebarContainer = document.querySelector('.category-sidebar-container');
+
     sidebarItems.forEach(item => {
-        const link = item.querySelector('a');
         const submenu = item.querySelector('.cat-submenu');
-        
-        if (submenu) {
-            let hideTimeout;
-            
-            // Show submenu immediately on hover
-            item.addEventListener('mouseenter', function() {
-                clearTimeout(hideTimeout);
-                this.classList.add('hover-active');
-                if (submenu) {
-                    submenu.style.display = 'block';
-                    submenu.style.opacity = '1';
-                    submenu.style.transform = 'translateX(0)';
-                    submenu.style.zIndex = '9999';
-                }
-            });
-            
-            // Hide with slight delay to prevent flickering
-            item.addEventListener('mouseleave', function(e) {
-                const relatedTarget = e.relatedTarget || e.toElement;
-                
-                // Check if moving to submenu
-                if (relatedTarget && submenu.contains(relatedTarget)) {
-                    return; // Don't hide if moving to submenu
-                }
-                
-                hideTimeout = setTimeout(() => {
-                    this.classList.remove('hover-active');
-                    if (submenu) {
-                        submenu.style.opacity = '0';
-                        submenu.style.transform = 'translateX(-10px)';
-                        setTimeout(() => {
-                            if (!this.matches(':hover') && !submenu.matches(':hover')) {
-                                submenu.style.display = 'none';
-                            }
-                        }, 200);
-                    }
-                }, 150);
-            });
-            
-            // Keep submenu open when hovering over it
-            submenu.addEventListener('mouseenter', function() {
-                clearTimeout(hideTimeout);
-                item.classList.add('hover-active');
-                this.style.display = 'block';
-                this.style.opacity = '1';
-                this.style.transform = 'translateX(0)';
-                this.style.zIndex = '9999';
-            });
-            
-            submenu.addEventListener('mouseleave', function(e) {
-                const relatedTarget = e.relatedTarget || e.toElement;
-                
-                // Check if moving back to parent item
-                if (relatedTarget && item.contains(relatedTarget)) {
-                    return; // Don't hide if moving back to parent
-                }
-                
-                hideTimeout = setTimeout(() => {
+        if (!submenu) return;
+
+        // Detach submenu to <body> so it escapes overflow clipping entirely
+        document.body.appendChild(submenu);
+        submenu.style.position = 'fixed';
+        submenu.style.display = 'none';
+        submenu.style.zIndex = '99999';
+        submenu.style.maxHeight = '80vh';
+        submenu.style.overflowY = 'auto';
+
+        let hideTimeout;
+
+        const showSubmenu = () => {
+            clearTimeout(hideTimeout);
+            item.classList.add('hover-active');
+
+            const rect = item.getBoundingClientRect();
+            const containerRect = sidebarContainer
+                ? sidebarContainer.getBoundingClientRect()
+                : rect;
+
+            // Position to the right of the sidebar
+            const desiredTop = rect.top;
+            const submenuH = submenu.offsetHeight || 400;
+            const top = Math.max(10, Math.min(desiredTop, window.innerHeight - submenuH - 10));
+
+            submenu.style.top = top + 'px';
+            submenu.style.left = (containerRect.right + 6) + 'px';
+            submenu.style.display = 'block';
+            submenu.style.opacity = '1';
+            submenu.style.transform = 'translateX(0)';
+        };
+
+        const hideSubmenu = () => {
+            hideTimeout = setTimeout(() => {
+                if (!item.matches(':hover') && !submenu.matches(':hover')) {
+                    submenu.style.display = 'none';
                     item.classList.remove('hover-active');
-                    this.style.opacity = '0';
-                    this.style.transform = 'translateX(-10px)';
-                    setTimeout(() => {
-                        if (!item.matches(':hover') && !this.matches(':hover')) {
-                            this.style.display = 'none';
-                        }
-                    }, 200);
-                }, 150);
-            });
-        }
+                }
+            }, 150);
+        };
+
+        item.addEventListener('mouseenter', showSubmenu);
+        item.addEventListener('mouseleave', (e) => {
+            if (e.relatedTarget && submenu.contains(e.relatedTarget)) return;
+            hideSubmenu();
+        });
+
+        submenu.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            item.classList.add('hover-active');
+        });
+        submenu.addEventListener('mouseleave', (e) => {
+            if (e.relatedTarget && item.contains(e.relatedTarget)) return;
+            hideSubmenu();
+        });
     });
 }
 // Toggle subcategory products

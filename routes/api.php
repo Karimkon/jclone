@@ -2206,6 +2206,91 @@ Route::middleware('auth:sanctum')->group(function () {
         }
     });
 
+    // ==================== BUYER SERVICE REQUESTS ====================
+    Route::post('/service-requests', function (Request $request) {
+        $request->validate([
+            'vendor_service_id' => 'required|exists:vendor_services,id',
+            'description'       => 'required|string|max:2000',
+            'customer_name'     => 'required|string|max:255',
+            'customer_phone'    => 'required|string|max:20',
+            'customer_email'    => 'nullable|email',
+            'location'          => 'nullable|string|max:255',
+            'address'           => 'nullable|string|max:500',
+            'preferred_date'    => 'nullable|date',
+            'preferred_time'    => 'nullable|string|max:50',
+            'urgency'           => 'nullable|in:normal,urgent,emergency',
+            'budget_min'        => 'nullable|numeric|min:0',
+            'budget_max'        => 'nullable|numeric|min:0',
+        ]);
+
+        $service = \App\Models\VendorService::findOrFail($request->vendor_service_id);
+
+        $sr = \App\Models\ServiceRequest::create([
+            'vendor_service_id'  => $service->id,
+            'vendor_profile_id'  => $service->vendor_profile_id,
+            'user_id'            => $request->user()->id,
+            'request_number'     => 'SR-' . strtoupper(uniqid()),
+            'description'        => $request->description,
+            'customer_name'      => $request->customer_name,
+            'customer_phone'     => $request->customer_phone,
+            'customer_email'     => $request->customer_email ?? $request->user()->email,
+            'location'           => $request->location,
+            'address'            => $request->address,
+            'preferred_date'     => $request->preferred_date,
+            'preferred_time'     => $request->preferred_time,
+            'urgency'            => $request->urgency ?? 'normal',
+            'budget_min'         => $request->budget_min,
+            'budget_max'         => $request->budget_max,
+            'status'             => 'pending',
+        ]);
+
+        $service->increment('inquiries_count');
+
+        return response()->json(['success' => true, 'message' => 'Service request submitted.', 'data' => $sr->load('service')], 201);
+    });
+
+    Route::get('/service-requests', function (Request $request) {
+        $query = \App\Models\ServiceRequest::where('user_id', $request->user()->id)
+            ->with(['service:id,title,pricing_type,price,images'])
+            ->latest();
+
+        if ($request->filled('status')) $query->where('status', $request->status);
+
+        $items = $query->paginate($request->get('per_page', 20));
+
+        return response()->json([
+            'success' => true, 'data' => $items->items(),
+            'current_page' => $items->currentPage(), 'last_page' => $items->lastPage(), 'total' => $items->total(),
+        ]);
+    });
+
+    Route::get('/service-requests/{id}', function (Request $request, $id) {
+        $sr = \App\Models\ServiceRequest::where('user_id', $request->user()->id)
+            ->with(['service', 'review'])->findOrFail($id);
+        return response()->json(['success' => true, 'data' => $sr]);
+    });
+
+    Route::post('/service-requests/{id}/accept', function (Request $request, $id) {
+        $sr = \App\Models\ServiceRequest::where('user_id', $request->user()->id)
+            ->where('status', 'quoted')->findOrFail($id);
+        $sr->update(['status' => 'accepted', 'accepted_at' => now()]);
+        return response()->json(['success' => true, 'message' => 'Quote accepted.', 'data' => $sr->fresh()]);
+    });
+
+    Route::post('/service-requests/{id}/cancel', function (Request $request, $id) {
+        $sr = \App\Models\ServiceRequest::where('user_id', $request->user()->id)
+            ->whereIn('status', ['pending', 'quoted'])->findOrFail($id);
+        $sr->update(['status' => 'cancelled']);
+        return response()->json(['success' => true, 'message' => 'Request cancelled.']);
+    });
+
+    Route::post('/service-requests/{id}/complete', function (Request $request, $id) {
+        $sr = \App\Models\ServiceRequest::where('user_id', $request->user()->id)
+            ->where('status', 'in_progress')->findOrFail($id);
+        $sr->update(['status' => 'completed', 'completed_at' => now()]);
+        return response()->json(['success' => true, 'message' => 'Service marked as completed.', 'data' => $sr->fresh()]);
+    });
+
     // Place Order - FIXED: Now includes title in order_items
     Route::post('/orders/place-order', function (Request $request) {
         $request->validate([
@@ -3699,6 +3784,102 @@ Route::middleware(['auth:sanctum'])->prefix('vendor')->group(function () {
                 'success' => true,
                 'message' => 'Service deleted.',
             ]);
+        });
+    });
+
+    // ==================== VENDOR SERVICE REQUESTS ====================
+    Route::prefix('service-requests')->group(function () {
+
+        // List vendor's service requests
+        Route::get('/', function (Request $request) {
+            $vendor = $request->user()->vendorProfile;
+            if (!$vendor) return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
+
+            $query = \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)
+                ->with(['service:id,title,pricing_type,price', 'user:id,name,phone,email'])
+                ->latest();
+
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $requests = $query->paginate($request->get('per_page', 20));
+
+            $statusCounts = [
+                'pending'     => \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->where('status', 'pending')->count(),
+                'quoted'      => \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->where('status', 'quoted')->count(),
+                'accepted'    => \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->where('status', 'accepted')->count(),
+                'in_progress' => \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->where('status', 'in_progress')->count(),
+                'completed'   => \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->where('status', 'completed')->count(),
+            ];
+
+            return response()->json([
+                'success'       => true,
+                'data'          => $requests->items(),
+                'status_counts' => $statusCounts,
+                'current_page'  => $requests->currentPage(),
+                'last_page'     => $requests->lastPage(),
+                'total'         => $requests->total(),
+            ]);
+        });
+
+        // Get single request
+        Route::get('/{id}', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+            if (!$vendor) return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
+
+            $sr = \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)
+                ->with(['service', 'user:id,name,phone,email', 'review'])
+                ->findOrFail($id);
+
+            return response()->json(['success' => true, 'data' => $sr]);
+        });
+
+        // Submit quote
+        Route::post('/{id}/quote', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+            $sr = \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)
+                ->where('status', 'pending')->findOrFail($id);
+
+            $request->validate([
+                'quoted_price' => 'required|numeric|min:0',
+                'vendor_notes' => 'nullable|string|max:1000',
+            ]);
+
+            $notes = $sr->vendor_notes ?? [];
+            $notes[] = ['note' => $request->vendor_notes, 'at' => now()->toDateTimeString()];
+
+            $sr->update([
+                'quoted_price' => $request->quoted_price,
+                'vendor_notes' => $notes,
+                'status'       => 'quoted',
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Quote submitted.', 'data' => $sr->fresh()]);
+        });
+
+        // Update status
+        Route::post('/{id}/status', function (Request $request, $id) {
+            $vendor = $request->user()->vendorProfile;
+            $sr = \App\Models\ServiceRequest::where('vendor_profile_id', $vendor->id)->findOrFail($id);
+
+            $request->validate(['status' => 'required|in:in_progress,completed,cancelled']);
+
+            $allowed = [
+                'accepted'    => ['in_progress', 'cancelled'],
+                'in_progress' => ['completed', 'cancelled'],
+            ];
+
+            if (!isset($allowed[$sr->status]) || !in_array($request->status, $allowed[$sr->status])) {
+                return response()->json(['success' => false, 'message' => 'Invalid status transition'], 422);
+            }
+
+            $update = ['status' => $request->status];
+            if ($request->status === 'completed') $update['completed_at'] = now();
+
+            $sr->update($update);
+
+            return response()->json(['success' => true, 'message' => 'Status updated.', 'data' => $sr->fresh()]);
         });
     });
 
