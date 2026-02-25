@@ -9,6 +9,7 @@ use App\Models\Escrow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\PushNotificationService;
 
 class CheckoutPaymentController extends Controller
 {
@@ -360,24 +361,26 @@ class CheckoutPaymentController extends Controller
             ]);
 
             // Notify vendor
-            \App\Models\NotificationQueue::create([
-                'user_id' => $order->vendorProfile->user_id,
-                'type' => 'order_paid',
-                'title' => 'New Paid Order!',
-                'message' => "Order #{$order->order_number} has been paid. Amount: UGX " . number_format($order->total, 0),
-                'meta' => ['order_id' => $order->id],
-                'status' => 'pending',
-            ]);
+            try {
+                (new \App\Services\PushNotificationService())->sendToUser(
+                    $order->vendorProfile->user_id,
+                    'vendor_order',
+                    "New order received! 🎉",
+                    "Order #{$order->order_number} — UGX " . number_format($order->total, 0) . ". Payment confirmed!",
+                    ['route' => '/vendor/orders/' . $order->id]
+                );
+            } catch (\Exception $e) { \Illuminate\Support\Facades\Log::warning('Vendor push failed', ['error' => $e->getMessage()]); }
 
             // Notify buyer
-            \App\Models\NotificationQueue::create([
-                'user_id' => $order->buyer_id,
-                'type' => 'payment_successful',
-                'title' => 'Payment Successful',
-                'message' => "Your payment for order #{$order->order_number} was successful. The vendor will process your order soon.",
-                'meta' => ['order_id' => $order->id],
-                'status' => 'pending',
-            ]);
+            try {
+                (new \App\Services\PushNotificationService())->sendToUser(
+                    $order->buyer_id,
+                    'order_update',
+                    "Payment Confirmed! ✅",
+                    "Your payment for order #{$order->order_number} was successful. The vendor will process your order soon.",
+                    ['route' => '/orders/' . $order->id]
+                );
+            } catch (\Exception $e) { \Illuminate\Support\Facades\Log::warning('Buyer push failed', ['error' => $e->getMessage()]); }
 
             DB::commit();
 

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\VendorProfile;
 use App\Models\VendorPerformance;
-use App\Models\NotificationQueue;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -131,18 +131,20 @@ class VendorOrderController extends Controller
 
         // Create notification for buyer
         if (in_array($validated['status'], ['processing', 'shipped'])) {
-            NotificationQueue::create([
-                'user_id' => $order->buyer_id,
-                'type' => 'order_status_update',
-                'title' => 'Order Status Update',
-                'message' => "Your order {$order->order_number} has been marked as " . strtoupper($validated['status']),
-                'meta' => [
-                    'order_id' => $order->id,
-                    'new_status' => $validated['status'],
-                    'order_number' => $order->order_number,
-                ],
-                'status' => 'pending',
-            ]);
+            try {
+                $statusMessages = [
+                    'processing' => ['title' => 'Order Being Processed! 📦', 'body' => "Your order #{$order->order_number} is being prepared by the vendor."],
+                    'shipped'    => ['title' => 'Order Shipped! 🚚',            'body' => "Your order #{$order->order_number} is on its way!"],
+                ];
+                $msg = $statusMessages[$validated['status']] ?? ['title' => 'Order Update 📋', 'body' => "Order #{$order->order_number} status: {$validated['status']}"];
+                (new PushNotificationService())->sendToUser(
+                    $order->buyer_id,
+                    'order_update',
+                    $msg['title'],
+                    $msg['body'],
+                    ['route' => '/orders/' . $order->id]
+                );
+            } catch (\Exception $e) { Log::warning('Buyer push failed', ['error' => $e->getMessage()]); }
         }
 
         DB::commit();
@@ -278,20 +280,16 @@ class VendorOrderController extends Controller
                 ]
             ]);
 
-            // Notify buyer
-            NotificationQueue::create([
-                'user_id' => $order->buyer_id,
-                'type' => 'order_shipped',
-                'title' => 'Order Shipped',
-                'message' => "Your order {$order->order_number} has been shipped via {$request->carrier}. Tracking: {$request->tracking_number}",
-                'meta' => [
-                    'order_id' => $order->id,
-                    'tracking_number' => $request->tracking_number,
-                    'carrier' => $request->carrier,
-                    'estimated_delivery' => $request->estimated_delivery,
-                ],
-                'status' => 'pending',
-            ]);
+            // Notify buyer — order shipped
+            try {
+                (new PushNotificationService())->sendToUser(
+                    $order->buyer_id,
+                    'order_update',
+                    "Order Shipped! 🚚",
+                    "Your order #{$order->order_number} has been shipped via {$request->carrier}. Tracking: {$request->tracking_number}",
+                    ['route' => '/orders/' . $order->id]
+                );
+            } catch (\Exception $e) { Log::warning('Buyer push failed', ['error' => $e->getMessage()]); }
 
             DB::commit();
 
@@ -349,33 +347,17 @@ class VendorOrderController extends Controller
                 }
             }
 
-            // Notify buyer
-            NotificationQueue::create([
-                'user_id' => $order->buyer_id,
-                'type' => 'order_cancelled',
-                'title' => 'Order Cancelled',
-                'message' => "Order {$order->order_number} has been cancelled by the vendor. Reason: {$request->reason}",
-                'meta' => [
-                    'order_id' => $order->id,
-                    'cancelled_by' => 'vendor',
-                    'reason' => $request->reason,
-                ],
-                'status' => 'pending',
-            ]);
+            // Notify buyer — order cancelled
+            try {
+                (new PushNotificationService())->sendToUser(
+                    $order->buyer_id,
+                    'order_update',
+                    "Order Cancelled 😔",
+                    "Order #{$order->order_number} has been cancelled by the vendor. Reason: {$request->reason}",
+                    ['route' => '/orders/' . $order->id]
+                );
+            } catch (\Exception $e) { Log::warning('Buyer push failed', ['error' => $e->getMessage()]); }
 
-            // Notify admin
-            NotificationQueue::create([
-                'type' => 'admin_notification',
-                'title' => 'Order Cancelled by Vendor',
-                'message' => "Order {$order->order_number} was cancelled by vendor. Reason: {$request->reason}",
-                'meta' => [
-                    'order_id' => $order->id,
-                    'vendor_id' => Auth::user()->vendorProfile->id,
-                    'reason' => $request->reason,
-                    'action_url' => route('admin.orders.show', $order),
-                ],
-                'status' => 'pending',
-            ]);
 
             DB::commit();
 

@@ -1428,6 +1428,37 @@ Route::prefix('listings')->group(function () {
     });
 });
 
+// ==================== JOB APPLICATION API ====================
+Route::middleware('auth:sanctum')->post('/jobs/{slug}/apply', function (Request $request, $slug) {
+    $job = \App\Models\JobListing::where('slug', $slug)->active()->notExpired()->firstOrFail();
+
+    if ($job->hasUserApplied($request->user()->id)) {
+        return response()->json(['success' => false, 'message' => 'You have already applied for this job.'], 400);
+    }
+
+    $request->validate([
+        'applicant_name'  => 'required|string|max:255',
+        'applicant_email' => 'required|email|max:255',
+        'applicant_phone' => 'nullable|string|max:20',
+        'cover_letter'    => 'nullable|string|max:10000',
+        'expected_salary' => 'nullable|numeric|min:0',
+    ]);
+
+    \App\Models\JobApplication::create([
+        'job_listing_id' => $job->id,
+        'user_id'        => $request->user()->id,
+        'applicant_name' => $request->applicant_name,
+        'applicant_email'=> $request->applicant_email,
+        'applicant_phone'=> $request->applicant_phone,
+        'cover_letter'   => $request->cover_letter,
+        'expected_salary'=> $request->expected_salary,
+    ]);
+
+    $job->increment('applications_count');
+
+    return response()->json(['success' => true, 'message' => 'Your application has been submitted successfully!']);
+});
+
 // ====================
 // AUTHENTICATED ROUTES
 // ====================

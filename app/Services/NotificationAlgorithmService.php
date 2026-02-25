@@ -61,6 +61,17 @@ class NotificationAlgorithmService
         "💫 Your daily dose of amazing deals is here!",
         "🎯 Handpicked deals just for you! Shop now on BebaMart",
         "🌟 Don't miss today's specials on BebaMart!",
+        "🤩 Thousands of products. One marketplace. Shop BebaMart now!",
+        "💡 Smart shoppers buy on BebaMart — come see why!",
+        "🎁 Something great is waiting for you. Come discover it!",
+    ];
+
+    private array $reEngagementTemplates = [
+        "We miss you! 😢 Come back and see what's new on BebaMart",
+        "It's been a while! 👋 Thousands of new deals are waiting for you",
+        "BebaMart has been busy! 🛒 New products, better deals — come check",
+        "Your perfect product might be waiting! 🔍 Come back and explore",
+        "Don't let great deals pass you by! 🏃 BebaMart is calling",
     ];
 
     public function __construct(PushNotificationService $pushService)
@@ -85,6 +96,19 @@ class NotificationAlgorithmService
 
         foreach ($userIds as $userId) {
             try {
+                // Skip if user already received a push notification today — avoid double-pinging
+                // (e.g. an order update fired at 9 AM before this 10 AM daily cron)
+                $alreadySentToday = DB::table('push_notifications')
+                    ->where('user_id', $userId)
+                    ->whereDate('created_at', today())
+                    ->where('status', 'sent')
+                    ->exists();
+
+                if ($alreadySentToday) {
+                    $stats['skipped']++;
+                    continue;
+                }
+
                 $isVendor = DB::table('vendor_profiles')
                     ->where('user_id', $userId)
                     ->where('vetting_status', 'approved')
@@ -114,6 +138,13 @@ class NotificationAlgorithmService
     public function sendCartAbandonmentReminders(): array
     {
         $stats = ['sent' => 0, 'skipped' => 0];
+
+        // Quiet hours: never disturb users between 10 PM and 7 AM
+        $hour = (int) Carbon::now()->format('H');
+        if ($hour >= 22 || $hour < 7) {
+            return $stats;
+        }
+
         $fourHoursAgo = Carbon::now()->subHours(4);
 
         // Find users who added to cart 4+ hours ago but haven't purchased
@@ -198,6 +229,7 @@ class NotificationAlgorithmService
             [$this, 'tryViewBasedNotification'],
             [$this, 'tryTrendingNotification'],
             [$this, 'tryNewArrivalNotification'],
+            [$this, 'tryReEngagementNotification'], // Win back inactive users
             [$this, 'tryGeneralNotification'],
         ];
 
@@ -463,7 +495,48 @@ class NotificationAlgorithmService
     }
 
     /**
-     * Strategy 6: General promotional notification (fallback)
+     * Strategy 6: Re-engagement for users who haven't been active in 7+ days
+     */
+    private function tryReEngagementNotification(int $userId): bool
+    {
+        // Only fire for genuinely inactive users — don't use it on active ones
+        $recentActivity = ProductInteraction::where('user_id', $userId)
+            ->where('created_at', '>=', Carbon::now()->subDays(7))
+            ->exists();
+
+        if ($recentActivity) return false;
+
+        // Pick a bestselling product as the hook
+        $listing = Listing::where('is_active', true)
+            ->where('stock', '>', 0)
+            ->where('purchase_count', '>', 0)
+            ->with('images')
+            ->orderByDesc('purchase_count')
+            ->limit(20)
+            ->get()
+            ->random();
+
+        if (!$listing) return false;
+
+        $firstImage = $listing->images->first();
+        $imageUrl = $firstImage?->image_url
+            ? url('storage/' . $firstImage->image_url)
+            : null;
+
+        $this->pushService->sendToUser(
+            $userId,
+            'recommendation',
+            "BebaMart misses you! 💙",
+            $this->reEngagementTemplates[array_rand($this->reEngagementTemplates)],
+            ['route' => '/home'],
+            $imageUrl
+        );
+
+        return true;
+    }
+
+    /**
+     * Strategy 7: General promotional notification (fallback)
      */
     private function tryGeneralNotification(int $userId): bool
     {

@@ -166,24 +166,26 @@ class FlutterwaveWebhookController extends Controller
                 }
 
                 // Notify vendor
-                \App\Models\NotificationQueue::create([
-                    'user_id' => $payment->order->vendorProfile->user_id,
-                    'type' => 'order_paid',
-                    'title' => 'Order Payment Received',
-                    'message' => "Order #{$payment->order->order_number} has been paid. Amount: {$payment->amount}",
-                    'meta' => ['order_id' => $payment->order->id],
-                    'status' => 'pending',
-                ]);
+                try {
+                    (new \App\Services\PushNotificationService())->sendToUser(
+                        $payment->order->vendorProfile->user_id,
+                        'vendor_order',
+                        "New order received! 🎉",
+                        "Order #{$payment->order->order_number} — Amount: {$payment->amount}. Payment confirmed!",
+                        ['route' => '/vendor/orders/' . $payment->order->id]
+                    );
+                } catch (\Exception $e) { \Illuminate\Support\Facades\Log::warning('Vendor push failed', ['error' => $e->getMessage()]); }
 
                 // Notify buyer
-                \App\Models\NotificationQueue::create([
-                    'user_id' => $payment->order->buyer_id,
-                    'type' => 'payment_successful',
-                    'title' => 'Payment Successful',
-                    'message' => "Your payment for order #{$payment->order->order_number} was successful.",
-                    'meta' => ['order_id' => $payment->order->id],
-                    'status' => 'pending',
-                ]);
+                try {
+                    (new \App\Services\PushNotificationService())->sendToUser(
+                        $payment->order->buyer_id,
+                        'order_update',
+                        "Payment Confirmed! ✅",
+                        "Your payment for order #{$payment->order->order_number} was successful. The vendor will process your order soon.",
+                        ['route' => '/orders/' . $payment->order->id]
+                    );
+                } catch (\Exception $e) { \Illuminate\Support\Facades\Log::warning('Buyer push failed', ['error' => $e->getMessage()]); }
 
                 DB::commit();
 
