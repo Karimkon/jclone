@@ -1100,16 +1100,23 @@ main {
         <i class="fas fa-user-clock mr-1"></i>
         @php
             $createdAt = $product->vendor->created_at;
-            $vy = $createdAt ? floor($createdAt->diffInDays(now()) / 365) : 0;
-            $vm = $createdAt ? floor(($createdAt->diffInDays(now()) % 365) / 30) : 0;
-            $totalDays = $createdAt ? $createdAt->diffInDays(now()) : 0;
-
-            if ($vy >= 1) {
-                $dt = $vy == 1 ? '1 year' : $vy . '+ years';
-            } elseif ($vm >= 1) {
-                $dt = $vm == 1 ? '1 month' : $vm . ' months';
+            if ($createdAt) {
+                $totalSeconds = (int) $createdAt->diffInSeconds(now());
+                $totalMinutes = (int) $createdAt->diffInMinutes(now());
+                $totalHours   = (int) $createdAt->diffInHours(now());
+                $totalDays    = (int) $createdAt->diffInDays(now());
+                $totalWeeks   = (int) $createdAt->diffInWeeks(now());
+                $totalMonths  = (int) $createdAt->diffInMonths(now());
+                $totalYears   = (int) $createdAt->diffInYears(now());
+                if ($totalSeconds < 60)     $dt = 'Just joined';
+                elseif ($totalMinutes < 60) $dt = $totalMinutes . 'm';
+                elseif ($totalHours < 24)   $dt = $totalHours . 'h';
+                elseif ($totalDays < 7)     $dt = $totalDays . 'd';
+                elseif ($totalWeeks < 5)    $dt = $totalWeeks . 'w';
+                elseif ($totalMonths < 12)  $dt = $totalMonths == 1 ? '1 month' : $totalMonths . ' months';
+                else                        $dt = $totalYears == 1 ? '1 year' : $totalYears . '+ years';
             } else {
-                $dt = $totalDays == 0 ? 'New' : $totalDays . 'd';
+                $dt = 'New';
             }
         @endphp
         <span>{{ $dt }}</span>
@@ -1316,16 +1323,23 @@ main {
         <i class="fas fa-user-clock mr-1"></i>
         @php
             $createdAt = $product->vendor->created_at;
-            $vy = $createdAt ? floor($createdAt->diffInDays(now()) / 365) : 0;
-            $vm = $createdAt ? floor(($createdAt->diffInDays(now()) % 365) / 30) : 0;
-            $totalDays = $createdAt ? $createdAt->diffInDays(now()) : 0;
-
-            if ($vy >= 1) {
-                $dt = $vy == 1 ? '1 year' : $vy . '+ years';
-            } elseif ($vm >= 1) {
-                $dt = $vm == 1 ? '1 month' : $vm . ' months';
+            if ($createdAt) {
+                $totalSeconds = (int) $createdAt->diffInSeconds(now());
+                $totalMinutes = (int) $createdAt->diffInMinutes(now());
+                $totalHours   = (int) $createdAt->diffInHours(now());
+                $totalDays    = (int) $createdAt->diffInDays(now());
+                $totalWeeks   = (int) $createdAt->diffInWeeks(now());
+                $totalMonths  = (int) $createdAt->diffInMonths(now());
+                $totalYears   = (int) $createdAt->diffInYears(now());
+                if ($totalSeconds < 60)     $dt = 'Just joined';
+                elseif ($totalMinutes < 60) $dt = $totalMinutes . 'm';
+                elseif ($totalHours < 24)   $dt = $totalHours . 'h';
+                elseif ($totalDays < 7)     $dt = $totalDays . 'd';
+                elseif ($totalWeeks < 5)    $dt = $totalWeeks . 'w';
+                elseif ($totalMonths < 12)  $dt = $totalMonths == 1 ? '1 month' : $totalMonths . ' months';
+                else                        $dt = $totalYears == 1 ? '1 year' : $totalYears . '+ years';
             } else {
-                $dt = $totalDays == 0 ? 'New' : $totalDays . 'd';
+                $dt = 'New';
             }
         @endphp
         <span>{{ $dt }}</span>

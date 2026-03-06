@@ -379,6 +379,19 @@ $breadcrumbLd = [
         color: #d1d5db;
     }
     
+    /* Trust Badge Ticker */
+    @keyframes ticker-scroll {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-50%); }
+    }
+    .trust-ticker {
+        animation: ticker-scroll 12s linear infinite;
+        width: max-content;
+    }
+    .trust-ticker:hover {
+        animation-play-state: paused;
+    }
+
     /* Trust Badges */
     .trust-badge {
         display: flex;
@@ -411,10 +424,15 @@ $breadcrumbLd = [
     .related-card {
         transition: all 0.3s ease;
     }
-    
+
     .related-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+
+    /* Hide scrollbar on related products horizontal rail */
+    #relatedScroll::-webkit-scrollbar {
+        display: none;
     }
     
     /* Breadcrumb */
@@ -1088,42 +1106,41 @@ button[onclick="closeOptionsModal()"]:hover {
                         </button>
                     </div>
                     
-                    <!-- Trust Badges -->
-                    <div class="space-y-3">
-                        <div class="trust-badge">
-                            <div class="trust-badge-icon bg-green-100 text-green-600">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold text-gray-800">Escrow Protection</h5>
-                                <p class="text-sm text-gray-500">Payment secured until delivery confirmed</p>
-                            </div>
+                    <!-- Trust Badges - Animated Ticker -->
+                    <div class="overflow-hidden rounded-xl bg-gray-50 border border-gray-100 py-2 px-3">
+                        <div class="trust-ticker flex gap-8 items-center whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 flex-shrink-0">
+                                <i class="fas fa-shield-alt text-green-500"></i> Escrow Protected
+                            </span>
+                            <span class="text-gray-300 flex-shrink-0">•</span>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 flex-shrink-0">
+                                <i class="fas fa-truck text-blue-500"></i> Fast Delivery
+                            </span>
+                            <span class="text-gray-300 flex-shrink-0">•</span>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 flex-shrink-0">
+                                <i class="fas fa-undo text-purple-500"></i> 30-day Returns
+                            </span>
+                            <span class="text-gray-300 flex-shrink-0">•</span>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 flex-shrink-0">
+                                <i class="fas fa-shield-alt text-green-500"></i> Escrow Protected
+                            </span>
+                            <span class="text-gray-300 flex-shrink-0">•</span>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 flex-shrink-0">
+                                <i class="fas fa-truck text-blue-500"></i> Fast Delivery
+                            </span>
+                            <span class="text-gray-300 flex-shrink-0">•</span>
+                            <span class="inline-flex items-center gap-1.5 text-sm font-medium text-purple-700 flex-shrink-0">
+                                <i class="fas fa-undo text-purple-500"></i> 30-day Returns
+                            </span>
                         </div>
-                        <div class="trust-badge">
-                            <div class="trust-badge-icon bg-blue-100 text-blue-600">
-                                <i class="fas fa-truck"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold text-gray-800">Fast Delivery</h5>
-                                <p class="text-sm text-gray-500">Estimated 3-7 business days</p>
-                            </div>
-                        </div>
-                        <div class="trust-badge">
-                            <div class="trust-badge-icon bg-purple-100 text-purple-600">
-                                <i class="fas fa-undo"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold text-gray-800">Easy Returns</h5>
-                                <p class="text-sm text-gray-500">30-day hassle-free returns</p>
-                            </div>
-                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- Product Details & Sidebar -->
-        <div class="grid lg:grid-cols-3 gap-8 mt-8">
+        <div class="grid lg:grid-cols-3 gap-8 mt-8 items-start">
             <!-- Left: Tabs Content -->
             <div class="lg:col-span-2">
                 <!-- Tabs Navigation -->
@@ -1479,19 +1496,28 @@ button[onclick="closeOptionsModal()"]:hover {
             
             @if($listing->vendor && $listing->vendor->created_at)
                 @php
-                    $totalDays = $listing->vendor->created_at->diffInDays(now());
-                    $vendorYears = floor($totalDays / 365);
-                    $vendorMonths = floor(($totalDays % 365) / 30);
-                    if ($vendorYears == 0) {
-                        if ($vendorMonths == 0) {
-                            $durationText = $totalDays == 0 ? 'New on BebaMart' : $totalDays . ' days on BebaMart';
-                        } else {
-                            $durationText = $vendorMonths == 1 ? '1 month on BebaMart' : $vendorMonths . ' months on BebaMart';
-                        }
-                    } elseif ($vendorYears == 1) {
-                        $durationText = '1 year on BebaMart';
+                    $vc = $listing->vendor->created_at;
+                    $totalSeconds = (int) $vc->diffInSeconds(now());
+                    $totalMinutes = (int) $vc->diffInMinutes(now());
+                    $totalHours   = (int) $vc->diffInHours(now());
+                    $totalDays    = (int) $vc->diffInDays(now());
+                    $totalWeeks   = (int) $vc->diffInWeeks(now());
+                    $totalMonths  = (int) $vc->diffInMonths(now());
+                    $totalYears   = (int) $vc->diffInYears(now());
+                    if ($totalSeconds < 60) {
+                        $durationText = $totalSeconds <= 1 ? 'Just joined BebaMart' : $totalSeconds . ' seconds on BebaMart';
+                    } elseif ($totalMinutes < 60) {
+                        $durationText = $totalMinutes == 1 ? '1 minute on BebaMart' : $totalMinutes . ' minutes on BebaMart';
+                    } elseif ($totalHours < 24) {
+                        $durationText = $totalHours == 1 ? '1 hour on BebaMart' : $totalHours . ' hours on BebaMart';
+                    } elseif ($totalDays < 7) {
+                        $durationText = $totalDays == 1 ? '1 day on BebaMart' : $totalDays . ' days on BebaMart';
+                    } elseif ($totalWeeks < 5) {
+                        $durationText = $totalWeeks == 1 ? '1 week on BebaMart' : $totalWeeks . ' weeks on BebaMart';
+                    } elseif ($totalMonths < 12) {
+                        $durationText = $totalMonths == 1 ? '1 month on BebaMart' : $totalMonths . ' months on BebaMart';
                     } else {
-                        $durationText = $vendorYears . '+ years on BebaMart';
+                        $durationText = $totalYears == 1 ? '1 year on BebaMart' : $totalYears . ' years on BebaMart';
                     }
                 @endphp
                 <p class="text-xs text-gray-500 flex items-center mt-1">
@@ -1598,51 +1624,104 @@ button[onclick="closeOptionsModal()"]:hover {
                     </div>
                 </div>
                 
-                <!-- Related Products -->
-                @if(isset($related) && $related->count() > 0)
-                <div class="bg-white rounded-2xl shadow-sm p-6">
-                    <h4 class="font-bold text-gray-900 mb-4">Related Products</h4>
-                    
-                    <div class="space-y-4">
-                        @foreach($related as $relatedItem)
-                        <a href="{{ $relatedItem->category ? route('marketplace.show.category', ['category_slug' => $relatedItem->category->slug, 'listing' => $relatedItem->slug]) : route('marketplace.show', $relatedItem) }}" class="related-card flex gap-4 p-3 rounded-xl hover:bg-gray-50 transition">
-                            <div class="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                                @if($relatedItem->images->first())
-                                <img src="{{ asset('storage/' . $relatedItem->images->first()->path) }}" 
-                                     alt="{{ $relatedItem->title }}"
-                                     class="w-full h-full object-cover">
-                                @else
-                                <div class="w-full h-full flex items-center justify-center">
-                                    <i class="fas fa-image text-gray-300"></i>
-                                </div>
-                                @endif
+            </div>
+        </div>
+
+        <!-- Related Products - Full Width Horizontal Scroll -->
+        @if(isset($related) && $related->count() > 0)
+        <div class="mt-10 mb-4 overflow-x-hidden">
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fas fa-th-large text-primary"></i>
+                    Related Products
+                </h3>
+                @if($listing->category)
+                <a href="{{ route('marketplace.index', ['category' => $listing->category->id]) }}"
+                   class="flex items-center gap-1 text-primary font-semibold hover:underline text-sm">
+                    View All <i class="fas fa-arrow-right text-xs"></i>
+                </a>
+                @endif
+            </div>
+
+            <!-- Scroll Wrapper with nav buttons -->
+            <div class="relative">
+                <button onclick="scrollRelated(-1)"
+                        class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white shadow-lg rounded-full flex items-center justify-center text-gray-600 hover:text-primary hover:shadow-xl transition -ml-4">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div id="relatedScroll"
+                     class="flex gap-5 overflow-x-auto pb-3 px-1"
+                     style="scrollbar-width:none; -ms-overflow-style:none; scroll-behavior:smooth;">
+                    @foreach($related as $relatedItem)
+                    <a href="{{ $relatedItem->category ? route('marketplace.show.category', ['category_slug' => $relatedItem->category->slug, 'listing' => $relatedItem->slug]) : route('marketplace.show', $relatedItem) }}"
+                       class="flex-shrink-0 w-52 bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group border border-gray-100">
+                        <div class="w-full h-52 bg-gray-100 overflow-hidden">
+                            @if($relatedItem->images->first())
+                            <img src="{{ asset('storage/' . $relatedItem->images->first()->path) }}"
+                                 alt="{{ $relatedItem->title }}"
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            @else
+                            <div class="w-full h-full flex items-center justify-center">
+                                <i class="fas fa-image text-gray-300 text-4xl"></i>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <h5 class="font-medium text-gray-800 line-clamp-2 text-sm mb-1">{{ $relatedItem->title }}</h5>
-                                <div class="flex items-center gap-1 mb-1">
-                                    @php
-                                        $relatedRating = \App\Models\Review::getAverageRating($relatedItem->id);
-                                    @endphp
-                                    @for($i = 1; $i <= 5; $i++)
-                                    <i class="fas fa-star text-xs {{ $i <= round($relatedRating) ? 'text-yellow-400' : 'text-gray-200' }}"></i>
-                                    @endfor
-                                </div>
-                                <p class="font-bold text-primary">UGX {{ number_format($relatedItem->price, 2) }}</p>
+                            @endif
+                        </div>
+                        <div class="p-4">
+                            <h5 class="font-semibold text-gray-800 line-clamp-2 text-sm mb-2 leading-snug">{{ $relatedItem->title }}</h5>
+                            <div class="flex items-center gap-0.5 mb-2">
+                                @php
+                                    $relatedRating = \App\Models\Review::getAverageRating($relatedItem->id);
+                                @endphp
+                                @for($i = 1; $i <= 5; $i++)
+                                <i class="fas fa-star text-xs {{ $i <= round($relatedRating) ? 'text-yellow-400' : 'text-gray-200' }}"></i>
+                                @endfor
                             </div>
-                        </a>
-                        @endforeach
-                    </div>
-                    
-                    @if($listing->category)
-                    <a href="{{ route('marketplace.index', ['category' => $listing->category->id]) }}" 
-                       class="block mt-4 text-center text-primary font-medium hover:underline">
-                        View All in {{ $listing->category->name }} →
+                            <p class="font-bold text-primary text-base">UGX {{ number_format($relatedItem->price, 2) }}</p>
+                        </div>
                     </a>
-                    @endif
+                    @endforeach
+                </div>
+                <button onclick="scrollRelated(1)"
+                        class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white shadow-lg rounded-full flex items-center justify-center text-gray-600 hover:text-primary hover:shadow-xl transition -mr-4">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        @endif
+
+        <!-- Advertisements - Small & Centered -->
+        @if(isset($advertisements) && $advertisements->count() > 0)
+        <div class="mt-6 mb-2 flex flex-col items-center">
+            <span class="text-xs text-gray-400 uppercase tracking-widest font-semibold mb-2">Advertisement</span>
+            <div class="relative w-full max-w-sm" id="showAdCarousel">
+                @foreach($advertisements as $adIndex => $ad)
+                <div class="show-ad-slide {{ $adIndex === 0 ? 'block' : 'hidden' }}" data-index="{{ $adIndex }}">
+                    <a href="{{ $ad->link ?? '#' }}" {{ $ad->link ? 'target="_blank"' : '' }} class="block relative rounded-xl overflow-hidden shadow-sm">
+                        @if($ad->media_type == 'image')
+                            <img src="{{ Storage::url($ad->media_path) }}" alt="{{ $ad->title }}"
+                                 class="w-full object-cover" style="height:110px; object-position:center;">
+                        @else
+                            <video src="{{ Storage::url($ad->media_path) }}"
+                                   class="w-full object-cover" style="height:110px;"
+                                   autoplay muted loop playsinline></video>
+                        @endif
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-3 py-1.5 text-white">
+                            <p class="text-xs font-semibold line-clamp-1">{{ $ad->title }}</p>
+                        </div>
+                    </a>
+                </div>
+                @endforeach
+                @if($advertisements->count() > 1)
+                <div class="flex justify-center gap-1.5 mt-2">
+                    @foreach($advertisements as $adIndex => $ad)
+                    <button class="show-ad-dot w-1.5 h-1.5 rounded-full {{ $adIndex === 0 ? 'bg-primary' : 'bg-gray-300' }} transition-colors" onclick="showAdSlide({{ $adIndex }})"></button>
+                    @endforeach
                 </div>
                 @endif
             </div>
         </div>
+        @endif
+
     </div>
 </div>
 
@@ -2648,5 +2727,53 @@ function copyLink() {
     navigator.clipboard.writeText(window.location.href);
     showToast('Link copied to clipboard!', 'success');
 }
+
+// Admin Advertisement Carousel
+(function() {
+    const slides = document.querySelectorAll('.show-ad-slide');
+    const dots   = document.querySelectorAll('.show-ad-dot');
+    let current  = 0;
+    if (slides.length <= 1) return;
+
+    window.showAdSlide = function(index) {
+        slides.forEach(s => s.classList.add('hidden'));
+        slides[index].classList.remove('hidden');
+        dots.forEach((d, i) => {
+            d.classList.toggle('bg-white',    i === index);
+            d.classList.toggle('bg-white/50', i !== index);
+        });
+        current = index;
+    };
+
+    setInterval(() => {
+        showAdSlide((current + 1) % slides.length);
+    }, 4000);
+})();
+
+// Related Products horizontal scroll
+function scrollRelated(dir) {
+    const el = document.getElementById('relatedScroll');
+    if (el) el.scrollBy({ left: dir * 700, behavior: 'smooth' });
+}
+
+// Auto-scroll related products carousel
+(function() {
+    const el = document.getElementById('relatedScroll');
+    if (!el) return;
+    let paused = false;
+    el.addEventListener('mouseenter', () => paused = true);
+    el.addEventListener('mouseleave', () => paused = false);
+    el.addEventListener('touchstart', () => paused = true, { passive: true });
+    el.addEventListener('touchend', () => setTimeout(() => paused = false, 2000), { passive: true });
+    setInterval(() => {
+        if (paused) return;
+        const maxScroll = el.scrollWidth - el.clientWidth;
+        if (el.scrollLeft >= maxScroll - 2) {
+            el.scrollTo({ left: 0, behavior: 'smooth' });
+        } else {
+            el.scrollBy({ left: 220, behavior: 'smooth' });
+        }
+    }, 3000);
+})();
 </script>
 @endpush

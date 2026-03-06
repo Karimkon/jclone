@@ -280,11 +280,14 @@ private function renderPublicListing(Listing $listing)
         ->where('is_active', true)
         ->whereHas('user', fn($q) => $q->where('is_active', true))
         ->with('images')
-        ->take(4)
+        ->take(10)
         ->get();
 
+    // Get active advertisements
+    $advertisements = \App\Models\Advertisement::where('is_active', true)->get();
+
     return view('marketplace.show', compact(
-        'listing', 
+        'listing',
         'related',
         'reviewStats',
         'totalDistribution',
@@ -297,7 +300,8 @@ private function renderPublicListing(Listing $listing)
         'availableSizes',
         'hasVariations',
         'deliveryPerformance',
-        'deliveryStats'
+        'deliveryStats',
+        'advertisements'
     ));
 }
 

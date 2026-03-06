@@ -14,19 +14,21 @@
                     Your trusted marketplace with escrow protection. Shop safely with confidence.
                 </p>
                 <div class="flex flex-wrap gap-2">
-                    <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-all duration-200 hover:scale-110">
+                    <a href="https://www.facebook.com/share/1AmT9d3Xji/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-all duration-200 hover:scale-110">
                         <i class="fab fa-facebook-f"></i>
                     </a>
-                    <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-sky-500 transition-all duration-200 hover:scale-110">
-                        <i class="fab fa-twitter"></i>
+                    <a href="https://x.com/BebamartGlobal" target="_blank" rel="noopener noreferrer" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gray-600 transition-all duration-200 hover:scale-110">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
                     </a>
-                    <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gradient-to-br hover:from-purple-600 hover:to-pink-500 transition-all duration-200 hover:scale-110">
+                    <a href="http://instagram.com/bebamartglobal" target="_blank" rel="noopener noreferrer" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-pink-600 transition-all duration-200 hover:scale-110">
                         <i class="fab fa-instagram"></i>
                     </a>
-                    <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110">
+                    <a href="https://www.tiktok.com/@bebamart.global?lang=en" target="_blank" rel="noopener noreferrer" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-black transition-all duration-200 hover:scale-110">
                         <i class="fab fa-tiktok"></i>
                     </a>
-                    <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-green-500 transition-all duration-200 hover:scale-110">
+                    <a href="https://wa.me/256782971912" target="_blank" rel="noopener noreferrer" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-green-500 transition-all duration-200 hover:scale-110">
                         <i class="fab fa-whatsapp"></i>
                     </a>
                 </div>
