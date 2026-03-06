@@ -1256,6 +1256,34 @@ Route::get('/marketplace', function (Request $request) {
     }
 });
 
+// Public vendor profile endpoint
+Route::get('/vendors/{id}/profile', function ($id) {
+    $vendor = \DB::table('vendor_profiles')->where('id', $id)->first();
+    if (!$vendor) {
+        return response()->json(['success' => false, 'message' => 'Vendor not found'], 404);
+    }
+    $user = \DB::table('users')->where('id', $vendor->user_id)->first();
+    $meta = $vendor->meta ? json_decode($vendor->meta, true) : [];
+    $logoRaw = $meta['logo'] ?? null;
+    $logoUrl = $logoRaw ? (str_starts_with($logoRaw, 'http') ? $logoRaw : asset('storage/' . $logoRaw)) : null;
+    return response()->json([
+        'success' => true,
+        'vendor' => [
+            'id' => $vendor->id,
+            'user_id' => $vendor->user_id,
+            'business_name' => $vendor->business_name ?? $user->name ?? 'Vendor',
+            'phone' => $meta['phone'] ?? ($user->phone ?? null),
+            'city' => $vendor->city,
+            'country' => $vendor->country,
+            'address' => $vendor->address,
+            'description' => $meta['description'] ?? null,
+            'logo' => $logoUrl,
+            'is_verified' => $user ? ($user->is_admin_verified ?? false) : false,
+            'created_at' => $vendor->created_at,
+        ],
+    ]);
+});
+
 Route::get('/marketplace/{id}', function ($id) {
     $listing = Listing::with(['category', 'user.vendorProfile', 'variants', 'images', 'reviews.user'])
         ->where('is_active', true)
@@ -1291,7 +1319,12 @@ Route::get('/marketplace/{id}', function ($id) {
             'category' => $listing->category ? ['id' => $listing->category->id, 'name' => $listing->category->name] : null,
             'vendor' => $listing->user && $listing->user->vendorProfile ? [
                 'id' => $listing->user->vendorProfile->id,
+                'user_id' => $listing->user->id,
                 'business_name' => $listing->user->vendorProfile->business_name ?? $listing->user->name,
+                'phone' => $listing->user->vendorProfile->business_phone ?? $listing->user->phone,
+                'city' => $listing->user->vendorProfile->city,
+                'country' => $listing->user->vendorProfile->country,
+                'logo' => $listing->user->vendorProfile->logo,
                 'created_at' => $listing->user->vendorProfile->created_at?->toIso8601String(),
                 'is_verified' => $listing->user->is_admin_verified ?? false,
             ] : null,
@@ -4329,6 +4362,24 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             $participantAvatar = $vendorProfile->logo ?? null;
         }
 
+        // Get listing preview if conversation is about a specific product
+        $listingPreview = null;
+        if ($conversation->listing_id) {
+            $listingData = \DB::table('listings')->where('id', $conversation->listing_id)->first();
+            if ($listingData) {
+                $listingImage = \DB::table('listing_images')
+                    ->where('listing_id', $conversation->listing_id)
+                    ->orderBy('order', 'asc')
+                    ->first();
+                $listingPreview = [
+                    'id' => $listingData->id,
+                    'title' => $listingData->title,
+                    'price' => $listingData->price,
+                    'image' => $listingImage ? $listingImage->path : null,
+                ];
+            }
+        }
+
         return response()->json([
             'success' => true,
             'conversation' => [
@@ -4337,6 +4388,7 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
                 'participant_avatar' => $participantAvatar,
                 'subject' => $conversation->subject,
                 'listing_id' => $conversation->listing_id,
+                'listing' => $listingPreview,
             ],
             'messages' => $messages,
         ]);
