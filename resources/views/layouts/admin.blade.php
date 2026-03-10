@@ -1092,6 +1092,17 @@
                 </div>
 
                 <div class="nav-item">
+                    <a href="{{ route('admin.broadcasts.index') }}"
+                       class="nav-link {{ request()->routeIs('admin.broadcasts.*') ? 'active' : '' }}">
+                        <div class="nav-icon">
+                            <i class="fas fa-bell"></i>
+                        </div>
+                        <span class="nav-text">Broadcasts</span>
+                        <div class="nav-tooltip">Broadcasts</div>
+                    </a>
+                </div>
+
+                <div class="nav-item">
                     <a href="{{ route('admin.newsletters.index') }}"
                        class="nav-link {{ request()->routeIs('admin.newsletters.*') ? 'active' : '' }}">
                         <div class="nav-icon">

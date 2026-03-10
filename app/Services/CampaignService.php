@@ -37,6 +37,10 @@ class CampaignService
                 }
                 $recipients = $query->select('id', 'email', 'phone')->get();
                 break;
+            case 'specific_users':
+                $userIds = $campaign->filters['user_ids'] ?? [];
+                $recipients = User::where('is_active', true)->whereIn('id', $userIds)->select('id', 'email', 'phone')->get();
+                break;
         }
 
         $count = 0;
@@ -91,6 +95,9 @@ class CampaignService
                     $query->whereIn('role', $filters['roles']);
                 }
                 $count = $query->count();
+                break;
+            case 'specific_users':
+                $count = count($filters['user_ids'] ?? []);
                 break;
             default:
                 $count = 0;

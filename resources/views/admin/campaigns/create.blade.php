@@ -3,6 +3,41 @@
 @section('title', 'Create Campaign - Admin Dashboard')
 @section('page-title', 'Create Campaign')
 
+@push('styles')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Select2 base styling to match Tailwind */
+    .select2-container--default .select2-selection--multiple {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 4px 6px;
+        min-height: 42px;
+    }
+    .select2-container--default.select2-container--focus .select2-selection--multiple {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgba(99,102,241,0.2);
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: #e0e7ff;
+        border: none;
+        color: #3730a3;
+        border-radius: 0.375rem;
+        padding: 2px 8px;
+        font-size: 0.75rem;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: #6366f1;
+        margin-right: 4px;
+    }
+    .select2-dropdown { border-radius: 0.5rem; border: 1px solid #d1d5db; }
+    .select2-search--dropdown .select2-search__field { border-radius: 0.375rem; border: 1px solid #d1d5db; padding: 6px 10px; }
+    .select2-results__option { padding: 8px 12px; font-size: 0.875rem; }
+    .select2-results__option--highlighted { background-color: #6366f1 !important; }
+    .select2-results__option .user-email { font-size: 0.75rem; color: #6b7280; }
+    .select2-results__option--highlighted .user-email { color: #c7d2fe; }
+</style>
+@endpush
+
 @section('content')
 <div class="max-w-4xl mx-auto">
     <form action="{{ route('admin.campaigns.store') }}" method="POST" id="campaignForm">
@@ -51,15 +86,16 @@
                         <select name="audience" id="audience" required
                                 class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                                 onchange="updateAudienceCount(); toggleCustomFilters()">
-                            <option value="all" {{ old('audience') === 'all' ? 'selected' : '' }}>All Users</option>
-                            <option value="buyers" {{ old('audience') === 'buyers' ? 'selected' : '' }}>Buyers Only</option>
-                            <option value="vendors" {{ old('audience') === 'vendors' ? 'selected' : '' }}>Vendors Only</option>
-                            <option value="newsletter" {{ old('audience') === 'newsletter' ? 'selected' : '' }}>Newsletter Subscribers</option>
-                            <option value="custom" {{ old('audience') === 'custom' ? 'selected' : '' }}>Custom Selection</option>
+                            <option value="all"            {{ old('audience') === 'all'            ? 'selected' : '' }}>All Users</option>
+                            <option value="buyers"         {{ old('audience') === 'buyers'         ? 'selected' : '' }}>Buyers Only</option>
+                            <option value="vendors"        {{ old('audience') === 'vendors'        ? 'selected' : '' }}>Vendors Only</option>
+                            <option value="newsletter"     {{ old('audience') === 'newsletter'     ? 'selected' : '' }}>Newsletter Subscribers</option>
+                            <option value="custom"         {{ old('audience') === 'custom'         ? 'selected' : '' }}>Custom (by Role)</option>
+                            <option value="specific_users" {{ old('audience') === 'specific_users' ? 'selected' : '' }}>Specific Users</option>
                         </select>
                     </div>
 
-                    <!-- Custom Filters (shown when audience=custom) -->
+                    <!-- Custom Role Filters (shown when audience=custom) -->
                     <div id="customFilters" class="hidden bg-gray-50 rounded-lg p-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Select Roles</label>
                         <div class="flex flex-wrap gap-3">
@@ -73,6 +109,29 @@
                             </label>
                             @endforeach
                         </div>
+                    </div>
+
+                    <!-- Specific Users Select2 (shown when audience=specific_users) -->
+                    <div id="specificUsersField" class="hidden">
+                        <label for="userSelect2" class="block text-sm font-medium text-gray-700 mb-1">
+                            Search &amp; Select Users *
+                            <span class="text-gray-400 font-normal ml-1">— type to search by name or email</span>
+                        </label>
+                        <select id="userSelect2" name="filters[user_ids][]" multiple
+                                class="w-full" style="width:100%">
+                            @foreach(old('filters.user_ids', []) as $uid)
+                                @php $u = App\Models\User::find($uid) @endphp
+                                @if($u)
+                                    <option value="{{ $u->id }}" selected>{{ $u->name }} — {{ $u->email }}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                        @error('filters.user_ids')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+                        @error('filters.user_ids.*')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
             </div>
@@ -169,12 +228,53 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         toggleTypeFields();
         toggleCustomFilters();
         updateAudienceCount();
+        initSelect2();
     });
+
+    // ─── Select2 init ────────────────────────────────────────────────
+    function initSelect2() {
+        $('#userSelect2').select2({
+            placeholder: 'Type a name or email to search...',
+            minimumInputLength: 2,
+            allowClear: true,
+            ajax: {
+                url: '{{ route("admin.campaigns.search-users") }}',
+                dataType: 'json',
+                delay: 300,
+                data: function(params) { return { q: params.term }; },
+                processResults: function(data) {
+                    return {
+                        results: data.map(function(u) {
+                            return { id: u.id, text: u.name, email: u.email, role: u.role };
+                        })
+                    };
+                },
+                cache: true
+            },
+            templateResult: function(u) {
+                if (u.loading) return u.text;
+                return $('<span>' + u.text + '<br><small class="user-email">' + (u.email || '') + ' · ' + (u.role || '') + '</small></span>');
+            },
+            templateSelection: function(u) { return u.text || u.id; }
+        }).on('change', function() {
+            const count = $(this).val() ? $(this).val().length : 0;
+            document.getElementById('audienceCount').textContent = count > 0 ? '(' + count + ' selected)' : '';
+        });
+    }
+
+    // ─── Toggle panels ───────────────────────────────────────────────
+    function toggleCustomFilters() {
+        const audience = document.getElementById('audience').value;
+        document.getElementById('customFilters').classList.toggle('hidden', audience !== 'custom');
+        document.getElementById('specificUsersField').classList.toggle('hidden', audience !== 'specific_users');
+    }
 
     function toggleTypeFields() {
         const type = document.querySelector('input[name="type"]:checked')?.value || 'email';
@@ -197,9 +297,7 @@
         const newsletterOption = audienceSelect.querySelector('option[value="newsletter"]');
         if (type === 'sms') {
             newsletterOption.disabled = true;
-            if (audienceSelect.value === 'newsletter') {
-                audienceSelect.value = 'all';
-            }
+            if (audienceSelect.value === 'newsletter') audienceSelect.value = 'all';
         } else {
             newsletterOption.disabled = false;
         }
@@ -207,27 +305,28 @@
         updateAudienceCount();
     }
 
-    function toggleCustomFilters() {
-        const audience = document.getElementById('audience').value;
-        document.getElementById('customFilters').classList.toggle('hidden', audience !== 'custom');
-    }
-
     function updateCharCount() {
         const text = document.getElementById('smsMessage').value;
         document.getElementById('charCount').textContent = text.length;
     }
 
+    // ─── Audience count ──────────────────────────────────────────────
     function updateAudienceCount() {
         const audience = document.getElementById('audience').value;
+
+        // For specific_users, count is driven by Select2 selection
+        if (audience === 'specific_users') {
+            const count = ($('#userSelect2').val() || []).length;
+            document.getElementById('audienceCount').textContent = count > 0 ? '(' + count + ' selected)' : '';
+            return;
+        }
+
         const type = document.querySelector('input[name="type"]:checked')?.value || 'email';
         const checkedRoles = Array.from(document.querySelectorAll('input[name="filters[roles][]"]:checked')).map(el => el.value);
 
         fetch('{{ route("admin.campaigns.audience-count") }}', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
             body: JSON.stringify({ audience, type, filters: { roles: checkedRoles } })
         })
         .then(r => r.json())
@@ -237,22 +336,22 @@
         .catch(() => {});
     }
 
+    // ─── Form submission ─────────────────────────────────────────────
     function submitForm(action) {
         document.getElementById('formAction').value = action;
-
         const type = document.querySelector('input[name="type"]:checked')?.value || 'email';
         if (type === 'sms') {
             document.getElementById('emailMessage').value = document.getElementById('smsMessage').value;
         }
-
         document.getElementById('campaignForm').submit();
     }
 
     function confirmSend() {
         const audience = document.getElementById('audience');
         const audienceText = audience.options[audience.selectedIndex].text;
+        const countText = document.getElementById('audienceCount').textContent;
 
-        if (confirm('Are you sure you want to send this campaign to "' + audienceText + '" now? This action cannot be undone.')) {
+        if (confirm('Are you sure you want to send this campaign to "' + audienceText + '" ' + countText + ' now? This action cannot be undone.')) {
             submitForm('send');
         }
     }
@@ -263,11 +362,8 @@
 
         fetch('{{ route("admin.campaigns.preview") }}', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ message: message, subject: subject })
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            body: JSON.stringify({ message, subject })
         })
         .then(r => r.json())
         .then(data => {

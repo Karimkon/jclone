@@ -40,6 +40,7 @@ use \App\Http\Controllers\Admin\AdminSettingsController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\Admin\CampaignController;
 use App\Http\Controllers\Admin\AdminNewsletterController;
+use App\Http\Controllers\Admin\AdminBroadcastController;
 
 // ====================
 // PUBLIC ROUTES
@@ -649,6 +650,17 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/{campaign}/duplicate', [CampaignController::class, 'duplicate'])->name('duplicate');
             Route::post('/preview', [CampaignController::class, 'preview'])->name('preview');
             Route::post('/audience-count', [CampaignController::class, 'getAudienceCount'])->name('audience-count');
+            Route::get('/search-users', [CampaignController::class, 'searchUsers'])->name('search-users');
+        });
+
+        // Broadcasts (Admin In-App Messages)
+        Route::prefix('broadcasts')->name('broadcasts.')->group(function () {
+            Route::get('/', [AdminBroadcastController::class, 'index'])->name('index');
+            Route::get('/create', [AdminBroadcastController::class, 'create'])->name('create');
+            Route::post('/', [AdminBroadcastController::class, 'store'])->name('store');
+            Route::post('/{broadcast}/cancel', [AdminBroadcastController::class, 'cancel'])->name('cancel');
+            Route::post('/audience-count', [AdminBroadcastController::class, 'getAudienceCount'])->name('audience-count');
+            Route::get('/search-users', [AdminBroadcastController::class, 'searchUsers'])->name('search-users');
         });
 
         // Newsletter Subscribers

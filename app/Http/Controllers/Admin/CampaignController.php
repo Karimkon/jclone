@@ -55,10 +55,12 @@ class CampaignController extends Controller
             'subject' => 'nullable|string|max:255',
             'message' => 'required|string',
             'type' => 'required|in:email,sms',
-            'audience' => 'required|in:all,buyers,vendors,newsletter,custom',
+            'audience' => 'required|in:all,buyers,vendors,newsletter,custom,specific_users',
             'filters' => 'nullable|array',
             'filters.roles' => 'nullable|array',
             'filters.roles.*' => 'string|in:buyer,vendor,admin,support,logistics',
+            'filters.user_ids' => 'nullable|array',
+            'filters.user_ids.*' => 'integer|exists:users,id',
             'scheduled_at' => 'nullable|date|after:now',
             'action' => 'required|in:draft,send,schedule',
         ]);
@@ -141,10 +143,12 @@ class CampaignController extends Controller
             'subject' => 'nullable|string|max:255',
             'message' => 'required|string',
             'type' => 'required|in:email,sms',
-            'audience' => 'required|in:all,buyers,vendors,newsletter,custom',
+            'audience' => 'required|in:all,buyers,vendors,newsletter,custom,specific_users',
             'filters' => 'nullable|array',
             'filters.roles' => 'nullable|array',
             'filters.roles.*' => 'string|in:buyer,vendor,admin,support,logistics',
+            'filters.user_ids' => 'nullable|array',
+            'filters.user_ids.*' => 'integer|exists:users,id',
             'scheduled_at' => 'nullable|date|after:now',
             'action' => 'required|in:draft,send,schedule',
         ]);
@@ -234,10 +238,25 @@ class CampaignController extends Controller
         return response()->json(['html' => $html]);
     }
 
+    public function searchUsers(Request $request)
+    {
+        $request->validate(['q' => 'required|string|min:2']);
+
+        $users = \App\Models\User::where(function ($query) use ($request) {
+                $query->where('email', 'like', '%' . $request->q . '%')
+                      ->orWhere('name', 'like', '%' . $request->q . '%');
+            })
+            ->select('id', 'name', 'email', 'role')
+            ->limit(20)
+            ->get();
+
+        return response()->json($users);
+    }
+
     public function getAudienceCount(Request $request)
     {
         $request->validate([
-            'audience' => 'required|in:all,buyers,vendors,newsletter,custom',
+            'audience' => 'required|in:all,buyers,vendors,newsletter,custom,specific_users',
             'type' => 'required|in:email,sms',
             'filters' => 'nullable|array',
         ]);
