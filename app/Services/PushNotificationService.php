@@ -148,7 +148,6 @@ class PushNotificationService
                     'priority' => 'high',
                     'notification' => [
                         'channel_id' => 'bebamart_notifications',
-                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
                     ],
                 ],
                 'apns' => [

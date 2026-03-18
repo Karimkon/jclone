@@ -418,6 +418,39 @@ class OrderController extends Controller
 
             DB::commit();
 
+            // Notify vendors and buyer after successful order placement
+            try {
+                $pushService = new \App\Services\PushNotificationService();
+                foreach ($orders as $placedOrder) {
+                    $vendorUserId = $placedOrder->vendorProfile?->user_id;
+                    if (!$vendorUserId) continue;
+
+                    if ($validated['payment_method'] === 'wallet') {
+                        $pushService->sendToUser(
+                            $vendorUserId, 'vendor_order',
+                            "New order received! 🎉",
+                            "Order #{$placedOrder->order_number} — UGX " . number_format($placedOrder->total, 0) . ". Wallet payment confirmed!",
+                            ['route' => '/vendor/orders/' . $placedOrder->id]
+                        );
+                        $pushService->sendToUser(
+                            $placedOrder->buyer_id, 'order_update',
+                            "Order Confirmed! ✅",
+                            "Your order #{$placedOrder->order_number} is confirmed. The vendor will process it soon.",
+                            ['route' => '/orders/' . $placedOrder->id]
+                        );
+                    } elseif ($validated['payment_method'] === 'cash_on_delivery') {
+                        $pushService->sendToUser(
+                            $vendorUserId, 'vendor_order',
+                            "New COD order! 🛒",
+                            "Order #{$placedOrder->order_number} — UGX " . number_format($placedOrder->total, 0) . ". Cash on delivery.",
+                            ['route' => '/vendor/orders/' . $placedOrder->id]
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Order notification failed', ['error' => $e->getMessage()]);
+            }
+
             // Redirect based on payment method
             if ($validated['payment_method'] === 'cash_on_delivery' || $validated['payment_method'] === 'wallet') {
                 return redirect()->route('buyer.orders.show', $orders[0]->id)

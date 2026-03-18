@@ -159,7 +159,7 @@ class NotificationAlgorithmService
 
             // Skip if user completed an order in the past 24 hours (cart may already be fulfilled)
             $recentOrder = DB::table('orders')
-                ->where('user_id', $cart->user_id)
+                ->where('buyer_id', $cart->user_id)
                 ->where('created_at', '>=', Carbon::now()->subHours(24))
                 ->exists();
 
