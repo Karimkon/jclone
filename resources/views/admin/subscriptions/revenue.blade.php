@@ -7,25 +7,92 @@
 @section('content')
 <div class="container-fluid">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-6">
+    <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">Subscription Revenue</h1>
             <p class="text-gray-600">Track subscription revenue and analytics</p>
         </div>
         <div class="flex gap-2">
-            <a href="{{ route('admin.subscriptions.index') }}" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
-                <i class="fas fa-arrow-left mr-2"></i>Back
+            <a href="{{ route('admin.subscriptions.payments') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                <i class="fas fa-list mr-2"></i>All Payments
             </a>
-            <form method="GET" class="flex gap-2">
-                <select name="period" onchange="this.form.submit()"
-                        class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary">
-                    <option value="7" {{ $period == '7' ? 'selected' : '' }}>Last 7 days</option>
-                    <option value="30" {{ $period == '30' ? 'selected' : '' }}>Last 30 days</option>
-                    <option value="90" {{ $period == '90' ? 'selected' : '' }}>Last 90 days</option>
-                    <option value="365" {{ $period == '365' ? 'selected' : '' }}>Last year</option>
-                </select>
-            </form>
+            <a href="{{ route('admin.subscriptions.index') }}" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition">
+                <i class="fas fa-arrow-left mr-2"></i>Subscriptions
+            </a>
         </div>
+    </div>
+
+    <!-- Analytics Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
+        <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-4">
+            <i class="fas fa-filter mr-2 text-green-500"></i>Analytics Filters
+        </h3>
+        <form method="GET" id="revenueFilterForm" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Period preset -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Quick Period</label>
+                    <select name="period" id="periodSelect"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="7"   {{ $period == '7'   && !$dateFrom ? 'selected' : '' }}>Last 7 days</option>
+                        <option value="30"  {{ $period == '30'  && !$dateFrom ? 'selected' : '' }}>Last 30 days</option>
+                        <option value="90"  {{ $period == '90'  && !$dateFrom ? 'selected' : '' }}>Last 90 days</option>
+                        <option value="365" {{ $period == '365' && !$dateFrom ? 'selected' : '' }}>Last 12 months</option>
+                    </select>
+                </div>
+                <!-- Custom date from -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">
+                        Custom From <span class="text-gray-400 font-normal">(overrides period)</span>
+                    </label>
+                    <input type="date" name="date_from" id="dateFrom" value="{{ $dateFrom }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                </div>
+                <!-- Custom date to -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Custom To</label>
+                    <input type="date" name="date_to" id="dateTo" value="{{ $dateTo }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                </div>
+                <!-- Plan filter -->
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Subscription Plan</label>
+                    <select name="plan_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="">All Plans</option>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}" {{ $planId == $plan->id ? 'selected' : '' }}>
+                                {{ $plan->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 flex-wrap items-center">
+                <button type="submit" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">
+                    <i class="fas fa-chart-line mr-1"></i>Update Analytics
+                </button>
+                <a href="{{ route('admin.subscriptions.revenue') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+                    <i class="fas fa-times mr-1"></i>Reset
+                </a>
+
+                <!-- Quick presets -->
+                <div class="ml-2 flex gap-1 flex-wrap">
+                    <button type="button" onclick="setRevenueDateRange(7)"  class="px-3 py-1.5 text-xs border rounded hover:bg-gray-100">7d</button>
+                    <button type="button" onclick="setRevenueDateRange(30)" class="px-3 py-1.5 text-xs border rounded hover:bg-gray-100">30d</button>
+                    <button type="button" onclick="setRevenueDateRange(90)" class="px-3 py-1.5 text-xs border rounded hover:bg-gray-100">90d</button>
+                    <button type="button" onclick="setThisMonth()"          class="px-3 py-1.5 text-xs border rounded hover:bg-gray-100">This month</button>
+                    <button type="button" onclick="setThisYear()"           class="px-3 py-1.5 text-xs border rounded hover:bg-gray-100">This year</button>
+                </div>
+
+                @if($dateFrom)
+                <span class="ml-auto px-3 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-medium border border-green-200">
+                    <i class="fas fa-calendar mr-1"></i>
+                    {{ \Carbon\Carbon::parse($dateFrom)->format('M d, Y') }} — {{ \Carbon\Carbon::parse($dateTo)->format('M d, Y') }}
+                    @if($planId) &nbsp;·&nbsp; Plan: {{ $plans->firstWhere('id', $planId)?->name }} @endif
+                </span>
+                @endif
+            </div>
+        </form>
     </div>
 
     <!-- Stats Grid -->
@@ -98,10 +165,19 @@
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="3" class="px-6 py-4 text-center text-gray-500">No revenue data</td>
+                        <td colspan="3" class="px-6 py-4 text-center text-gray-500">No revenue data for this period</td>
                     </tr>
                     @endforelse
                 </tbody>
+                @if($revenueByPlan->count() > 0)
+                <tfoot class="bg-gray-50 border-t-2">
+                    <tr>
+                        <td class="px-6 py-3 text-sm font-bold">Total</td>
+                        <td class="px-6 py-3 text-right text-sm font-bold text-green-600">UGX {{ number_format($revenueByPlan->sum('total')) }}</td>
+                        <td class="px-6 py-3 text-right text-sm font-bold">{{ $revenueByPlan->sum('count') }}</td>
+                    </tr>
+                </tfoot>
+                @endif
             </table>
         </div>
 
@@ -163,9 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: { display: false }
-            },
+            plugins: { legend: { display: false } },
             scales: {
                 y: {
                     beginAtZero: true,
@@ -188,23 +262,40 @@ document.addEventListener('DOMContentLoaded', function() {
             labels: planData.map(d => d.name),
             datasets: [{
                 data: planData.map(d => d.total),
-                backgroundColor: [
-                    '#6366f1',
-                    '#f59e0b',
-                    '#9ca3af',
-                    '#ef4444'
-                ]
+                backgroundColor: ['#f59e0b', '#9ca3af', '#f97316', '#6366f1']
             }]
         },
         options: {
             responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
+            plugins: { legend: { position: 'bottom' } }
         }
     });
 });
+
+function setRevenueDateRange(days) {
+    const today = new Date();
+    const from  = new Date(today);
+    from.setDate(today.getDate() - days);
+    const fmt = d => d.toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = fmt(from);
+    document.getElementById('dateTo').value   = fmt(today);
+    document.getElementById('revenueFilterForm').submit();
+}
+
+function setThisMonth() {
+    const now = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = fmt(new Date(now.getFullYear(), now.getMonth(), 1));
+    document.getElementById('dateTo').value   = fmt(now);
+    document.getElementById('revenueFilterForm').submit();
+}
+
+function setThisYear() {
+    const now = new Date();
+    const fmt = d => d.toISOString().split('T')[0];
+    document.getElementById('dateFrom').value = fmt(new Date(now.getFullYear(), 0, 1));
+    document.getElementById('dateTo').value   = fmt(now);
+    document.getElementById('revenueFilterForm').submit();
+}
 </script>
 @endsection

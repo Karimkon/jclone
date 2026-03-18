@@ -57,6 +57,46 @@
     @endforeach
 </div>
 
+<!-- Subscription Revenue Section -->
+<div class="mb-6 p-4 rounded-xl" style="background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(99,102,241,0.05)); border: 1px solid rgba(139,92,246,0.2);">
+    <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-crown text-yellow-400"></i>
+            <span class="text-sm font-semibold text-purple-300">Vendor Subscription Revenue</span>
+            <span class="text-xs text-dark-500">(Pesapal — separate from order commissions)</span>
+        </div>
+        <a href="{{ route('admin.subscriptions.payments') }}" class="text-xs text-indigo-400 hover:text-indigo-300">
+            View all payments <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="text-center p-3 rounded-lg" style="background:rgba(139,92,246,0.1);">
+            <div class="text-xl font-bold text-purple-300 tabular-nums">UGX {{ number_format($subscriptionRevenue, 0) }}</div>
+            <div class="text-xs text-dark-400 mt-1">Period Revenue</div>
+            @php $subChange = $prevSubscriptionRevenue > 0 ? round(($subscriptionRevenue - $prevSubscriptionRevenue) / $prevSubscriptionRevenue * 100, 1) : ($subscriptionRevenue > 0 ? 100 : 0); @endphp
+            <div class="text-xs mt-1 {{ $subChange >= 0 ? 'text-green-400' : 'text-red-400' }}">
+                <i class="fas fa-arrow-{{ $subChange >= 0 ? 'up' : 'down' }} mr-1"></i>{{ abs($subChange) }}% vs prev
+            </div>
+        </div>
+        <div class="text-center p-3 rounded-lg" style="background:rgba(139,92,246,0.1);">
+            <div class="text-xl font-bold text-purple-300 tabular-nums">UGX {{ number_format($subscriptionMRR, 0) }}</div>
+            <div class="text-xs text-dark-400 mt-1">Monthly Recurring Revenue</div>
+            <div class="text-xs text-dark-500 mt-1">Based on active plans</div>
+        </div>
+        <div class="text-center p-3 rounded-lg" style="background:rgba(139,92,246,0.1);">
+            <div class="text-xl font-bold text-white tabular-nums">{{ number_format($activeSubscriptions) }}</div>
+            <div class="text-xs text-dark-400 mt-1">Active Paid Subscriptions</div>
+            <div class="text-xs text-dark-500 mt-1">Currently active vendors</div>
+        </div>
+        <div class="text-center p-3 rounded-lg" style="background:rgba(139,92,246,0.1);">
+            @php $totalPlatformRevenue = $totalCommissions + $subscriptionRevenue; @endphp
+            <div class="text-xl font-bold text-yellow-400 tabular-nums">UGX {{ number_format($totalPlatformRevenue, 0) }}</div>
+            <div class="text-xs text-dark-400 mt-1">Total Platform Income</div>
+            <div class="text-xs text-dark-500 mt-1">Commissions + Subscriptions</div>
+        </div>
+    </div>
+</div>
+
 <!-- Requires Attention -->
 @if($pendingWithdrawals > 0 || $openDisputes > 0 || $pendingVendors > 0 || $outOfStockProducts > 0 || $lowStockProducts > 0)
 <div class="chart-card mb-6" style="border-color: rgba(239,68,68,0.2);">

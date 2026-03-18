@@ -12,12 +12,15 @@
             <h1 class="text-2xl font-bold text-gray-900">Vendor Subscriptions</h1>
             <p class="text-gray-600">Manage all vendor subscription plans and billing</p>
         </div>
-        <div class="flex gap-2">
-            <a href="{{ route('admin.subscriptions.plans.index') }}" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
-                <i class="fas fa-cog mr-2"></i>Manage Plans
+        <div class="flex gap-2 flex-wrap">
+            <a href="{{ route('admin.subscriptions.payments') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                <i class="fas fa-money-bill-wave mr-2"></i>Payments
             </a>
             <a href="{{ route('admin.subscriptions.revenue') }}" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
                 <i class="fas fa-chart-line mr-2"></i>Revenue
+            </a>
+            <a href="{{ route('admin.subscriptions.plans.index') }}" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition">
+                <i class="fas fa-cog mr-2"></i>Plans
             </a>
         </div>
     </div>
@@ -85,42 +88,98 @@
         </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
-        <form method="GET" class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="relative flex-1">
-                <input type="text" name="search" value="{{ request('search') }}"
-                       placeholder="Search by vendor name or email..."
-                       class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+    <!-- Advanced Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-5 mb-6">
+        <h3 class="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-4">
+            <i class="fas fa-filter mr-2 text-primary-500"></i>Filters
+        </h3>
+        <form method="GET" id="subFilterForm" class="space-y-4">
+            <!-- Row 1 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Search</label>
+                    <div class="relative">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                               placeholder="Vendor business name or email..."
+                               class="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                    <select name="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="">All Statuses</option>
+                        <option value="active"    {{ request('status') == 'active'    ? 'selected' : '' }}>Active</option>
+                        <option value="pending"   {{ request('status') == 'pending'   ? 'selected' : '' }}>Pending</option>
+                        <option value="expired"   {{ request('status') == 'expired'   ? 'selected' : '' }}>Expired</option>
+                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Plan</label>
+                    <select name="plan_id" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="">All Plans</option>
+                        @foreach($plans as $plan)
+                            <option value="{{ $plan->id }}" {{ request('plan_id') == $plan->id ? 'selected' : '' }}>{{ $plan->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
             </div>
-
-            <div class="flex space-x-2">
-                <select name="status" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    <option value="">All Status</option>
-                    <option value="active" {{ request('status') == 'active' ? 'selected' : '' }}>Active</option>
-                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                    <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Expired</option>
-                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-                </select>
-
-                <select name="plan_id" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    <option value="">All Plans</option>
-                    @foreach($plans as $plan)
-                        <option value="{{ $plan->id }}" {{ request('plan_id') == $plan->id ? 'selected' : '' }}>{{ $plan->name }}</option>
-                    @endforeach
-                </select>
-
-                <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                    Filter
+            <!-- Row 2 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Subscribed From</label>
+                    <input type="date" name="date_from" value="{{ request('date_from') }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Subscribed To</label>
+                    <input type="date" name="date_to" value="{{ request('date_to') }}"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Auto-Renew</label>
+                    <select name="auto_renew" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="">Any</option>
+                        <option value="1" {{ request('auto_renew') === '1' ? 'selected' : '' }}>Enabled</option>
+                        <option value="0" {{ request('auto_renew') === '0' ? 'selected' : '' }}>Disabled</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Expiring Within</label>
+                    <select name="expiring" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary">
+                        <option value="">Any</option>
+                        <option value="3"  {{ request('expiring') == '3'  ? 'selected' : '' }}>3 days</option>
+                        <option value="7"  {{ request('expiring') == '7'  ? 'selected' : '' }}>7 days</option>
+                        <option value="14" {{ request('expiring') == '14' ? 'selected' : '' }}>14 days</option>
+                        <option value="30" {{ request('expiring') == '30' ? 'selected' : '' }}>30 days</option>
+                    </select>
+                </div>
+            </div>
+            <!-- Actions -->
+            <div class="flex gap-2 flex-wrap items-center">
+                <button type="submit" class="px-5 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 text-sm font-medium">
+                    <i class="fas fa-search mr-1"></i>Apply Filters
                 </button>
-
-                <a href="{{ route('admin.subscriptions.export') }}" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700">
-                    <i class="fas fa-download mr-1"></i>Export
+                <a href="{{ route('admin.subscriptions.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm">
+                    <i class="fas fa-times mr-1"></i>Clear
                 </a>
+                <div class="ml-auto">
+                    <a href="{{ route('admin.subscriptions.export', request()->query()) }}"
+                       class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm">
+                        <i class="fas fa-download mr-1"></i>Export CSV
+                    </a>
+                </div>
             </div>
         </form>
     </div>
+
+    @if(request()->hasAny(['search','status','plan_id','date_from','date_to','auto_renew','expiring']))
+    <div class="mb-4 text-sm text-gray-600">
+        <i class="fas fa-filter text-primary-500 mr-1"></i>
+        Showing <strong>{{ $subscriptions->total() }}</strong> filtered results
+    </div>
+    @endif
 
     <!-- Subscriptions Table -->
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -230,7 +289,7 @@
 
         @if($subscriptions->hasPages())
         <div class="px-6 py-4 border-t">
-            {{ $subscriptions->links() }}
+            {{ $subscriptions->appends(request()->query())->links() }}
         </div>
         @endif
     </div>

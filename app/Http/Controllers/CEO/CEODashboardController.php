@@ -88,6 +88,24 @@ class CEODashboardController extends Controller
             ->where('status', 'held')
             ->sum('amount');
 
+        // Subscription revenue for period
+        $subscriptionRevenue = DB::table('subscription_payments')
+            ->whereBetween('created_at', [$start, $end])
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $activeSubscriptions = DB::table('vendor_subscriptions')
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->count();
+
+        $subscriptionMRR = DB::table('vendor_subscriptions')
+            ->join('subscription_plans', 'vendor_subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+            ->where('vendor_subscriptions.status', 'active')
+            ->where('vendor_subscriptions.expires_at', '>', now())
+            ->where('subscription_plans.price', '>', 0)
+            ->sum('subscription_plans.price');
+
         // Previous period for comparisons
         $prevRevenue = DB::table('orders')
             ->whereBetween('created_at', [$prevStart, $prevEnd])
@@ -106,6 +124,11 @@ class CEODashboardController extends Controller
             ->whereBetween('created_at', [$prevStart, $prevEnd])
             ->whereIn('status', ['delivered', 'shipped', 'processing', 'confirmed'])
             ->sum('platform_commission');
+
+        $prevSubscriptionRevenue = DB::table('subscription_payments')
+            ->whereBetween('created_at', [$prevStart, $prevEnd])
+            ->where('status', 'completed')
+            ->sum('amount');
 
         // 12-month revenue trend
         $monthlyRevenue = DB::table('orders')
@@ -173,6 +196,7 @@ class CEODashboardController extends Controller
         return view('ceo.dashboard', compact(
             'period', 'totalRevenue', 'totalOrders', 'totalUsers', 'totalProducts',
             'totalCommissions', 'escrowHeld',
+            'subscriptionRevenue', 'prevSubscriptionRevenue', 'activeSubscriptions', 'subscriptionMRR',
             'prevRevenue', 'prevOrders', 'prevUsers', 'prevCommissions',
             'monthlyRevenue', 'userGrowth', 'orderStatuses', 'recentOrders',
             'todayRevenue', 'todayOrders', 'todayUsers',
@@ -387,6 +411,42 @@ class CEODashboardController extends Controller
             ->whereIn('status', ['delivered', 'shipped', 'processing', 'confirmed'])
             ->avg('total') ?? 0;
 
+        // Subscription revenue
+        $subscriptionRevenuePeriod = DB::table('subscription_payments')
+            ->whereBetween('created_at', [$start, $end])
+            ->where('status', 'completed')
+            ->sum('amount');
+
+        $subscriptionRevenueByPlan = DB::table('subscription_payments')
+            ->join('vendor_subscriptions', 'subscription_payments.vendor_subscription_id', '=', 'vendor_subscriptions.id')
+            ->join('subscription_plans', 'vendor_subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+            ->whereBetween('subscription_payments.created_at', [$start, $end])
+            ->where('subscription_payments.status', 'completed')
+            ->selectRaw('subscription_plans.name, subscription_plans.slug, SUM(subscription_payments.amount) as total, COUNT(*) as count')
+            ->groupBy('subscription_plans.id', 'subscription_plans.name', 'subscription_plans.slug')
+            ->orderByDesc('total')
+            ->get();
+
+        $monthlySubscriptionRevenue = DB::table('subscription_payments')
+            ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as month, SUM(amount) as revenue, COUNT(*) as payments")
+            ->where('created_at', '>=', Carbon::now()->subMonths(12))
+            ->where('status', 'completed')
+            ->groupByRaw("DATE_FORMAT(created_at, '%Y-%m')")
+            ->orderBy('month')
+            ->get();
+
+        $subscriptionActiveCount = DB::table('vendor_subscriptions')
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->count();
+
+        $subscriptionMRR = DB::table('vendor_subscriptions')
+            ->join('subscription_plans', 'vendor_subscriptions.subscription_plan_id', '=', 'subscription_plans.id')
+            ->where('vendor_subscriptions.status', 'active')
+            ->where('vendor_subscriptions.expires_at', '>', now())
+            ->where('subscription_plans.price', '>', 0)
+            ->sum('subscription_plans.price');
+
         // Revenue by vendor type
         $revenueByVendorType = DB::table('orders')
             ->join('vendor_profiles', 'orders.vendor_profile_id', '=', 'vendor_profiles.id')
@@ -402,7 +462,9 @@ class CEODashboardController extends Controller
             'vendorBalancesTotal', 'vendorPendingTotal', 'vendorBalanceCount',
             'promotionRevenue', 'refundStats',
             'periodRevenue', 'periodCommission', 'periodAvgOrderValue',
-            'revenueByVendorType'
+            'revenueByVendorType',
+            'subscriptionRevenuePeriod', 'subscriptionRevenueByPlan',
+            'monthlySubscriptionRevenue', 'subscriptionActiveCount', 'subscriptionMRR'
         ));
     }
 

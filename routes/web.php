@@ -565,11 +565,13 @@ Route::middleware(['auth'])->group(function () {
         // Subscription Management
         Route::prefix('subscriptions')->name('subscriptions.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'index'])->name('index');
+            Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'export'])->name('export');
+            Route::get('/revenue/analytics', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'revenue'])->name('revenue');
+            Route::get('/payments', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'payments'])->name('payments');
+            Route::get('/payments/export', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'exportPayments'])->name('payments.export');
             Route::get('/{id}', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'showSubscription'])->name('show');
             Route::post('/{id}/extend', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'extendSubscription'])->name('extend');
             Route::post('/{id}/cancel', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'cancelSubscription'])->name('cancel');
-            Route::get('/export/csv', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'export'])->name('export');
-            Route::get('/revenue/analytics', [\App\Http\Controllers\Admin\AdminSubscriptionController::class, 'revenue'])->name('revenue');
         });
 
         // Subscription Plans Management
