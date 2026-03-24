@@ -378,6 +378,31 @@ button[onclick="closeOptionsModal()"]:hover {
         
         /* Promo */
         .promo-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+
+        /* Buganda Votes Banner Animations */
+        @keyframes bgShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes logoBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            20%       { transform: translateY(-6px) rotate(-8deg); }
+            40%       { transform: translateY(-6px) rotate(8deg); }
+            60%       { transform: translateY(-3px) rotate(-4deg); }
+            80%       { transform: translateY(-3px) rotate(4deg); }
+        }
+        @keyframes btnPulse {
+            0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(255,255,255,.6); }
+            50%       { transform: scale(1.07); box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+        }
+        .buganda-banner {
+            background: linear-gradient(135deg, #f59e0b, #dc2626, #b91c1c, #f59e0b);
+            background-size: 300% 300%;
+            animation: bgShift 3s ease infinite;
+        }
+        .buganda-logo { animation: logoBounce 1.2s ease-in-out infinite; }
+        .buganda-btn  { animation: btnPulse 1.5s ease-in-out infinite; }
         
         /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -620,7 +645,7 @@ main {
             <i class="fab fa-google-play text-sm"></i>
             <span class="hidden sm:inline">Android</span>
         </a>
-        <a href="#" 
+        <a href="https://apps.apple.com/ug/app/bebamart/id6758656832" 
            class="flex items-center gap-1.5 bg-gradient-to-r from-gray-700 to-gray-900 hover:from-gray-800 hover:to-black text-white px-3 py-1.5 rounded-full transition font-medium text-xs shadow-lg shadow-gray-500/25 hover:shadow-gray-500/40 hover:scale-105 transform"
            id="iosDownloadBtn">
             <i class="fab fa-apple text-sm"></i>
@@ -667,7 +692,7 @@ main {
 </a>
             
             <!-- Search - IMPROVED WITH FORM -->
-            <div class="hidden md:flex flex-1 max-w-xl mx-6 relative z-40">
+            <div class="hidden md:flex flex-1 max-w-lg ml-2 mr-2 relative z-40">
                 <form method="GET" action="{{ route('marketplace.index') }}" class="relative w-full" id="searchForm">
                     <input type="text"
                            name="search"
@@ -682,6 +707,21 @@ main {
                 </form>
             </div>
             
+            <!-- Buganda Votes inline promo -->
+            <div id="bugandaVotesBar" class="hidden lg:flex items-center gap-2 buganda-banner text-white px-3 py-1.5 rounded-xl mx-2 whitespace-nowrap relative">
+                <img src="https://bugandavotes.com/images/logo.png" alt="Buganda Votes" class="w-12 h-12 object-contain rounded buganda-logo" onerror="this.style.display='none'">
+                <div class="flex flex-col leading-tight">
+                    <span class="font-bold text-xs">Vote For Miss Buganda!</span>
+                    <a href="https://bugandavotes.com/" target="_blank" rel="noopener noreferrer"
+                       class="buganda-btn inline-flex items-center gap-1 bg-white text-red-700 font-bold text-xs px-2 py-0.5 rounded-full hover:bg-yellow-50 transition-all shadow-sm mt-0.5">
+                        Vote Now →
+                    </a>
+                </div>
+                <button onclick="document.getElementById('bugandaVotesBar').style.display='none'"
+                        class="absolute -top-1 -right-1 bg-red-700 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs leading-none"
+                        aria-label="Close">×</button>
+            </div>
+
             <!-- Actions -->
             <div class="flex items-center gap-2 sm:gap-3">
                 @auth
@@ -728,6 +768,19 @@ main {
         </div>
     </div>
     
+  <!-- Mobile Buganda Votes Banner (visible on <lg screens) -->
+<div id="bugandaVotesBarMobile" class="lg:hidden buganda-banner text-white px-3 py-1.5 flex items-center justify-center gap-2 relative">
+    <img src="https://bugandavotes.com/images/logo.png" alt="Buganda Votes" class="w-8 h-8 object-contain rounded buganda-logo" onerror="this.style.display='none'">
+    <span class="font-semibold text-xs">Vote For Miss Buganda — Cast your vote today!</span>
+    <a href="https://bugandavotes.com/" target="_blank" rel="noopener noreferrer"
+       class="buganda-btn inline-flex items-center gap-1 bg-white text-red-700 font-bold text-xs px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+        Vote Now →
+    </a>
+    <button onclick="document.getElementById('bugandaVotesBarMobile').style.display='none'"
+            class="absolute right-2 top-1/2 -translate-y-1/2 text-white/80 hover:text-white text-base leading-none"
+            aria-label="Close">×</button>
+</div>
+
   <!-- Navigation - IMPROVED WITH NEW LINKS -->
 <div class="bg-gradient-to-r from-brand-600 to-purple-600 relative">
     <div class="container mx-auto px-4">

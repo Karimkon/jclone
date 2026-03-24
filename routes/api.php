@@ -4019,14 +4019,19 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
                 if ($isVendor && $vendorProfileId) {
                     $query->orWhere('vendor_profile_id', $vendorProfileId);
                 }
+
+                // Include support chats where user is the assigned support agent
+                $query->orWhere('support_user_id', $user->id);
             });
 
         $conversations = $allConversations->orderBy('last_message_at', 'desc')->get();
 
         // Group by participants in PHP to be absolutely sure - picks the latest one for each pair
         $grouped = $conversations->groupBy(function ($conv) {
-            // Ensure grouping is based on the pair, regardless of who is buyer/vendor
-            // But since one is always 'me', we just need the other person's ID type
+            // Support chats are unique per conversation — never merge them
+            if (!empty($conv->is_support_chat)) {
+                return 'support-' . $conv->id;
+            }
             return $conv->buyer_id . '-' . $conv->vendor_profile_id;
         })->map(function ($group) {
             return $group->first(); // Conversations are already sorted by last_message_at desc
@@ -4036,9 +4041,19 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         $enriched = $grouped->map(function ($conv) use ($user, $isVendor, $vendorProfileId) {
             // Determine if user is the seller in THIS specific conversation
             $isSellerInConv = $isVendor && $vendorProfileId && $conv->vendor_profile_id == $vendorProfileId;
+            $isSupportAgentInConv = !empty($conv->support_user_id) && $conv->support_user_id == $user->id;
 
-            // Get other participant - show buyer if user is seller, show seller if user is buyer
-            if ($isSellerInConv) {
+            // Get other participant
+            if ($isSupportAgentInConv) {
+                // Admin/support viewing — show the user who opened the ticket
+                $otherUser = \DB::table('users')->where('id', $conv->buyer_id)->first();
+                $participantName = $otherUser->name ?? 'User';
+                $participantAvatar = $otherUser->avatar ?? null;
+            } elseif (!empty($conv->is_support_chat)) {
+                // Regular user viewing their own support chat
+                $participantName = 'BebaMart Support';
+                $participantAvatar = null;
+            } elseif ($isSellerInConv) {
                 $otherUser = \DB::table('users')->where('id', $conv->buyer_id)->first();
                 $participantName = $otherUser->name ?? 'Buyer';
                 $participantAvatar = $otherUser->avatar ?? null;
@@ -4315,11 +4330,12 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
         }
 
-        // User has access if they're EITHER the buyer OR the vendor (seller)
+        // User has access if they're EITHER the buyer, the vendor (seller), OR the support agent
         $isBuyer = $conversation->buyer_id == $user->id;
         $isSeller = $isVendor && $vendorProfileId && $conversation->vendor_profile_id == $vendorProfileId;
+        $isSupportAgent = !empty($conversation->support_user_id) && $conversation->support_user_id == $user->id;
 
-        if (!$isBuyer && !$isSeller) {
+        if (!$isBuyer && !$isSeller && !$isSupportAgent) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
@@ -4350,9 +4366,14 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             ->update(['read_at' => now()]);
 
         // Get conversation details - show the OTHER participant
-        // If user is the seller in this conversation, show buyer info
-        // If user is the buyer in this conversation, show seller info
-        if ($isSeller) {
+        if ($isSupportAgent) {
+            $otherUser = \DB::table('users')->where('id', $conversation->buyer_id)->first();
+            $participantName = $otherUser->name ?? 'User';
+            $participantAvatar = $otherUser->avatar ?? null;
+        } elseif (!empty($conversation->is_support_chat)) {
+            $participantName = 'BebaMart Support';
+            $participantAvatar = null;
+        } elseif ($isSeller) {
             $otherUser = \DB::table('users')->where('id', $conversation->buyer_id)->first();
             $participantName = $otherUser->name ?? 'Buyer';
             $participantAvatar = $otherUser->avatar ?? null;
@@ -4418,11 +4439,12 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
             return response()->json(['success' => false, 'message' => 'Conversation not found'], 404);
         }
 
-        // User has access if they're EITHER the buyer OR the vendor (seller)
+        // User has access if they're EITHER the buyer, the vendor (seller), OR the support agent
         $isBuyer = $conversation->buyer_id == $user->id;
         $isSeller = $isVendor && $vendorProfileId && $conversation->vendor_profile_id == $vendorProfileId;
+        $isSupportAgent = !empty($conversation->support_user_id) && $conversation->support_user_id == $user->id;
 
-        if (!$isBuyer && !$isSeller) {
+        if (!$isBuyer && !$isSeller && !$isSupportAgent) {
             return response()->json(['success' => false, 'message' => 'Access denied'], 403);
         }
 
@@ -4476,6 +4498,70 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
         ]);
     });
 
+    // Open or continue a support chat conversation
+    Route::post('/support', function (Request $request) {
+        $user = $request->user();
+
+        // Support/admin users cannot open a support ticket themselves
+        if (in_array($user->role, ['admin', 'support'])) {
+            return response()->json(['success' => false, 'message' => 'You are a support agent'], 400);
+        }
+
+        // Find the first available admin or support user
+        $supportUser = \DB::table('users')
+            ->whereIn('role', ['admin', 'support'])
+            ->first();
+
+        if (!$supportUser) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Support is currently unavailable. Please try email or phone.',
+            ], 503);
+        }
+
+        // Return existing support conversation if one already exists
+        $existing = \DB::table('conversations')
+            ->where('buyer_id', $user->id)
+            ->where('is_support_chat', 1)
+            ->first();
+
+        if ($existing) {
+            if ($existing->status !== 'active') {
+                \DB::table('conversations')->where('id', $existing->id)->update([
+                    'status'          => 'active',
+                    'support_user_id' => $supportUser->id,
+                    'updated_at'      => now(),
+                ]);
+            }
+            return response()->json(['success' => true, 'conversation_id' => $existing->id]);
+        }
+
+        // Create a new support conversation
+        $conversationId = \DB::table('conversations')->insertGetId([
+            'buyer_id'          => $user->id,
+            'vendor_profile_id' => null,
+            'is_support_chat'   => 1,
+            'support_user_id'   => $supportUser->id,
+            'subject'           => 'BebaMart Support',
+            'status'            => 'active',
+            'created_at'        => now(),
+            'updated_at'        => now(),
+        ]);
+
+        // Welcome system message
+        \DB::table('messages')->insert([
+            'conversation_id' => $conversationId,
+            'sender_id'       => null,
+            'body'            => 'Welcome to BebaMart Support! How can we help you today?',
+            'type'            => 'system',
+            'is_deleted'      => 0,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+
+        return response()->json(['success' => true, 'conversation_id' => $conversationId]);
+    });
+
     // Get unread message count
     Route::get('/unread-count', function (Request $request) {
         $user = $request->user();
@@ -4501,8 +4587,19 @@ Route::middleware('auth:sanctum')->prefix('chat')->group(function () {
                 ->pluck('id');
         }
 
+        // Also count unread in support conversations (as user or as support agent)
+        $supportChatIds = \DB::table('conversations')
+            ->where(function ($q) use ($user) {
+                $q->where('buyer_id', $user->id)
+                  ->orWhere('support_user_id', $user->id);
+            })
+            ->where('is_support_chat', 1)
+            ->where('status', 'active')
+            ->pluck('id');
+        $allConversationIds = $conversationIds->merge($supportChatIds)->unique();
+
         $unreadCount = \DB::table('messages')
-            ->whereIn('conversation_id', $conversationIds)
+            ->whereIn('conversation_id', $allConversationIds)
             ->where('sender_id', '!=', $user->id)
             ->whereNull('read_at')
             ->where('is_deleted', false)
