@@ -201,18 +201,20 @@
                         @endif
                     </ul>
 
-                    @if($isCurrentPlan)
+                    @if($isCurrentPlan || $plan->is_free_plan)
                         <button disabled class="w-full py-3 bg-gray-300 text-gray-600 rounded-xl font-semibold cursor-not-allowed">
-                            Current Plan
+                            @if($isCurrentPlan)
+                                Current Plan
+                            @else
+                                Default Plan
+                            @endif
                         </button>
                     @else
                         <form action="{{ route('vendor.subscription.subscribe') }}" method="POST">
                             @csrf
                             <input type="hidden" name="plan_id" value="{{ $plan->id }}">
                             <button type="submit" class="w-full py-3 {{ $colors['btn'] }} text-white rounded-xl font-semibold transition shadow-lg hover:shadow-xl">
-                                @if($plan->is_free_plan)
-                                    Select Free Plan
-                                @elseif($currentSubscription && !$currentSubscription->plan->is_free_plan)
+                                @if($currentSubscription && $currentSubscription->plan && !$currentSubscription->plan->is_free_plan)
                                     @if($plan->price > $currentSubscription->plan->price)
                                         Upgrade Now
                                     @else

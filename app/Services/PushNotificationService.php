@@ -286,6 +286,7 @@ class PushNotificationService
             'vendor_review' => $prefs->reviews,
             'vendor_payout' => $prefs->payouts,
             'vendor_tip' => $prefs->vendor_tips,
+            'vendor_approval' => true, // Always deliver approval notifications
             default => true,
         };
     }

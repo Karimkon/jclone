@@ -425,25 +425,42 @@ class OrderController extends Controller
                     $vendorUserId = $placedOrder->vendorProfile?->user_id;
                     if (!$vendorUserId) continue;
 
+                    $orderAmount = "UGX " . number_format($placedOrder->total, 0);
+                    $orderRoute = ['route' => '/vendor/orders/' . $placedOrder->id];
+                    $buyerRoute = ['route' => '/orders/' . $placedOrder->id];
+
                     if ($validated['payment_method'] === 'wallet') {
                         $pushService->sendToUser(
                             $vendorUserId, 'vendor_order',
                             "New order received! 🎉",
-                            "Order #{$placedOrder->order_number} — UGX " . number_format($placedOrder->total, 0) . ". Wallet payment confirmed!",
-                            ['route' => '/vendor/orders/' . $placedOrder->id]
+                            "Order #{$placedOrder->order_number} — {$orderAmount}. Wallet payment confirmed!",
+                            $orderRoute
                         );
                         $pushService->sendToUser(
                             $placedOrder->buyer_id, 'order_update',
                             "Order Confirmed! ✅",
                             "Your order #{$placedOrder->order_number} is confirmed. The vendor will process it soon.",
-                            ['route' => '/orders/' . $placedOrder->id]
+                            $buyerRoute
                         );
                     } elseif ($validated['payment_method'] === 'cash_on_delivery') {
                         $pushService->sendToUser(
                             $vendorUserId, 'vendor_order',
                             "New COD order! 🛒",
-                            "Order #{$placedOrder->order_number} — UGX " . number_format($placedOrder->total, 0) . ". Cash on delivery.",
-                            ['route' => '/vendor/orders/' . $placedOrder->id]
+                            "Order #{$placedOrder->order_number} — {$orderAmount}. Cash on delivery.",
+                            $orderRoute
+                        );
+                    } elseif (in_array($validated['payment_method'], ['card', 'mobile_money', 'bank_transfer'])) {
+                        $methodLabel = match ($validated['payment_method']) {
+                            'card' => 'Card payment',
+                            'mobile_money' => 'Mobile money',
+                            'bank_transfer' => 'Bank transfer',
+                            default => 'Online payment',
+                        };
+                        $pushService->sendToUser(
+                            $vendorUserId, 'vendor_order',
+                            "New order received! 🎉",
+                            "Order #{$placedOrder->order_number} — {$orderAmount}. {$methodLabel} pending.",
+                            $orderRoute
                         );
                     }
                 }

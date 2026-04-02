@@ -1148,12 +1148,12 @@ Route::get('/marketplace', function (Request $request) {
             $query->where('price', '<=', $request->max_price);
         }
 
-        $sortBy = $request->get('sort_by', 'created_at');
+        $sortBy = $request->get('sort_by', 'ranking'); // Default: subscription-boosted ranking
         $sortOrder = $request->get('sort_order', 'desc');
         $perPage = $request->get('per_page', 20);
 
-        // Try to use ranking service, fall back to simple sorting if it fails
-        $useRanking = ($sortBy === 'ranking' || $sortBy === 'recommended');
+        // Use ranking service unless caller explicitly requests a different sort
+        $useRanking = in_array($sortBy, ['ranking', 'recommended', 'popular']);
 
         if ($useRanking) {
             try {

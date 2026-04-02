@@ -13,9 +13,10 @@ use App\Models\VendorDocument;
 use App\Models\VendorScore;
 use App\Models\AuditLog;
 use App\Models\NotificationQueue;
+use App\Services\PushNotificationService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 
 class AdminVendorController extends Controller
 {
@@ -133,12 +134,12 @@ class AdminVendorController extends Controller
                 'ip' => $request->ip(),
             ]);
             
-            // Send notification to vendor
+            // Send email notification to vendor (queue)
             NotificationQueue::create([
                 'user_id' => $vendor->user_id,
                 'type' => 'email',
                 'title' => 'Vendor Application Approved! 🎉',
-                'message' => "Congratulations {$vendor->user->name}! Your vendor application for '{$vendor->business_name}' has been approved. You can now start listing products and receiving orders.",
+                'message' => "Congratulations {$vendor->user->name}! Your vendor application for '{$vendor->business_name}' has been approved within 24 hours! You can now start listing products and receiving orders.",
                 'meta' => [
                     'vendor_id' => $vendor->id,
                     'action_url' => route('vendor.dashboard'),
@@ -146,7 +147,23 @@ class AdminVendorController extends Controller
                 ],
                 'status' => 'pending',
             ]);
-            
+
+            // Send FCM push notification to vendor's device
+            try {
+                (new PushNotificationService())->sendToUser(
+                    $vendor->user_id,
+                    'vendor_approval',
+                    'Your Store is Live! 🎉',
+                    "Congratulations! Your application for '{$vendor->business_name}' has been approved in under 24 hours. Start listing now!",
+                    ['route' => '/vendor/dashboard']
+                );
+            } catch (\Exception $e) {
+                Log::warning('Vendor approval push notification failed', [
+                    'vendor_id' => $vendor->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             DB::commit();
             
             Log::info('Vendor approved by admin', [

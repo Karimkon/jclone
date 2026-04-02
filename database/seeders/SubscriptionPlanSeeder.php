@@ -51,7 +51,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'Silver',
                 'slug' => 'silver',
-                'price' => 45000,
+                'price' => 25000,
                 'billing_cycle' => 'monthly',
                 'boost_multiplier' => 2.00,
                 'max_featured_listings' => 10,
@@ -70,7 +70,7 @@ class SubscriptionPlanSeeder extends Seeder
             [
                 'name' => 'Gold',
                 'slug' => 'gold',
-                'price' => 100000,
+                'price' => 40000,
                 'billing_cycle' => 'monthly',
                 'boost_multiplier' => 3.00,
                 'max_featured_listings' => -1, // Unlimited

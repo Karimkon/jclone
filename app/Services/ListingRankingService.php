@@ -104,7 +104,7 @@ class ListingRankingService
     protected function getRecentSalesCount(Listing $listing): int
     {
         return $listing->interactions()
-            ->where('interaction_type', 'purchase')
+            ->where('type', 'purchase')
             ->where('created_at', '>=', now()->subDays(30))
             ->count();
     }

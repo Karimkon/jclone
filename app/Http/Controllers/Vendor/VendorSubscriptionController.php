@@ -77,9 +77,9 @@ class VendorSubscriptionController extends Controller
             return back()->with('info', 'You are already subscribed to this plan.');
         }
 
-        // Handle free plan
+        // Free plan cannot be subscribed to (it's the default) - always redirect back
         if ($plan->is_free_plan) {
-            return $this->handleFreeSubscription($vendor, $plan);
+            return back()->with('info', 'The Free plan is your default plan. Upgrade to a paid plan for more visibility and features.');
         }
 
         DB::beginTransaction();
@@ -152,23 +152,29 @@ class VendorSubscriptionController extends Controller
      */
     protected function handleFreeSubscription($vendor, $plan)
     {
-        // Cancel any existing subscriptions
-        $vendor->subscriptions()
-            ->where('status', 'active')
-            ->update(['status' => 'cancelled']);
+        try {
+            // Cancel any existing paid subscriptions
+            $vendor->subscriptions()
+                ->where('status', 'active')
+                ->update(['status' => 'cancelled']);
 
-        // Create and activate free subscription
-        VendorSubscription::create([
-            'vendor_profile_id' => $vendor->id,
-            'subscription_plan_id' => $plan->id,
-            'status' => 'active',
-            'starts_at' => now(),
-            'expires_at' => now()->addYears(100),
-            'auto_renew' => false,
-        ]);
+            // Create and activate free subscription
+            VendorSubscription::create([
+                'vendor_profile_id' => $vendor->id,
+                'subscription_plan_id' => $plan->id,
+                'status' => 'active',
+                'starts_at' => now(),
+                'expires_at' => now()->addYears(100),
+                'auto_renew' => false,
+            ]);
 
-        return redirect()->route('vendor.subscription.index')
-            ->with('success', 'Successfully subscribed to Free plan!');
+            return redirect()->route('vendor.subscription.index')
+                ->with('success', 'You are now on the Free plan.');
+        } catch (\Exception $e) {
+            Log::error('Free subscription setup failed: ' . $e->getMessage());
+            return redirect()->route('vendor.subscription.index')
+                ->with('error', 'Something went wrong. Please try again.');
+        }
     }
 
     /**
