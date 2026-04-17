@@ -683,6 +683,12 @@ button[onclick="closeOptionsModal()"]:hover {
     .animate-scale-in {
         animation: scale-in 0.3s ease forwards;
     }
+    /* Globally prevent horizontal scroll on this page */
+    html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw !important;
+    }
+
     @media (max-width: 768px) {
     /* Prevent the main container from expanding */
     .container {
@@ -691,16 +697,17 @@ button[onclick="closeOptionsModal()"]:hover {
         width: 100% !important;
         max-width: 100vw !important;
         overflow-x: hidden !important;
+        box-sizing: border-box !important;
     }
 
     /* Fix the main product image container */
     .main-image-container {
         height: auto !important;
-        min-height: 300px;
+        min-height: 260px;
     }
 
     .main-image {
-        height: 300px !important; /* Forces height to stay reasonable on phones */
+        height: 260px !important;
         width: 100% !important;
         object-fit: cover !important;
     }
@@ -710,14 +717,56 @@ button[onclick="closeOptionsModal()"]:hover {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     /* Fix the breadcrumb from pushing the screen width */
     nav.flex.items-center {
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
+        overflow-x: hidden !important;
+        white-space: normal;
+    }
+
+    /* Price section: stack vertically on mobile so long prices don't overflow */
+    .bg-gradient-to-r.from-orange-50 .flex.items-end {
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+
+    /* Shrink the large price text on mobile */
+    #productPrice {
+        font-size: 1.75rem !important;
+    }
+
+    /* Rating row: allow wrapping */
+    .flex.items-center.gap-4.mb-6 {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* Analytics row: allow wrapping */
+    .flex.items-center.gap-4.text-sm.text-gray-600 {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* Share row: allow wrapping */
+    .flex.items-center.justify-between.mt-6 {
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* Ensure all direct children of the page don't push width */
+    .min-h-screen, .bg-white.rounded-2xl, .p-6, .p-4 {
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Tab row: scroll horizontally inside its container, don't push page */
+    .border-b.flex.overflow-x-auto,
+    .flex.border-b {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
-        white-space: nowrap;
     }
 }
 
@@ -817,7 +866,7 @@ button[onclick="closeOptionsModal()"]:hover {
                     @endif
                     
                     <!-- Share & Actions Row -->
-                    <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
+                    <div class="flex flex-wrap items-center gap-3 mt-6 pt-6 border-t border-gray-100">
                         <div class="flex items-center gap-2">
                             <span class="text-sm text-gray-500">Share:</span>
                             <button onclick="shareOn('facebook')" class="w-9 h-9 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-600 hover:text-white transition flex items-center justify-center">
@@ -895,7 +944,7 @@ button[onclick="closeOptionsModal()"]:hover {
 @endif
                     
                     <!-- Rating & Reviews - DYNAMIC -->
-                    <div class="flex items-center gap-4 mb-6">
+                    <div class="flex flex-wrap items-center gap-2 mb-6">
                         <div class="flex items-center gap-2">
                             <div class="star-rating">
                                 @for($i = 1; $i <= 5; $i++)
@@ -916,12 +965,12 @@ button[onclick="closeOptionsModal()"]:hover {
                     
                     <!-- Price Section -->
                     <div class="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-5 mb-6">
-                        <div class="flex items-end gap-4">
-                            <span id="productPrice" class="text-4xl font-bold text-primary">
+                        <div class="flex flex-wrap items-end gap-2">
+                            <span id="productPrice" class="text-3xl lg:text-4xl font-bold text-primary">
                                 UGX {{ number_format($listing->price, 0) }}
                             </span>
                             @php $originalPrice = $listing->price * 1.25; @endphp
-                            <span id="productOriginalPrice" class="text-lg text-gray-400 line-through mb-1">
+                            <span id="productOriginalPrice" class="text-base text-gray-400 line-through mb-1">
                                 UGX {{ number_format($originalPrice, 0) }}
                             </span>
                             <span class="px-2 py-1 bg-red-500 text-white text-sm font-bold rounded-lg mb-1">
@@ -1066,7 +1115,7 @@ button[onclick="closeOptionsModal()"]:hover {
                         <!-- Quantity Selector -->
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                            <div class="flex items-center gap-4">
+                            <div class="flex flex-wrap items-center gap-3">
                                 <div class="flex items-center border-2 border-gray-200 rounded-xl overflow-hidden">
                                     <button type="button" id="qtyMinus" class="qty-btn">
                                         <i class="fas fa-minus text-gray-600"></i>
@@ -1107,7 +1156,7 @@ button[onclick="closeOptionsModal()"]:hover {
                     </div>
                     
                     <!-- Trust Badges - Animated Ticker -->
-                    <div class="overflow-hidden rounded-xl bg-gray-50 border border-gray-100 py-2 px-3">
+                    <div class="overflow-hidden rounded-xl bg-gray-50 border border-gray-100 py-2 px-3" style="width:100%;max-width:100%;">
                         <div class="trust-ticker flex gap-8 items-center whitespace-nowrap">
                             <span class="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 flex-shrink-0">
                                 <i class="fas fa-shield-alt text-green-500"></i> Escrow Protected

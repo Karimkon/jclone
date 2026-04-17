@@ -68,6 +68,14 @@ class PushNotificationService
             'status' => 'pending',
         ]);
 
+        // Always inject notification_id into the FCM data payload so the Flutter
+        // app can open the specific NotificationDetailScreen when the user taps
+        // the push notification (especially for admin_message types).
+        $fcmData = array_merge($data, [
+            'notification_id' => (string) $notification->id,
+            'type'            => $type,
+        ]);
+
         // Get active device tokens
         $tokens = DeviceToken::where('user_id', $userId)->active()->pluck('token');
 
@@ -80,7 +88,7 @@ class PushNotificationService
         $sent = false;
         foreach ($tokens as $token) {
             try {
-                $this->sendFcmMessage($token, $title, $body, $data, $imageUrl, $userId);
+                $this->sendFcmMessage($token, $title, $body, $fcmData, $imageUrl, $userId);
                 $sent = true;
             } catch (\Exception $e) {
                 // If token is invalid, deactivate it

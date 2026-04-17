@@ -165,7 +165,7 @@ Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor/jobs')->name(
     Route::post('/{id}/toggle', [VendorJobController::class, 'toggleStatus'])->name('toggle');
     
     // Applications
-    Route::get('/{jobId}/applications/{applicationId}', [VendorJobController::class, 'showApplication'])->name('applications.show');
+    Route::get('/{jobId}/applications/{applicationId}', [VendorJobController::class, 'showApplication'])->name('buyer.applications.show');
     Route::post('/{jobId}/applications/{applicationId}/status', [VendorJobController::class, 'updateApplicationStatus'])->name('applications.status');
     Route::get('/{jobId}/applications/{applicationId}/cv', [VendorJobController::class, 'downloadCV'])->name('applications.cv');
 });
@@ -203,22 +203,22 @@ Route::middleware(['auth', 'check.vendor.status'])->prefix('vendor/services')->n
 // ====================
 // BUYER ROUTES - My Applications & Service Requests
 // ====================
-Route::middleware(['auth'])->prefix('buyer')->name('buyer.')->group(function () {
+Route::middleware(['auth'])->prefix('buyer')->group(function () {
     // Job Applications
-    Route::get('/my-applications', [BuyerJobsServicesController::class, 'myApplications'])->name('applications.index');
-    Route::get('/my-applications/{id}', [BuyerJobsServicesController::class, 'showApplication'])->name('applications.show');
-    Route::delete('/my-applications/{id}', [BuyerJobsServicesController::class, 'withdrawApplication'])->name('applications.withdraw');
+    Route::get('/my-applications', [BuyerJobsServicesController::class, 'myApplications'])->name('buyer.applications.index');
+    Route::get('/my-applications/{id}', [BuyerJobsServicesController::class, 'showApplication'])->name('buyer.applications.show');
+    Route::delete('/my-applications/{id}', [BuyerJobsServicesController::class, 'withdrawApplication'])->name('buyer.applications.withdraw');
     
     // Service Requests
-    Route::get('/service-requests', [BuyerJobsServicesController::class, 'myServiceRequests'])->name('service-requests.index');
-    Route::get('/service-requests/{id}', [BuyerJobsServicesController::class, 'showServiceRequest'])->name('service-requests.show');
-    Route::post('/service-requests/{id}/accept', [BuyerJobsServicesController::class, 'acceptQuote'])->name('service-requests.accept');
-    Route::post('/service-requests/{id}/cancel', [BuyerJobsServicesController::class, 'cancelServiceRequest'])->name('service-requests.cancel');
-    Route::post('/service-requests/{id}/complete', [BuyerJobsServicesController::class, 'confirmCompletion'])->name('service-requests.complete');
+    Route::get('/service-requests', [BuyerJobsServicesController::class, 'myServiceRequests'])->name('buyer.service-requests.index');
+    Route::get('/service-requests/{id}', [BuyerJobsServicesController::class, 'showServiceRequest'])->name('buyer.service-requests.show');
+    Route::post('/service-requests/{id}/accept', [BuyerJobsServicesController::class, 'acceptQuote'])->name('buyer.service-requests.accept');
+    Route::post('/service-requests/{id}/cancel', [BuyerJobsServicesController::class, 'cancelServiceRequest'])->name('buyer.service-requests.cancel');
+    Route::post('/service-requests/{id}/complete', [BuyerJobsServicesController::class, 'confirmCompletion'])->name('buyer.service-requests.complete');
     
     // Reviews
-    Route::get('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'showReviewForm'])->name('service-requests.review');
-    Route::post('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'submitReview'])->name('service-requests.review.submit');
+    Route::get('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'showReviewForm'])->name('buyer.service-requests.review');
+    Route::post('/service-requests/{id}/review', [BuyerJobsServicesController::class, 'submitReview'])->name('buyer.service-requests.review.submit');
 });
 
 // ====================
@@ -892,6 +892,11 @@ Route::prefix('webhooks')->name('webhooks.')->group(function () {
 });
 
 // ====================
+// Convenience redirect: /cart -> /buyer/cart (handles direct URL access and browser bookmarks)
+Route::get('/cart', function () {
+    return redirect('/buyer/cart');
+})->middleware('auth');
+
 // PUBLIC AJAX ROUTES (for cart/wishlist counts)
 // ====================
 Route::get('/cart/count', function() {

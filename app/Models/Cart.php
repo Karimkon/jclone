@@ -355,6 +355,14 @@ private function findItemKey($items, $listingId, $variantId, $color, $size)
         if ($listing) {
             $enrichedItem = $item;
             $enrichedItem['item_key'] = $itemKey; // Add the key for reference
+
+            // Ensure 'image' key always exists (older cart items may not have it)
+            if (!array_key_exists('image', $enrichedItem)) {
+                $enrichedItem['image'] = $listing->images->first()
+                    ? asset('storage/' . $listing->images->first()->path)
+                    : null;
+            }
+
             $enrichedItem['listing'] = [
                 'id' => $listing->id,
                 'title' => $listing->title,
