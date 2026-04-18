@@ -1,237 +1,429 @@
 @extends('layouts.vendor')
 
-@section('title', 'Vendor Dashboard - JClone')
+@section('title', 'Dashboard - BebaMart Vendor')
 @section('page_title', 'Dashboard')
+@section('page_description', 'Manage your store, track sales and grow your business')
+
+@push('styles')
+<style>
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+    0%,100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-8px) rotate(2deg); }
+}
+.anim { opacity: 0; animation: fadeUp .45s ease forwards; }
+.s1 { animation-delay: .05s; }
+.s2 { animation-delay: .10s; }
+.s3 { animation-delay: .15s; }
+.s4 { animation-delay: .20s; }
+.s5 { animation-delay: .25s; }
+
+/* ── Hero ───────────────────────────────────────────── */
+.hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #312e81 100%);
+    border-radius: 20px;
+    padding: 20px 22px 0;
+    overflow: hidden;
+    position: relative;
+}
+.hero::before {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(99,102,241,.35) 0%, transparent 70%);
+    pointer-events: none;
+}
+.hero-name { font-size: 20px; font-weight: 800; color: #fff; }
+.hero-sub  { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
+.hero-icon {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,.12);
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #fff;
+    animation: float 4s ease-in-out infinite;
+    flex-shrink: 0;
+}
+.hero-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-radius: 10px;
+    font-size: 12px; font-weight: 700;
+    text-decoration: none; transition: all .2s; white-space: nowrap;
+}
+.hero-btn-white { background: #fff; color: #4f46e5; }
+.hero-btn-white:hover { background: #e0e7ff; }
+.hero-btn-glass {
+    background: rgba(255,255,255,.15);
+    border: 1.5px solid rgba(255,255,255,.3);
+    color: #fff;
+}
+.hero-btn-glass:hover { background: rgba(255,255,255,.25); }
+
+.hero-strip {
+    margin: 16px -22px 0;
+    padding: 12px 22px;
+    background: rgba(0,0,0,.25);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+}
+.hs-item { text-align: center; }
+.hs-val { font-size: 17px; font-weight: 800; color: #fff; }
+.hs-lbl { font-size: 10px; color: rgba(255,255,255,.5); font-weight: 500; margin-top: 2px; }
+
+/* ── Stat cards ─────────────────────────────────────── */
+.sc {
+    background: #fff; border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    transition: box-shadow .2s, transform .2s;
+}
+.sc:hover { box-shadow: 0 6px 24px rgba(0,0,0,.07); transform: translateY(-1px); }
+.sc-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; flex-shrink: 0;
+}
+.sc-val { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1; }
+.sc-lbl { font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 3px; }
+
+/* ── Quick actions ──────────────────────────────────── */
+.qa {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 6px; padding: 14px 8px;
+    border-radius: 14px; background: #fff;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    text-decoration: none; transition: all .2s; text-align: center;
+}
+.qa:hover { box-shadow: 0 6px 20px rgba(0,0,0,.08); transform: translateY(-2px); }
+.qa-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+}
+.qa span { font-size: 11px; font-weight: 600; color: #374151; }
+
+/* ── Section ────────────────────────────────────────── */
+.sec {
+    background: #fff; border-radius: 16px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 1px 4px rgba(0,0,0,.04);
+    overflow: hidden;
+}
+.sec-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f8fafc;
+}
+.sec-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+.sec-link  { font-size: 12px; font-weight: 600; color: #6366f1; text-decoration: none; }
+.sec-link:hover { color: #4f46e5; }
+
+/* ── Order rows ─────────────────────────────────────── */
+.ord-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid #f8fafc;
+    transition: background .15s;
+}
+.ord-row:last-child { border-bottom: none; }
+.ord-row:hover { background: #fafbff; }
+.ord-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 12px;
+}
+.ord-num   { font-size: 13px; font-weight: 700; color: #1e293b; }
+.ord-buyer { font-size: 11px; color: #94a3b8; }
+.ord-amt   { font-size: 13px; font-weight: 800; color: #0f172a; }
+.ord-badge {
+    font-size: 10px; font-weight: 700;
+    padding: 3px 8px; border-radius: 50px; display: inline-block; white-space: nowrap;
+}
+
+/* ── Listing rows ───────────────────────────────────── */
+.lst-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid #f8fafc;
+    transition: background .15s;
+}
+.lst-row:last-child { border-bottom: none; }
+.lst-row:hover { background: #fafbff; }
+.lst-img {
+    width: 36px; height: 36px; border-radius: 8px;
+    object-fit: cover; flex-shrink: 0;
+}
+.lst-placeholder {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: #f1f5f9;
+    display: flex; align-items: center; justify-content: center;
+    color: #cbd5e1; font-size: 13px; flex-shrink: 0;
+}
+.lst-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+.lst-price { font-size: 11px; color: #6366f1; font-weight: 700; }
+</style>
+@endpush
 
 @section('content')
-<div class="space-y-6">
-    <!-- Welcome Message -->
-    @php
-        $vendorSubscription = auth()->user()->vendorProfile?->activeSubscription;
-        $subPlan = $vendorSubscription?->plan;
-    @endphp
-    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white rounded-2xl p-6 shadow-lg shadow-purple-500/20">
-        <div class="flex flex-col md:flex-row items-center justify-between">
-            <div class="md:w-2/3">
-                <div class="flex items-center gap-3 mb-2">
-                    <h2 class="text-2xl font-bold">Welcome back, {{ auth()->user()->name }}!</h2>
-                    @if($subPlan && !$subPlan->is_free_plan)
-                        <span class="px-3 py-1 {{ $subPlan->slug == 'gold' ? 'bg-yellow-500' : ($subPlan->slug == 'silver' ? 'bg-gray-400' : 'bg-orange-500') }} rounded-full text-xs font-bold">
-                            <i class="fas fa-crown mr-1"></i>{{ $subPlan->name }}
-                        </span>
-                    @endif
-                </div>
-                <p class="text-white/90 mb-4">Manage your store, track sales, and grow your business with BebaMart.</p>
-                <div class="flex flex-wrap gap-3">
-                    <a href="{{ route('vendor.listings.create') }}"
-                       class="px-5 py-2.5 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-gray-100 transition inline-flex items-center shadow-lg">
-                        <i class="fas fa-plus mr-2"></i> Add Product
-                    </a>
-                    <a href="{{ route('vendor.orders.index') }}"
-                       class="px-5 py-2.5 bg-white/20 backdrop-blur border-2 border-white/50 text-white rounded-xl font-semibold hover:bg-white/30 transition inline-flex items-center">
-                        <i class="fas fa-shopping-bag mr-2"></i> View Orders
-                    </a>
-                </div>
+@php
+    $vendorSubscription = auth()->user()->vendorProfile?->activeSubscription;
+    $subPlan = $vendorSubscription?->plan;
+    $hour = now()->hour;
+    $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
+@endphp
+
+<div class="space-y-4">
+
+{{-- ── Hero ────────────────────────────────────────────── --}}
+<div class="hero anim s1">
+    <div class="flex items-center justify-between mb-3">
+        <div>
+            <div class="hero-name">{{ $greeting }}, {{ Auth::user()->name }}!</div>
+            <div class="hero-sub">
+                {{ auth()->user()->vendorProfile->business_name ?? 'Your Store' }}
+                @if($subPlan && !$subPlan->is_free_plan)
+                &middot; <span style="color:#fbbf24;font-weight:700;"><i class="fas fa-crown text-xs"></i> {{ $subPlan->name }}</span>
+                @endif
             </div>
-            <div class="mt-6 md:mt-0">
-                <div class="w-24 h-24 bg-white/20 backdrop-blur rounded-full flex items-center justify-center">
-                    <i class="fas fa-store text-4xl"></i>
-                </div>
+            <div class="flex flex-wrap gap-2 mt-3">
+                <a href="{{ route('vendor.listings.create') }}" class="hero-btn hero-btn-white">
+                    <i class="fas fa-plus"></i> Add Product
+                </a>
+                <a href="{{ route('vendor.orders.index') }}" class="hero-btn hero-btn-glass">
+                    <i class="fas fa-receipt"></i> View Orders
+                </a>
             </div>
         </div>
+        <div class="hero-icon ml-4"><i class="fas fa-store"></i></div>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <!-- Total Sales -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center">
-                <div class="bg-green-100 p-3 rounded-lg mr-4">
-                    <i class="fas fa-dollar-sign text-green-600 text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-gray-600">Total Sales</p>
-                    <p class="text-2xl font-bold text-gray-800">UGX {{ number_format($stats['total_sales'] ?? 0, 2) }}</p>
-                </div>
-            </div>
+    <div class="hero-strip">
+        <div class="hs-item">
+            <div class="hs-val" data-count="{{ $stats['total_sales'] ?? 0 }}">0</div>
+            <div class="hs-lbl">UGX Sales</div>
         </div>
-
-        <!-- Active Listings -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center">
-                <div class="bg-blue-100 p-3 rounded-lg mr-4">
-                    <i class="fas fa-boxes text-blue-600 text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-gray-600">Active Listings</p>
-                    <p class="text-2xl font-bold text-gray-800">{{ $stats['active_listings'] ?? 0 }}</p>
-                </div>
-            </div>
+        <div class="hs-item">
+            <div class="hs-val" data-count="{{ $stats['active_listings'] ?? 0 }}">0</div>
+            <div class="hs-lbl">Active Listings</div>
         </div>
-
-        <!-- Pending Orders -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center">
-                <div class="bg-yellow-100 p-3 rounded-lg mr-4">
-                    <i class="fas fa-shopping-cart text-yellow-600 text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-gray-600">Pending Orders</p>
-                    <p class="text-2xl font-bold text-gray-800">{{ $stats['pending_orders'] ?? 0 }}</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Store Rating -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex items-center">
-                <div class="bg-purple-100 p-3 rounded-lg mr-4">
-                    <i class="fas fa-star text-purple-600 text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-gray-600">Store Rating</p>
-                    <p class="text-2xl font-bold text-gray-800">4.8/5.0</p>
-                </div>
-            </div>
+        <div class="hs-item">
+            <div class="hs-val" data-count="{{ $stats['pending_orders'] ?? 0 }}">0</div>
+            <div class="hs-lbl">Pending Orders</div>
         </div>
     </div>
+</div>
 
-    <!-- Quick Actions -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Add New Product -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-4">Quick Actions</h3>
-            <div class="space-y-3">
-                <a href="{{ route('vendor.listings.create') }}" 
-                   class="flex items-center p-3 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition">
-                    <i class="fas fa-plus-circle mr-3 text-xl"></i>
-                    <span>Add New Product</span>
-                    <i class="fas fa-arrow-right ml-auto"></i>
-                </a>
-                
-                <a href="{{ route('vendor.orders.index') }}" 
-                   class="flex items-center p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition">
-                    <i class="fas fa-shopping-bag mr-3 text-xl"></i>
-                    <span>View Orders</span>
-                    <i class="fas fa-arrow-right ml-auto"></i>
-                </a>
-                
-                <a href="{{ route('vendor.imports.index') }}" 
-                   class="flex items-center p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
-                    <i class="fas fa-plane mr-3 text-xl"></i>
-                    <span>Import Products</span>
-                    <i class="fas fa-arrow-right ml-auto"></i>
-                </a>
-                
-                <a href="{{ route('vendor.promotions.index') }}"
-                   class="flex items-center p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition">
-                    <i class="fas fa-bullhorn mr-3 text-xl"></i>
-                    <span>Create Promotion</span>
-                    <i class="fas fa-arrow-right ml-auto"></i>
-                </a>
-
-                <a href="{{ route('vendor.subscription.index') }}"
-                   class="flex items-center p-3 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 transition">
-                    <i class="fas fa-crown mr-3 text-xl"></i>
-                    <span>Boost Visibility</span>
-                    <i class="fas fa-arrow-right ml-auto"></i>
-                </a>
-            </div>
+{{-- ── Stat Cards ──────────────────────────────────────── --}}
+<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 anim s2">
+    <div class="sc">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">
+            <i class="fas fa-coins" style="color:#16a34a;"></i>
         </div>
-
-        <!-- Recent Orders -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-lg font-bold text-gray-800">Recent Orders</h3>
-                <a href="{{ route('vendor.orders.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
-                    View All
-                </a>
-            </div>
-            
-            @if($recentOrders && $recentOrders->count() > 0)
-                <div class="space-y-3">
-                    @foreach($recentOrders as $order)
-                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                        <div>
-                            <p class="font-medium">Order #{{ $order->order_number }}</p>
-                            <p class="text-sm text-gray-600">{{ $order->buyer->name }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold">UGX {{ number_format($order->total, 2) }}</p>
-                            <span class="text-xs px-2 py-1 rounded-full 
-                                @if($order->status == 'pending') bg-yellow-100 text-yellow-800
-                                @elseif($order->status == 'paid') bg-blue-100 text-blue-800
-                                @elseif($order->status == 'delivered') bg-green-100 text-green-800
-                                @else bg-gray-100 text-gray-800 @endif">
-                                {{ ucfirst($order->status) }}
-                            </span>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            @else
-                <div class="text-center py-8">
-                    <i class="fas fa-shopping-cart text-gray-400 text-3xl mb-3"></i>
-                    <p class="text-gray-600">No orders yet</p>
-                    <p class="text-sm text-gray-500 mt-1">Start by adding products</p>
-                </div>
-            @endif
+        <div>
+            <div class="sc-val" data-count="{{ $stats['total_sales'] ?? 0 }}">0</div>
+            <div class="sc-lbl">Sales (UGX)</div>
         </div>
     </div>
-
-    <!-- Recent Listings -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-gray-800">Your Listings</h3>
-            <a href="{{ route('vendor.listings.index') }}" class="text-indigo-600 hover:text-indigo-800 text-sm">
-                View All
-            </a>
+    <div class="sc">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+            <i class="fas fa-boxes" style="color:#2563eb;"></i>
         </div>
-        
-        @if($recentListings && $recentListings->count() > 0)
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($recentListings as $listing)
-                <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
-                    <div class="flex items-start">
-                        @if($listing->images->first())
-                        <img src="{{ asset('storage/' . $listing->images->first()->path) }}" 
-                             alt="{{ $listing->title }}" 
-                             class="w-16 h-16 object-cover rounded-lg mr-4">
-                        @else
-                        <div class="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
-                            <i class="fas fa-image text-gray-400"></i>
-                        </div>
-                        @endif
-                        
-                        <div class="flex-1">
-                            <h4 class="font-medium text-gray-800 line-clamp-1">{{ $listing->title }}</h4>
-                            <p class="text-lg font-bold text-indigo-600">UGX {{ number_format($listing->price, 2) }}</p>
-                            <div class="flex items-center justify-between mt-2">
-                                <span class="text-sm text-gray-600">
-                                    Stock: {{ $listing->stock }}
-                                </span>
-                                <span class="text-xs px-2 py-1 rounded-full 
-                                    @if($listing->is_active) bg-green-100 text-green-800
-                                    @else bg-gray-100 text-gray-800 @endif">
-                                    {{ $listing->is_active ? 'Active' : 'Inactive' }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                @endforeach
+        <div>
+            <div class="sc-val" data-count="{{ $stats['active_listings'] ?? 0 }}">0</div>
+            <div class="sc-lbl">Listings</div>
+        </div>
+    </div>
+    <div class="sc">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#fef9c3,#fde68a);">
+            <i class="fas fa-shopping-cart" style="color:#ca8a04;"></i>
+        </div>
+        <div>
+            <div class="sc-val" data-count="{{ $stats['pending_orders'] ?? 0 }}">0</div>
+            <div class="sc-lbl">Pending Orders</div>
+        </div>
+    </div>
+    <div class="sc">
+        <div class="sc-icon" style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff);">
+            <i class="fas fa-star" style="color:#9333ea;"></i>
+        </div>
+        <div>
+            <div class="sc-val">4.8</div>
+            <div class="sc-lbl">Store Rating</div>
+        </div>
+    </div>
+</div>
+
+{{-- ── Quick Actions ───────────────────────────────────── --}}
+<div class="anim s3">
+    <p style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;">Quick Actions</p>
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <a href="{{ route('vendor.listings.create') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe);">
+                <i class="fas fa-plus" style="color:#4f46e5;"></i>
             </div>
+            <span>Add Product</span>
+        </a>
+        <a href="{{ route('vendor.orders.index') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);">
+                <i class="fas fa-receipt" style="color:#16a34a;"></i>
+            </div>
+            <span>Orders</span>
+        </a>
+        <a href="{{ route('vendor.jobs.create') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);">
+                <i class="fas fa-briefcase" style="color:#2563eb;"></i>
+            </div>
+            <span>Post Job</span>
+        </a>
+        <a href="{{ route('vendor.promotions.index') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);">
+                <i class="fas fa-bullhorn" style="color:#db2777;"></i>
+            </div>
+            <span>Promote</span>
+        </a>
+        <a href="{{ route('vendor.imports.index') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#fef9c3,#fde68a);">
+                <i class="fas fa-plane" style="color:#ca8a04;"></i>
+            </div>
+            <span>Import</span>
+        </a>
+        <a href="{{ route('vendor.subscription.index') }}" class="qa">
+            <div class="qa-icon" style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff);">
+                <i class="fas fa-crown" style="color:#9333ea;"></i>
+            </div>
+            <span>Upgrade</span>
+        </a>
+    </div>
+</div>
+
+{{-- ── Recent Orders + Listings ────────────────────────── --}}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 anim s4">
+
+    {{-- Recent Orders --}}
+    <div class="sec">
+        <div class="sec-head">
+            <span class="sec-title"><i class="fas fa-receipt text-indigo-400 mr-2"></i>Recent Orders</span>
+            <a href="{{ route('vendor.orders.index') }}" class="sec-link">View All <i class="fas fa-arrow-right text-xs ml-1"></i></a>
+        </div>
+        @if($recentOrders && $recentOrders->count() > 0)
+            @foreach($recentOrders as $order)
+            @php
+                $oMap = [
+                    'pending'    => ['background:#fef9c3;color:#854d0e;', 'fa-clock'],
+                    'paid'       => ['background:#dbeafe;color:#1e40af;', 'fa-check'],
+                    'delivered'  => ['background:#dcfce7;color:#15803d;', 'fa-check-double'],
+                    'cancelled'  => ['background:#fee2e2;color:#991b1b;', 'fa-times'],
+                    'processing' => ['background:#e0e7ff;color:#3730a3;', 'fa-cog'],
+                    'shipped'    => ['background:#f3e8ff;color:#6b21a8;', 'fa-truck'],
+                ];
+                $oc = $oMap[$order->status] ?? $oMap['pending'];
+            @endphp
+            <div class="ord-row">
+                <div class="ord-icon" style="{{ $oc[0] }}">
+                    <i class="fas {{ $oc[1] }}"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="ord-num">#{{ $order->order_number }}</div>
+                    <div class="ord-buyer">{{ $order->buyer->name ?? 'Customer' }}</div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div class="ord-amt">{{ number_format($order->total, 0) }}</div>
+                    <span class="ord-badge" style="{{ $oc[0] }}">{{ ucfirst($order->status) }}</span>
+                </div>
+            </div>
+            @endforeach
         @else
-            <div class="text-center py-8">
-                <i class="fas fa-box-open text-gray-400 text-3xl mb-3"></i>
-                <p class="text-gray-600">No listings yet</p>
-                <p class="text-sm text-gray-500 mt-1">Start by creating your first product</p>
-                <a href="{{ route('vendor.listings.create') }}" 
-                   class="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">
-                    <i class="fas fa-plus mr-2"></i>Add First Product
+            <div style="padding:32px 16px;text-align:center;">
+                <div style="width:44px;height:44px;background:linear-gradient(135deg,#e0e7ff,#c7d2fe);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
+                    <i class="fas fa-receipt" style="color:#6366f1;font-size:17px;"></i>
+                </div>
+                <p style="font-size:13px;font-weight:600;color:#475569;">No orders yet</p>
+                <p style="font-size:11px;color:#94a3b8;margin-top:3px;">Add products to start selling</p>
+            </div>
+        @endif
+    </div>
+
+    {{-- Recent Listings --}}
+    <div class="sec">
+        <div class="sec-head">
+            <span class="sec-title"><i class="fas fa-boxes text-blue-400 mr-2"></i>Your Listings</span>
+            <a href="{{ route('vendor.listings.index') }}" class="sec-link">View All <i class="fas fa-arrow-right text-xs ml-1"></i></a>
+        </div>
+        @if($recentListings && $recentListings->count() > 0)
+            @foreach($recentListings as $listing)
+            <div class="lst-row">
+                @if($listing->images->first())
+                <img src="{{ asset('storage/' . $listing->images->first()->path) }}"
+                     alt="{{ $listing->title }}" class="lst-img">
+                @else
+                <div class="lst-placeholder"><i class="fas fa-image"></i></div>
+                @endif
+                <div class="flex-1 min-w-0">
+                    <div class="lst-title truncate">{{ $listing->title }}</div>
+                    <div class="lst-price">UGX {{ number_format($listing->price, 0) }}</div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                    <div style="font-size:11px;color:#94a3b8;">Stock: {{ $listing->stock }}</div>
+                    <span class="ord-badge" style="{{ $listing->is_active ? 'background:#dcfce7;color:#15803d;' : 'background:#f1f5f9;color:#64748b;' }}">
+                        {{ $listing->is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                </div>
+            </div>
+            @endforeach
+        @else
+            <div style="padding:32px 16px;text-align:center;">
+                <div style="width:44px;height:44px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
+                    <i class="fas fa-box-open" style="color:#2563eb;font-size:17px;"></i>
+                </div>
+                <p style="font-size:13px;font-weight:600;color:#475569;">No listings yet</p>
+                <p style="font-size:11px;color:#94a3b8;margin-top:3px;">Create your first product</p>
+                <a href="{{ route('vendor.listings.create') }}"
+                   style="display:inline-flex;align-items:center;gap:5px;margin-top:10px;padding:7px 16px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:12px;font-weight:700;text-decoration:none;">
+                    <i class="fas fa-plus"></i> Add Product
                 </a>
             </div>
         @endif
     </div>
+
 </div>
+</div>
+
+@push('scripts')
+<script>
+function animateCounter(el) {
+    const raw = parseFloat((el.dataset.count || '0').toString().replace(/,/g, '')) || 0;
+    if (raw === 0) return;
+    const isLarge = raw > 999;
+    const steps   = 45;
+    const inc     = raw / steps;
+    let cur = 0, step = 0;
+    const t = setInterval(() => {
+        cur  = Math.min(cur + inc, raw);
+        step++;
+        el.textContent = isLarge
+            ? Math.round(cur).toLocaleString()
+            : (Number.isInteger(raw) ? Math.round(cur) : cur.toFixed(1));
+        if (step >= steps) {
+            el.textContent = isLarge ? raw.toLocaleString() : raw;
+            clearInterval(t);
+        }
+    }, 900 / steps);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) {
+                e.target.querySelectorAll('[data-count]').forEach(animateCounter);
+                obs.unobserve(e.target);
+            }
+        });
+    }, { threshold: 0.2 });
+    document.querySelectorAll('.sc, .hero').forEach(el => obs.observe(el));
+});
+</script>
+@endpush
 @endsection
